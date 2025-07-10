@@ -1,0 +1,28 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "o-12345678",
+      "cluster_name": "oceansurge-dev-us-west-2",
+      "environment": "development",
+      "timezone": "America/Los_Angeles",
+      "cost_center": "engineering",
+      "business_critical": false
+    },
+    {
+      "cluster_id": "o-87654321",
+      "cluster_name": "oceansurge-staging",
+      "environment": "staging", 
+      "timezone": "America/New_York",
+      "cost_center": "qa",
+      "business_critical": false
+    },
+    {
+      "cluster_id": "o-99999999",
+      "cluster_name": "oceansurge-prod",
+      "environment": "production",
+      "timezone": "America/New_York",
+      "cost_center": "production", 
+      "business_critical": true
+    }
+  ]
+}
