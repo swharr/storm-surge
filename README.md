@@ -3,20 +3,24 @@
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![LaunchDarkly](https://img.shields.io/badge/LaunchDarkly-Feature--Flags-blue?style=for-the-badge)
 ![Flexera Spot](https://img.shields.io/badge/Flexera--Spot-Ocean-blue?style=for-the-badge)
+![Spot.io](https://img.shields.io/badge/Spot.io-Ocean-blue?style=for-the-badge)
+![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
+![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 
-A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** with **Spot Ocean** and **LaunchDarkly**.
+A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
 
 ---
 
 ## 🚀 Highlights
 
-- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware
-- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags
-- 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI
+- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware to monitor and fire off infrastructure changes
+- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags in the LaunchDarkly Integration.
+- 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI (You need to have the API and CLI tools included)
 - 📈 **Cost Tracking**: Infrastructure impact monitoring via feature flag changes
 - 🔄 **Automated Scaling**: Dynamic right-sizing and node pool optimization
 - 🌐 **Production Ready**: Complete middleware with ingress, secrets, and monitoring
-- 💥 **Load Testing**: Built-in chaos testing and performance validation
+- 💥 **Load Testing**: Built-in chaos testing and performance validation to simulate activity and show responsiveness
 
 ---
 
@@ -39,11 +43,11 @@ cd ocean-surge
 
 ### Production Deployment (Recommended)
 ```bash
-# Full production deployment with LaunchDarkly + Spot API integration
+# Full deployment with All Features across all three hyperscalers (if configured)
 ./scripts/prod_deploy_preview.sh
 
 # Or specify provider directly
-./scripts/prod_deploy_preview.sh --provider=gke
+./scripts/prod_deploy_preview.sh --provider=gke #or "azure" or "aws"
 
 # Configuration only (no deployment)
 ./scripts/prod_deploy_preview.sh --config-only
@@ -63,6 +67,7 @@ The production script will collect your LaunchDarkly SDK key, Spot API token, an
    - Secret: Generated during deployment
 
 ### Spot API Configuration
+** Pre-Requiste** You need to have a Spot Console (https://console.spotinst.com) base organization set up with your Admin account verified.
 1. Get your **Spot API token** from Spot Console (Settings > API)
 2. Find your **Spot Cluster ID** (Ocean > Clusters)
 3. Ensure cluster has proper permissions for scaling
@@ -98,6 +103,8 @@ ocean-surge/
 │   ├── deploy.sh                    # Basic deployment
 │   ├── prod_deploy_preview.sh       # Production deployment with integrations
 │   ├── deploy-middleware.sh         # Middleware-only deployment
+│   └── cleanup/
+│       ├── cleanup.sh               # Destroys all cluster resources except for default namespaces, and then de-registers from Spot Ocean
 │   └── providers/
 │       ├── gke.sh                   # Google Kubernetes Engine
 │       ├── eks.sh                   # Amazon EKS
@@ -105,11 +112,11 @@ ocean-surge/
 ├── manifests/
 │   ├── base/                        # Core application manifests
 │   │   ├── kustomization.yaml
-│   │   ├── deployments.yaml         # Trail Blazer Auto Parts demo app
+│   │   ├── deployments.yaml         # Core Application with web front end. 
 │   │   ├── services.yaml
 │   │   ├── configmaps.yaml
 │   │   └── hpa.yaml
-│   └── middleware/                  # LaunchDarkly + Spot API integration
+│   └── middleware/                  # API Controller Middleware to talk between LaunchDarkly, Spot, and the Workload
 │       ├── kustomization.yaml
 │       ├── deployment.yaml          # Python Flask middleware
 │       ├── service.yaml             # LoadBalancer + Ingress
@@ -122,28 +129,35 @@ ocean-surge/
 
 ---
 
-## 🎯 Current Features
+## 🎯 Current Status
 
-- [x] **LaunchDarkly Webhook Integration**: Real-time feature flag processing
-- [x] **Spot Ocean API Integration**: Automated cluster scaling
+- [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
+- [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
 - [x] **Multi-Cloud Deployment**: GKE, EKS, AKS support
 - [x] **Production Middleware**: Flask app with proper security
 - [x] **Interactive Deployment**: Credential collection and validation
 - [x] **Load Testing**: Built-in traffic generation and scaling tests
 - [x] **Monitoring**: Health checks, logging, and status endpoints
 
-## 🧠 Future Features
+## 🧠 Roadmap 
 
 - [ ] OpenFeature + flagd support
+- [ ] Backstage IDP Scaffolding 
+- [ ] Microsoft Azure DevOps Pipeline
+- [ ] Github Runners for Deploy
+- [ ] FinOps Alerts based on infra changes
 - [ ] Advanced Spot Ocean policies (scheduling, taints)
 - [ ] GitOps flow via ArgoCD
 - [ ] FinOps Dashboard plugin
 - [ ] Multi-cluster support
 - [ ] Advanced cost analytics
+- [ ] Karpenter Support? 
+- [ ] Bring your own Application to test with 
+- [ ] NetApp Trident / Cloud Insights integration for Storage control (and testing)
 
 ---
 
-## 📞 Support
+## 📞 Support Channels
 
 - 📖 [Flexera Docs](https://docs.spot.io)
 - 💬 [Spot Slack](https://community.spot.io)
@@ -185,5 +199,5 @@ kubectl logs -f deployment/ld-spot-middleware -n oceansurge
 ---
 
 **Version**: v0.1.1-rebase  
-**Status**: Production Ready  
-Made with ❤️ for the FinOps Developer Community
+**Status**: NOT PRODUCTION READY - For Alpha Testing Only -   
+Made with ❤️ for the FinOps Practicioner and Developer Community
