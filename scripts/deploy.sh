@@ -255,6 +255,110 @@ fi
 
 SCRIPTS_DIR=$(dirname "$0")/providers
 
+# Check if cluster exists for each provider
+check_cluster_exists() {
+  local provider=$1
+  local region=$2
+  local zone=$3
+  
+  case $provider in
+    "gke")
+      if command -v gcloud &> /dev/null; then
+        gcloud container clusters describe "storm-surge-gke" --zone="$zone" &>/dev/null
+      else
+        return 1
+      fi
+      ;;
+    "eks")
+      if command -v aws &> /dev/null; then
+        aws eks describe-cluster --name "storm-surge-eks" --region="$region" &>/dev/null
+      else
+        return 1
+      fi
+      ;;
+    "aks")
+      if command -v az &> /dev/null; then
+        az aks show --resource-group "storm-surge-rg" --name "storm-surge-aks" &>/dev/null
+      else
+        return 1
+      fi
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# Prompt user for action when cluster exists
+handle_existing_cluster() {
+  local provider=$1
+  
+  echo "🔍 Found existing storm-surge-$provider cluster!"
+  echo
+  echo "   What would you like to do?"
+  echo "   1) Deploy workloads only (faster, uses existing cluster)"
+  echo "   2) Delete and recreate cluster (slower, fresh start)"
+  echo "   3) Cancel deployment"
+  echo
+  
+  while true; do
+    read -p "Select option (1-3): " choice
+    case $choice in
+      1)
+        echo "✅ Will deploy workloads to existing cluster"
+        export STORM_SKIP_CLUSTER_CREATION="true"
+        return 0
+        ;;
+      2)
+        echo "🗑️  Will delete and recreate cluster"
+        export STORM_SKIP_CLUSTER_CREATION="false"
+        delete_existing_cluster "$provider"
+        return 0
+        ;;
+      3)
+        echo "❌ Deployment cancelled"
+        exit 0
+        ;;
+      *)
+        echo "❌ Invalid choice. Please enter 1, 2, or 3."
+        ;;
+    esac
+  done
+}
+
+# Delete existing cluster
+delete_existing_cluster() {
+  local provider=$1
+  
+  echo "🗑️  Deleting existing $provider cluster..."
+  case $provider in
+    "gke")
+      if gcloud container clusters delete "storm-surge-gke" --zone="$ZONE" --quiet; then
+        echo "✅ GKE cluster deleted"
+      else
+        echo "❌ Failed to delete GKE cluster"
+        exit 1
+      fi
+      ;;
+    "eks")
+      if eksctl delete cluster "storm-surge-eks" --region="$REGION"; then
+        echo "✅ EKS cluster deleted"
+      else
+        echo "❌ Failed to delete EKS cluster"
+        exit 1
+      fi
+      ;;
+    "aks")
+      if az aks delete --resource-group "storm-surge-rg" --name "storm-surge-aks" --yes; then
+        echo "✅ AKS cluster deleted"
+      else
+        echo "❌ Failed to delete AKS cluster"
+        exit 1
+      fi
+      ;;
+  esac
+}
+
 run_provider() {
   local p=$1
   local script="${SCRIPTS_DIR}/${p}.sh"
@@ -299,6 +403,11 @@ if [ "$PROVIDER" = "all" ]; then
       get_node_count
     fi
     
+    # Check if cluster exists and handle accordingly
+    if check_cluster_exists "$p" "$REGION" "$ZONE"; then
+      handle_existing_cluster "$p"
+    fi
+    
     run_provider $p
     
     # Reset for next provider
@@ -319,6 +428,11 @@ else
   
   if [ -z "$NODES" ]; then
     get_node_count
+  fi
+  
+  # Check if cluster exists and handle accordingly
+  if check_cluster_exists "$PROVIDER" "$REGION" "$ZONE"; then
+    handle_existing_cluster "$PROVIDER"
   fi
   
   echo

@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+# Get the script directory and go to project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+
+# Verify we're in the right place
+if [ ! -d "manifests/base" ]; then
+    echo "❌ Error: manifests/base directory not found in $PROJECT_ROOT"
+    echo "This script must be run from a storm-surge repository"
+    exit 1
+fi
+
 echo "💰 Deploying Storm Surge FinOps Controller (OceanSurge Repository)"
 echo "=================================================================="
 

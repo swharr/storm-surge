@@ -10,6 +10,14 @@
 
 A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
 
+### 🎯 Key Features
+
+- **Intelligent Region/Zone Selection**: Interactive deployment with validation for all cloud providers
+- **Robust Retry Logic**: Automatic retry mechanisms for deployment operations with configurable timeouts
+- **Embedded Local Testing**: Built-in validation suite with security checks and manifest validation
+- **Enhanced Security**: Comprehensive security controls and validation throughout deployment
+- **Cluster Management**: Smart cluster detection with options to reuse or recreate existing clusters
+
 ---
 
 ## 🚀 Highlights
@@ -38,8 +46,38 @@ This repo ties application behavior directly to cost outcomes.
 ```bash
 git clone https://github.com/swharr/ocean-surge.git
 cd ocean-surge
+
+# Interactive deployment with region/zone selection
 ./scripts/deploy.sh --provider=gke   # or eks | aks | all
+
+# Or specify parameters directly
+./scripts/deploy.sh --provider=gke --region=us-central1 --zone=us-central1-a --nodes=4
 ```
+
+### Supported Regions & Zones
+
+**GKE (Google Cloud)**
+- `us-central1` (Iowa): zones a, b, c, f
+- `us-east1` (South Carolina): zones b, c, d
+- `us-west1` (Oregon): zones a, b, c
+- `us-west2` (California): zones a, b, c
+- `europe-west1` (Belgium): zones b, c, d
+- `asia-east1` (Taiwan): zones a, b, c
+
+**EKS (AWS)**
+- `us-east-1` (N. Virginia): zones a, b, c, d, e, f
+- `us-east-2` (Ohio): zones a, b, c
+- `us-west-1` (N. California): zones a, c
+- `us-west-2` (Oregon): zones a, b, c, d
+- `eu-west-1` (Ireland): zones a, b, c
+- `ap-southeast-1` (Singapore): zones a, b, c
+
+**AKS (Azure)**
+- `eastus` (East US): zones 1, 2, 3
+- `westus2` (West US 2): zones 1, 2, 3
+- `centralus` (Central US): zones 1, 2, 3
+- `westeurope` (West Europe): zones 1, 2, 3
+- `southeastasia` (Southeast Asia): zones 1, 2, 3
 
 ### Production Deployment (Recommended)
 ```bash
@@ -56,6 +94,41 @@ cd ocean-surge
 The production script will collect your LaunchDarkly SDK key, Spot API token, and cluster configuration interactively.
 
 ---
+
+## 🧪 Local Testing & Validation
+
+### Quick Local Tests
+```bash
+# Run embedded local validation suite
+./test-local.sh
+
+# Full test suite with comprehensive checks
+./tests/test-suite.sh
+```
+
+### Test Coverage
+- **Script Syntax**: Validates all bash scripts for syntax errors
+- **Parameter Validation**: Tests deployment script argument handling
+- **Zone/Region Validation**: Ensures proper region-zone combinations
+- **Kubernetes Manifests**: Validates all YAML manifests with kustomize
+- **Security Configuration**: Checks for runAsNonRoot, resource limits
+- **Secret Detection**: Scans for hardcoded credentials
+
+### Retry Logic & Error Handling
+
+All deployment scripts include robust retry mechanisms:
+
+```bash
+# Environment variables for retry configuration
+export STORM_RETRY_COUNT=3      # Number of retry attempts (default: 3)
+export STORM_RETRY_DELAY=30     # Delay between retries in seconds (default: 30)
+```
+
+Retry logic applies to:
+- Cluster creation operations
+- Workload deployment
+- Health check validations
+- API calls to cloud providers
 
 ## ⚙️ LaunchDarkly + Spot API Setup
 
@@ -100,28 +173,44 @@ export WEBHOOK_SECRET="your-webhook-secret"
 ```
 ocean-surge/
 ├── scripts/
-│   ├── deploy.sh                    # Basic deployment
-│   ├── prod_deploy_preview.sh       # Production deployment with integrations
+│   ├── deploy.sh                    # Interactive deployment with region/zone selection
 │   ├── deploy-middleware.sh         # Middleware-only deployment
-│   └── cleanup/
-│       ├── cleanup.sh               # Destroys all cluster resources except for default namespaces, and then de-registers from Spot Ocean
+│   ├── deploy-finops.sh            # FinOps controller deployment
+│   ├── test-local.sh               # Embedded local testing suite
+│   ├── prod_deploy_preview.sh      # Production deployment with integrations
+│   ├── cleanup/
+│   │   └── cluster-sweep.sh         # Comprehensive cluster cleanup
 │   └── providers/
-│       ├── gke.sh                   # Google Kubernetes Engine
-│       ├── eks.sh                   # Amazon EKS
-│       └── aks.sh                   # Azure AKS
+│       ├── gke.sh                   # Google Kubernetes Engine with retry logic
+│       ├── eks.sh                   # Amazon EKS with retry logic  
+│       └── aks.sh                   # Azure AKS with retry logic
 ├── manifests/
 │   ├── base/                        # Core application manifests
 │   │   ├── kustomization.yaml
-│   │   ├── deployments.yaml         # Core Application with web front end. 
+│   │   ├── deployments.yaml         # Core Application with web front end
 │   │   ├── services.yaml
 │   │   ├── configmaps.yaml
+│   │   ├── namespace.yaml           # oceansurge namespace
 │   │   └── hpa.yaml
-│   └── middleware/                  # API Controller Middleware to talk between LaunchDarkly, Spot, and the Workload
-│       ├── kustomization.yaml
-│       ├── deployment.yaml          # Python Flask middleware
-│       ├── service.yaml             # LoadBalancer + Ingress
-│       ├── configmap.yaml           # Application code + configuration
-│       └── secret.yaml              # API keys and webhooks
+│   ├── middleware/                  # API Controller Middleware
+│   │   ├── kustomization.yaml
+│   │   ├── deployment.yaml          # Python Flask middleware
+│   │   ├── service.yaml             # LoadBalancer + Ingress
+│   │   ├── configmap.yaml           # Application code + configuration
+│   │   └── secret.yaml              # API keys and webhooks
+│   └── finops/                      # FinOps controller manifests
+│       └── kustomization.yaml
+├── tests/
+│   ├── test-suite.sh               # Comprehensive test suite
+│   ├── hooks/                       # Git hooks for validation
+│   │   ├── validate-deploy-scripts.sh
+│   │   ├── validate-manifests.sh
+│   │   └── validate-security.sh
+│   └── README.md
+├── finops/
+│   ├── finops_controller.py         # FinOps controller implementation
+│   ├── requirements.txt
+│   └── tests/                       # FinOps-specific tests
 ├── logs/                            # Deployment logs
 ├── .env                            # Environment configuration
 └── README.md
@@ -131,13 +220,26 @@ ocean-surge/
 
 ## 🎯 Current Status
 
+- [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
+- [x] **Robust Error Handling**: Comprehensive retry logic and validation
+- [x] **Security Hardening**: Embedded security checks and validation
+- [x] **Local Testing Suite**: Built-in validation with syntax, security, and manifest checks
+- [x] **Cluster Management**: Smart detection and handling of existing clusters
+- [x] **Interactive Configuration**: User-friendly deployment with guided setup
 - [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
 - [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
-- [x] **Multi-Cloud Deployment**: GKE, EKS, AKS support
 - [x] **Production Middleware**: Flask app with proper security
-- [x] **Interactive Deployment**: Credential collection and validation
 - [x] **Load Testing**: Built-in traffic generation and scaling tests
 - [x] **Monitoring**: Health checks, logging, and status endpoints
+
+### 🔒 Security Features
+
+- **Non-root containers**: All deployments run with `runAsNonRoot: true`
+- **Resource limits**: Comprehensive CPU/memory limits on all workloads
+- **Secret management**: No hardcoded credentials, proper Kubernetes secrets
+- **Namespace isolation**: Dedicated `oceansurge` namespace for all resources
+- **Validation hooks**: Pre-commit hooks for security and syntax validation
+- **Region restrictions**: Cloud deployment restricted to approved regions only
 
 ## 🧠 Roadmap 
 
@@ -194,10 +296,44 @@ kubectl get hpa -n oceansurge
 # Monitor scaling in Spot Console
 # Check middleware webhook logs
 kubectl logs -f deployment/ld-spot-middleware -n oceansurge
+
+# Run local validation before deployment
+./test-local.sh
+
+# Test specific provider deployment
+export STORM_REGION="us-central1"
+export STORM_ZONE="us-central1-a" 
+export STORM_NODES="3"
+./scripts/providers/gke.sh
+```
+
+### Troubleshooting
+
+**Zone/Region Mismatch**
+```bash
+# Error: Zone 'us-west-2-a' invalid for region 'us-central1'
+# Solution: Use matching zone (us-central1-a) or different region
+```
+
+**Existing Cluster Detected**
+```bash
+# The deployment script will prompt you to:
+# 1) Deploy workloads only (reuse existing cluster)
+# 2) Delete and recreate cluster (fresh start)  
+# 3) Cancel deployment
+```
+
+**Retry Logic in Action**
+```bash
+# Deployment operations will automatically retry on failure:
+# 📋 Creating cluster (attempt 1/3)...
+# ⚠️  Creating cluster failed, retrying in 30s...
+# 📋 Creating cluster (attempt 2/3)...
+# ✅ Creating cluster succeeded
 ```
 
 ---
 
-**Version**: v0.1.1-rebase  
+**Version**: v0.1.4-alpha-poc  
 **Status**: NOT PRODUCTION READY - For Alpha Testing Only -   
 Made with ❤️ for the FinOps Practicioner and Developer Community
