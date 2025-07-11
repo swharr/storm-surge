@@ -1,0 +1,357 @@
+# OceanSurge .gitignore
+# Generated for v0.1.1-rebase
+
+# =============================================================================
+# OS Generated Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# Development & IDE Files
+# =============================================================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
+.project
+.metadata/
+.classpath
+.settings/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# =============================================================================
+# Environment & Configuration Files
+# =============================================================================
+
+# Environment variables (keep .env.example if present)
+.env
+.env.local
+.env.*.local
+.envrc
+
+# Kubernetes secrets (real ones, not templates)
+*-secrets.yaml
+*-secret.yaml
+secrets/
+!secrets/README.md
+
+# Temporary configuration files
+config.local.*
+*.local.yaml
+*.local.json
+
+# =============================================================================
+# Logs & Runtime Files
+# =============================================================================
+
+# Log files
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# =============================================================================
+# Build & Dependency Files
+# =============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+.yarn-integrity
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+
+# Go
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Rust
+target/
+Cargo.lock
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# =============================================================================
+# Cloud & Kubernetes Files
+# =============================================================================
+
+# Kubernetes temporary files
+*.tmp.yaml
+*.temp.yaml
+kustomization.yaml.tmp
+
+# Helm
+charts/*.tgz
+.helmignore
+
+# Docker
+.docker/
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+
+# =============================================================================
+# Package Managers
+# =============================================================================
+
+# npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =============================================================================
+# Testing & Coverage
+# =============================================================================
+
+# Test output
+test-results/
+coverage/
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+htmlcov/
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jest
+jest.config.js.tmp
+
+# =============================================================================
+# Temporary & Cache Files
+# =============================================================================
+
+# General temp files
+*.tmp
+*.temp
+*.cache
+.cache/
+.sass-cache/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files (unless needed)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# =============================================================================
+# Security & Sensitive Files
+# =============================================================================
+
+# Private keys and certificates
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# API keys and tokens
+.api-keys
+.tokens
+credentials.json
+service-account.json
+
+# =============================================================================
+# Documentation Build Files
+# =============================================================================
+
+# Sphinx documentation
+docs/_build/
+docs/.doctrees/
+
+# MkDocs
+site/
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+
+# OceanSurge specific temporary files
+ocean-surge-temp/
+storm-surge-temp/
+deployment-temp/
+
+# Local testing configurations
+test-config/
+local-deploy/
+
+# Generated manifests from templating
+generated/
+output/
+
+# Local development overrides
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# =============================================================================
+# Version Control
+# =============================================================================
+
+# Git
+.git/
+.gitattributes
+
+# SVN
+.svn/
+
+# Mercurial
+.hg/
+.hgignore
+.hgcheck
+
+# =============================================================================
+# Monitoring & Observability
+# =============================================================================
+
+# Prometheus
+prometheus.yml.local
+
+# Grafana
+grafana/data/
+
+# =============================================================================
+# End of .gitignore
+# =============================================================================
