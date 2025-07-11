@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ld-spot-middleware
+  namespace: oceansurge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ld-spot-middleware
+  template:
+    metadata:
+      labels:
+        app: ld-spot-middleware
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: middleware
+        image: oceansurge/middleware:v0.1.1
+        env:
+        - name: LAUNCHDARKLY_SDK_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ld-spot-secrets
+              key: ld-sdk-key
+        - name: SPOT_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ld-spot-secrets
+              key: spot-api-token
+        - name: SPOT_CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: ld-spot-config
+              key: SPOT_CLUSTER_ID
+        - name: WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ld-spot-secrets
+              key: webhook-secret
+        - name: COST_IMPACT_THRESHOLD
+          valueFrom:
+            configMapKeyRef:
+              name: ld-spot-config
+              key: COST_IMPACT_THRESHOLD
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: ld-spot-config
+              key: LOG_LEVEL
+        - name: ENVIRONMENT
+          value: "production"
+        - name: PORT
+          value: "8000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 20
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+          readOnly: true
+      volumes:
+      - name: app-code
+        configMap:
+          name: middleware-code
+          defaultMode: 0755

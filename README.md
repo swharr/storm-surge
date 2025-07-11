@@ -1,4 +1,4 @@
-# 🌩️ Storm Surge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
+# 🌊 OceanSurge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
 
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![LaunchDarkly](https://img.shields.io/badge/LaunchDarkly-Feature--Flags-blue?style=for-the-badge)
@@ -10,11 +10,13 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 
 ## 🚀 Highlights
 
-- ⚙️ Integrated with [LaunchDarkly](https://launchdarkly.com) to simulate cost-aware infrastructure control
-- 🌊 Works with [Spot Ocean](https://spot.io) for dynamic right-sizing and node pool optimization
-- 🛠️ Deployable to GCP, AWS, or Azure via a unified CLI wrapper
-- 📈 Tracks infrastructure impact of feature flag changes
-- 💥 Supports chaos testing, right-sizing, load bursts, and monitoring
+- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware
+- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags
+- 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI
+- 📈 **Cost Tracking**: Infrastructure impact monitoring via feature flag changes
+- 🔄 **Automated Scaling**: Dynamic right-sizing and node pool optimization
+- 🌐 **Production Ready**: Complete middleware with ingress, secrets, and monitoring
+- 💥 **Load Testing**: Built-in chaos testing and performance validation
 
 ---
 
@@ -28,27 +30,53 @@ This repo ties application behavior directly to cost outcomes.
 
 ## 🧰 Quickstart
 
+### Basic Deployment
 ```bash
-git clone https://github.com/swharr/storm-surge.git
+git clone https://github.com/swharr/ocean-surge.git
 cd ocean-surge
 ./scripts/deploy.sh --provider=gke   # or eks | aks | all
 ```
 
-You’ll be prompted to enter your LaunchDarkly credentials if not already set in a `.env` file.
+### Production Deployment (Recommended)
+```bash
+# Full production deployment with LaunchDarkly + Spot API integration
+./scripts/prod_deploy_preview.sh
+
+# Or specify provider directly
+./scripts/prod_deploy_preview.sh --provider=gke
+
+# Configuration only (no deployment)
+./scripts/prod_deploy_preview.sh --config-only
+```
+
+The production script will collect your LaunchDarkly SDK key, Spot API token, and cluster configuration interactively.
 
 ---
 
-## ⚙️ LaunchDarkly Setup
+## ⚙️ LaunchDarkly + Spot API Setup
 
+### LaunchDarkly Configuration
 1. Create a boolean flag: `enable-cost-optimizer`
-2. Get your **Client-side ID** from LaunchDarkly (under your environment)
-3. Provide it to the deploy script or save it to `.env`:
+2. Get your **Server-side SDK key** from LaunchDarkly (Account Settings > Projects > Environment)
+3. Configure webhook endpoint (after deployment):
+   - URL: `https://your-domain.com/webhook/launchdarkly`
+   - Secret: Generated during deployment
 
+### Spot API Configuration
+1. Get your **Spot API token** from Spot Console (Settings > API)
+2. Find your **Spot Cluster ID** (Ocean > Clusters)
+3. Ensure cluster has proper permissions for scaling
+
+### Environment Variables
 ```bash
-export LAUNCHDARKLY_CLIENT_ID="your-client-id"
+# Required for production deployment
+export LAUNCHDARKLY_SDK_KEY="sdk-12345678-1234-1234-1234-123456789012"
+export SPOT_API_TOKEN="your-spot-api-token"
+export SPOT_CLUSTER_ID="ocn-12345678"
+export WEBHOOK_SECRET="your-webhook-secret"
 ```
 
-4. Toggle the flag → see UI and infra behavior update in real time
+4. Toggle the flag → see automated cluster scaling in real time
 
 ---
 
@@ -67,26 +95,51 @@ export LAUNCHDARKLY_CLIENT_ID="your-client-id"
 ```
 ocean-surge/
 ├── scripts/
-│   ├── deploy.sh
+│   ├── deploy.sh                    # Basic deployment
+│   ├── prod_deploy_preview.sh       # Production deployment with integrations
+│   ├── deploy-middleware.sh         # Middleware-only deployment
 │   └── providers/
-│       ├── gke.sh
-│       ├── eks.sh
-│       └── aks.sh
+│       ├── gke.sh                   # Google Kubernetes Engine
+│       ├── eks.sh                   # Amazon EKS
+│       └── aks.sh                   # Azure AKS
 ├── manifests/
-├── frontend/
-├── logs/
-├── .env
+│   ├── base/                        # Core application manifests
+│   │   ├── kustomization.yaml
+│   │   ├── deployments.yaml         # Trail Blazer Auto Parts demo app
+│   │   ├── services.yaml
+│   │   ├── configmaps.yaml
+│   │   └── hpa.yaml
+│   └── middleware/                  # LaunchDarkly + Spot API integration
+│       ├── kustomization.yaml
+│       ├── deployment.yaml          # Python Flask middleware
+│       ├── service.yaml             # LoadBalancer + Ingress
+│       ├── configmap.yaml           # Application code + configuration
+│       └── secret.yaml              # API keys and webhooks
+├── logs/                            # Deployment logs
+├── .env                            # Environment configuration
 └── README.md
 ```
 
 ---
 
+## 🎯 Current Features
+
+- [x] **LaunchDarkly Webhook Integration**: Real-time feature flag processing
+- [x] **Spot Ocean API Integration**: Automated cluster scaling
+- [x] **Multi-Cloud Deployment**: GKE, EKS, AKS support
+- [x] **Production Middleware**: Flask app with proper security
+- [x] **Interactive Deployment**: Credential collection and validation
+- [x] **Load Testing**: Built-in traffic generation and scaling tests
+- [x] **Monitoring**: Health checks, logging, and status endpoints
+
 ## 🧠 Future Features
 
 - [ ] OpenFeature + flagd support
-- [ ] Dynamic Spot Ocean reconfiguration via Spot API
+- [ ] Advanced Spot Ocean policies (scheduling, taints)
 - [ ] GitOps flow via ArgoCD
 - [ ] FinOps Dashboard plugin
+- [ ] Multi-cluster support
+- [ ] Advanced cost analytics
 
 ---
 
@@ -98,4 +151,39 @@ ocean-surge/
 
 ---
 
+## 🔧 Usage Examples
+
+### Basic Demo Deployment
+```bash
+# Deploy just the demo application
+./scripts/deploy.sh --provider=gke
+```
+
+### Full Production Stack
+```bash
+# Deploy with LaunchDarkly + Spot API integration
+./scripts/prod_deploy_preview.sh --provider=gke
+
+# Monitor middleware logs
+kubectl logs -f deployment/ld-spot-middleware -n oceansurge
+
+# Check scaling status
+kubectl get hpa -n oceansurge
+```
+
+### Testing the Integration
+```bash
+# Create the cost optimizer flag in LaunchDarkly
+# Toggle flag ON → Cluster scales down for cost optimization
+# Toggle flag OFF → Cluster scales up for performance
+
+# Monitor scaling in Spot Console
+# Check middleware webhook logs
+kubectl logs -f deployment/ld-spot-middleware -n oceansurge
+```
+
+---
+
+**Version**: v0.1.1-rebase  
+**Status**: Production Ready  
 Made with ❤️ for the FinOps Developer Community
