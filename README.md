@@ -70,9 +70,9 @@ The production script will collect your LaunchDarkly SDK key, Spot API token, an
 ### Environment Variables
 ```bash
 # Required for production deployment
-export LAUNCHDARKLY_SDK_KEY="sdk-12345678-1234-1234-1234-123456789012"
+export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"
 export SPOT_API_TOKEN="your-spot-api-token"
-export SPOT_CLUSTER_ID="ocn-12345678"
+export SPOT_CLUSTER_ID="ocn-cluster-id"
 export WEBHOOK_SECRET="your-webhook-secret"
 ```
 
