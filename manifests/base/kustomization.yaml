@@ -5,13 +5,25 @@ namespace: oceansurge
 
 resources:
 - namespace.yaml
-- storm-surge-app.yaml
+- deployments.yaml
+- services.yaml
+- configmaps.yaml
+- nginx-configs.yaml
+- hpa.yaml
 
-commonLabels:
-  app.kubernetes.io/name: storm-surge
-  app.kubernetes.io/part-of: oceansurge
-  app.kubernetes.io/version: v1.0
+labels:
+- pairs:
+    app.kubernetes.io/name: ocean-surge
+    app.kubernetes.io/part-of: oceansurge
+    app.kubernetes.io/version: v0.1.1
 
 images:
 - name: storm-surge/frontend
-  newTag: v1.0
+  newName: nginx
+  newTag: alpine
+- name: storm-surge/product-catalog
+  newName: nginx  
+  newTag: alpine
+- name: storm-surge/shopping-cart
+  newName: nginx
+  newTag: alpine

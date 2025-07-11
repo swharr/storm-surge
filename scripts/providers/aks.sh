@@ -14,4 +14,19 @@ az aks create --resource-group storm-surge-rg \
   2>&1 | tee -a logs/aks-deploy.log
 
 az aks get-credentials --resource-group storm-surge-rg --name storm-surge-aks
-echo "✅ AKS cluster ready"
+
+echo "🚀 Deploying OceanSurge application..."
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+# Deploy the application
+echo "📦 Applying Kubernetes manifests..."
+kubectl apply -k manifests/base/ 2>&1 | tee -a logs/aks-deploy.log
+
+echo "⏳ Waiting for deployments to be ready..."
+kubectl wait --for=condition=available --timeout=300s deployment --all -n oceansurge
+
+echo "📋 Deployment status:"
+kubectl get pods,svc,hpa -n oceansurge
+
+echo "✅ AKS cluster and application ready"
