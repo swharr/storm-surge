@@ -1,0 +1,34 @@
+# 🌀 Storm Surge – Changelog
+
+## v0.1.1-Alpha-POC – July 2025
+
+
+## 📦 Storm Surge v0.1.1-Alpha-POC
+
+_Released: July 2025_  
+This release introduces the first working implementation of the FinOps Controller, early-stage testing harnesses, and updated documentation for extensibility and scaling experiments.
+
+### 🚀 Highlights
+
+- ✅ **Initial FinOps Controller prototype**  
+  - `finops/finops_controller.py` includes a scheduled job framework using `schedule`, with stubbed methods for after-hours autoscaling disablement.
+  - Placeholder logging and control structure for integrating LaunchDarkly feature flags and Spot Ocean APIs.
+  - Prepares ground for real-time cost-aware infrastructure decisions.
+
+- 🧪 **New test harnesses added**
+  - `finops/tests/test_basic.py`: Sanity test coverage
+  - `finops/tests/test_finops_controller.py`: Unit test skeletons for controller logic
+  - `finops/tests/test_integration.py`: Placeholder for full integration tests (coming in v0.1.2)
+
+- 📜 **Documentation Enhancements**
+  - `docs/FINOPS.md`: Now includes environment setup, usage guide, and savings expectations across environments.
+  - `docs/ARCHITECTURE.md`: Updated to reflect the FinOps Controller as an official component of the system.
+  - `docs/REPOSITORY.md`: Clarified dual naming convention (OceanSurge repo, Storm Surge product), and added deploy + access examples.
+
+- 🛠️ **New deployment and chaos tooling**
+  - Added `scripts/deploy-finops.sh` to automate FinOps Controller deployment.
+  - Introduced `chaos-testing/lightning-strike.sh` for simulating random disruptions (experimental).
+
+- 🧹 **Structural & Naming Fixes**
+  - Repo renaming script `fix-repo-naming.sh` included to enforce standard naming conventions across the project.
+  - Git utility script `git-storm-surge-create.sh` added for rapid project creation and tagging.
