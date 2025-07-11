@@ -20,10 +20,9 @@ spec:
         tier: backend
     spec:
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
-        runAsGroup: 101
-        fsGroup: 101
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
       containers:
       - name: product-catalog
         image: nginx:alpine
@@ -112,10 +111,9 @@ spec:
         tier: backend
     spec:
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
-        runAsGroup: 101
-        fsGroup: 101
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
       containers:
       - name: shopping-cart
         image: nginx:alpine
@@ -124,10 +122,10 @@ spec:
           name: http
         resources:
           requests:
-            cpu: 200m
+            cpu: 100m
             memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 500m
             memory: 1Gi
         env:
         - name: SERVICE_NAME
@@ -206,10 +204,9 @@ spec:
         tier: frontend
     spec:
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
-        runAsGroup: 101
-        fsGroup: 101
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
       containers:
       - name: frontend
         image: nginx:alpine
@@ -240,7 +237,7 @@ spec:
           value: "http://shopping-cart-service:80"
         readinessProbe:
           httpGet:
-            path: /healthhealth
+            path: /health
             port: http
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -249,7 +246,7 @@ spec:
           failureThreshold: 3
         livenessProbe:
           httpGet:
-            path: /healthhealth
+            path: /health
             port: http
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -258,7 +255,7 @@ spec:
           failureThreshold: 3
         startupProbe:
           httpGet:
-            path: /healthhealth
+            path: /health
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
