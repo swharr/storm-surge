@@ -1,0 +1,191 @@
+name: Storm Surge Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Pre-commit hooks validation
+  pre-commit:
+    name: Pre-commit Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install pre-commit
+        run: pip install pre-commit
+        
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+          
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+
+  # Minikube deployment test
+  minikube-test:
+    name: Minikube Deployment Test
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install minikube
+        uses: medyagh/setup-minikube@latest
+        with:
+          cpus: 4
+          memory: 8192m
+          
+      - name: Run test suite
+        run: ./tests/test-suite.sh
+        
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs
+          path: test-logs/
+          retention-days: 7
+
+  # Multi-cloud script validation
+  script-validation:
+    name: Deployment Script Validation
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    strategy:
+      matrix:
+        provider: [gke, eks, aks]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cloud CLI tools
+        run: |
+          # Install gcloud CLI
+          curl https://sdk.cloud.google.com | bash
+          source ~/google-cloud-sdk/path.bash.inc
+          
+          # Install AWS CLI
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          
+          # Install Azure CLI
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+          
+      - name: Test ${{ matrix.provider }} script syntax
+        run: bash -n scripts/providers/${{ matrix.provider }}.sh
+        
+      - name: Test ${{ matrix.provider }} script validation
+        run: |
+          export STORM_REGION="us-central1"
+          export STORM_ZONE="us-west-2-a"  # Intentionally mismatched
+          export STORM_NODES="3"
+          
+          # Should fail due to zone/region mismatch
+          if scripts/providers/${{ matrix.provider }}.sh; then
+            echo "ERROR: Script should have failed validation"
+            exit 1
+          else
+            echo "SUCCESS: Script correctly rejected invalid zone/region"
+          fi
+
+  # Security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Documentation validation
+  docs-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate README links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+          
+      - name: Check for required documentation
+        run: |
+          required_docs=(
+            "README.md"
+            "docs/ARCHITECTURE.md"
+            "CHANGELOG.md"
+            "LICENSE"
+          )
+          
+          for doc in "${required_docs[@]}"; do
+            if [[ -f "$doc" ]]; then
+              echo "✅ $doc exists"
+            else
+              echo "❌ $doc is missing"
+              exit 1
+            fi
+          done
+
+  # Release preparation (only on main branch)
+  release-check:
+    name: Release Readiness Check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [minikube-test, script-validation, security-scan, docs-validation]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check version tags
+        run: |
+          if git describe --tags --exact-match HEAD 2>/dev/null; then
+            echo "✅ Commit is tagged for release"
+          else
+            echo "ℹ️  Commit is not tagged (development build)"
+          fi
+          
+      - name: Validate changelog
+        run: |
+          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "⚠️  Unreleased changes found in CHANGELOG.md"
+          else
+            echo "✅ CHANGELOG.md is up to date"
+          fi
+          
+      - name: Create release summary
+        run: |
+          echo "## 🚀 Release Readiness Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Security scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Documentation validated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Multi-cloud scripts validated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for production deployment! 🎉" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,61 @@
+repos:
+  # Local hooks for Storm Surge specific tests
+  - repo: local
+    hooks:
+      # Kubernetes manifest validation
+      - id: k8s-manifest-validation
+        name: Validate Kubernetes Manifests
+        entry: tests/hooks/validate-manifests.sh
+        language: script
+        files: ^manifests/.*\.(yaml|yml)$
+        pass_filenames: false
+        
+      # Deployment script validation
+      - id: deployment-script-validation
+        name: Validate Deployment Scripts
+        entry: tests/hooks/validate-deploy-scripts.sh
+        language: script
+        files: ^scripts/.*\.sh$
+        pass_filenames: false
+        
+      # Security validation
+      - id: security-validation
+        name: Security Validation
+        entry: tests/hooks/validate-security.sh
+        language: script
+        files: ^manifests/.*\.(yaml|yml)$
+        pass_filenames: false
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: ['-e', 'SC1091']  # Ignore sourcing of files
+
+  # YAML validation and formatting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ['-d', 'relaxed']
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: ['--disable', 'MD013', 'MD041']  # Disable line length and first line rules

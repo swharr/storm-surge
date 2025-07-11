@@ -8,7 +8,7 @@ spec:
     app: product-catalog
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 8080
   type: ClusterIP
 
 ---
@@ -21,7 +21,7 @@ spec:
     app: shopping-cart
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 8080
   type: ClusterIP
 
 ---
@@ -34,5 +34,5 @@ spec:
     app: frontend
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 8080
   type: LoadBalancer

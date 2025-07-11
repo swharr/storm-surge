@@ -20,14 +20,15 @@ spec:
         tier: backend
     spec:
       securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
       containers:
       - name: product-catalog
-        image: nginx:alpine
+        image: nginxinc/nginx-unprivileged:alpine
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: http
         resources:
           requests:
@@ -50,7 +51,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -59,7 +60,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -68,7 +69,7 @@ spec:
         startupProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
@@ -111,14 +112,15 @@ spec:
         tier: backend
     spec:
       securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
       containers:
       - name: shopping-cart
-        image: nginx:alpine
+        image: nginxinc/nginx-unprivileged:alpine
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: http
         resources:
           requests:
@@ -143,7 +145,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -152,7 +154,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -161,7 +163,7 @@ spec:
         startupProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 15
           periodSeconds: 5
           timeoutSeconds: 3
@@ -181,6 +183,10 @@ spec:
       - name: nginx-config
         configMap:
           name: shopping-cart-nginx
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
 
 ---
 # Frontend Application
@@ -204,14 +210,15 @@ spec:
         tier: frontend
     spec:
       securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
       containers:
       - name: frontend
-        image: nginx:alpine
+        image: nginxinc/nginx-unprivileged:alpine
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: http
         resources:
           requests:
@@ -238,7 +245,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -247,7 +254,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -256,7 +263,7 @@ spec:
         startupProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
@@ -276,3 +283,7 @@ spec:
       - name: html
         configMap:
           name: frontend-html
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}

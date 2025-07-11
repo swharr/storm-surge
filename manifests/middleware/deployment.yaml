@@ -18,9 +18,37 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+      initContainers:
+      - name: setup-python-env
+        image: python:3.11-slim
+        command: ['/bin/bash', '-c']
+        args:
+        - |
+          cd /app
+          export HOME=/tmp/home
+          mkdir -p $HOME/.local
+          pip install --user -r requirements.txt
+          cp -r $HOME/.local /shared-deps/
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+          readOnly: true
+        - name: shared-deps
+          mountPath: /shared-deps
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
       containers:
       - name: middleware
-        image: oceansurge/middleware:v0.1.1
+        image: python:3.11-slim
+        command: ['/bin/bash', '-c']
+        args:
+        - |
+          export HOME=/tmp/home
+          export PYTHONPATH=/shared-deps/.local/lib/python3.11/site-packages:$PYTHONPATH
+          export PATH=/shared-deps/.local/bin:$PATH
+          cd /app
+          python main.py
         env:
         - name: LAUNCHDARKLY_SDK_KEY
           valueFrom:
@@ -98,8 +126,13 @@ spec:
         - name: app-code
           mountPath: /app
           readOnly: true
+        - name: shared-deps
+          mountPath: /shared-deps
+          readOnly: true
       volumes:
       - name: app-code
         configMap:
           name: middleware-code
           defaultMode: 0755
+      - name: shared-deps
+        emptyDir: {}

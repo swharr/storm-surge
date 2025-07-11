@@ -1,5 +1,62 @@
 # 🌀 Storm Surge – Changelog
 
+## [Unreleased]
+
+### 🚀 Major Features
+- **Enhanced Interactive Deployment Script**
+  - Interactive provider selection (GKE, EKS, AKS, all)
+  - Cloud-specific region and zone selection with validation
+  - Node count configuration (1-10 nodes, default: 4)
+  - Zone/region mismatch detection with helpful error messages
+  - Support for both command-line and interactive modes
+  - Complete deployment including base app + middleware + finops
+
+### 🧪 Testing & Quality Assurance
+- **Comprehensive Test Suite**
+  - Local quick tests (`test-local.sh`) for rapid validation
+  - Full minikube test suite (`tests/test-suite.sh`) with detailed reporting
+  - Pre-commit hooks for automated validation on every commit
+  - GitHub Actions CI/CD pipeline with multi-cloud validation
+  - Security scanning with Trivy vulnerability detection
+  
+- **Test Coverage**
+  - Script syntax validation
+  - Parameter and zone/region validation
+  - Kubernetes manifest validation
+  - Health endpoint testing
+  - Resource constraint validation
+  - Security context verification
+  - Hardcoded secrets detection
+
+### 🛡️ Security Improvements
+- **Container Security Hardening**
+  - Migrated from `nginx:alpine` to `nginxinc/nginx-unprivileged:alpine`
+  - All containers now run as non-root users
+  - Proper security contexts with `runAsNonRoot: true`
+  - Container ports changed from 80 to 8080 for unprivileged access
+  - Resource limits and requests defined for all deployments
+
+### 🔧 Infrastructure Enhancements
+- **Provider Script Improvements**
+  - GKE, EKS, and AKS scripts now use environment variables
+  - Enhanced error handling and validation
+  - Improved logging and status reporting
+  - Authentication validation for all cloud providers
+  - Better resource configuration and autoscaling settings
+
+### 📚 Documentation & Developer Experience
+- **Testing Documentation**
+  - Comprehensive testing guide (`tests/README.md`)
+  - Local development workflow documentation
+  - Troubleshooting guide for common issues
+  - Performance benchmarks and success criteria
+
+### 🐛 Bug Fixes
+- Fixed nginx permission issues in unprivileged containers
+- Resolved middleware dependency installation problems
+- Corrected health check endpoints in frontend deployment
+- Fixed port binding issues for non-root containers
+
 ## v0.1.1-Alpha-POC – July 2025
 
 
