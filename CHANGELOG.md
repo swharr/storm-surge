@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+## v0.1.4-alpha-poc – July 11, 2025
+
+### 🛠️ Script Logic & Deployment Improvements
+- **Enhanced Deploy Script Logic**
+  - Improved region restrictions with comprehensive validation
+  - Added robust retry logic for deployment operations with configurable timeouts
+  - Implemented non-destructive re-deploy capabilities for existing clusters
+  - Better error handling and recovery mechanisms throughout deployment process
+  - Enhanced cloud region restrictions and security validation
+
+### 🔒 Security & Validation Enhancements  
+- **Advanced Security Controls**
+  - Cloud region restrictions enforced across all providers
+  - Enhanced error handling with detailed validation feedback
+  - Improved security checks throughout deployment pipeline
+  - Better validation of deployment parameters and configurations
+
+### 📖 Documentation Updates
+- **README and Documentation Improvements**
+  - Updated feature status and clarity improvements
+  - Enhanced documentation for deployment processes
+  - Better organization of project information and usage examples
+
+### 🔧 Infrastructure & Workflow
+- **GitHub Release Workflow**
+  - Added automated GitHub Release workflow for version tagging
+  - Improved CI/CD pipeline with proper version management
+
 ### 🚀 Major Features
 - **Enhanced Interactive Deployment Script**
   - Interactive provider selection (GKE, EKS, AKS, all)
