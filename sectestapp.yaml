@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubelet-readonly-example
+spec:
+  restartPolicy: Never
+  containers:
+  - name: kubelet-readonly-example
+    image: us-docker.pkg.dev/cloud-builders/ga/v1/curl:latest
+    command:
+      - curl
+      - http://$(NODE_ADDRESS):10255/metrics
+    env:
+    - name: NODE_ADDRESS
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP

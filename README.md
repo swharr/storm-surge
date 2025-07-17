@@ -15,8 +15,10 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 - **Intelligent Region/Zone Selection**: Interactive deployment with validation for all cloud providers
 - **Robust Retry Logic**: Automatic retry mechanisms for deployment operations with configurable timeouts
 - **Embedded Local Testing**: Built-in validation suite with security checks and manifest validation
-- **Enhanced Security**: Comprehensive security controls and validation throughout deployment
+- **Enhanced Security**: Comprehensive security controls, RBAC validation, and insecure port hardening
+- **Security Workloads**: Integrated security validation tests and defensive security measures (GKE-specific)
 - **Cluster Management**: Smart cluster detection with options to reuse or recreate existing clusters
+- **Custom Cluster Naming**: Support for user-defined cluster names with validation and fallback defaults
 
 ---
 
@@ -52,7 +54,36 @@ cd ocean-surge
 
 # Or specify parameters directly
 ./scripts/deploy.sh --provider=gke --region=us-central1 --zone=us-central1-a --nodes=4
+
+# With custom cluster naming
+./scripts/deploy.sh --provider=gke --cluster-name=my-custom-cluster --region=us-central1 --zone=us-central1-a
 ```
+
+### Enhanced Deployment Logic
+The main deployment script (`scripts/deploy.sh`) includes comprehensive improvements:
+
+- **Intelligent Argument Parsing**: Robust command-line argument handling with validation and help system
+- **Provider Configuration**: Built-in region/zone mappings for GKE, EKS, and AKS with validation
+- **Interactive Mode**: User-friendly prompts for provider, region, zone, and cluster configuration
+- **Non-Interactive Mode**: `--yes` flag for automated deployments with sensible defaults
+- **Existing Cluster Detection**: Smart detection of existing clusters with user choice options:
+  - Deploy workloads only (faster, reuses existing cluster)
+  - Delete and recreate cluster (slower, fresh start)
+  - Cancel deployment
+- **Multi-Provider Support**: Deploy to single provider or all providers with unified interface
+- **Custom Cluster Naming**: Support for custom cluster names with alphanumeric validation and automatic fallback to defaults
+- **Environment Variable Loading**: Automatic `.env` file loading for configuration
+- **CLI Tool Validation**: Checks for required CLI tools (gcloud, aws, az) before deployment
+
+### GKE Security Enhancements
+The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced security features:
+
+- **Cluster Hardening**: Creates clusters with shielded nodes, private networking, and disabled legacy authorization
+- **Security Workloads**: Automatically deploys RBAC authentication mapping, namespace role bindings, and validation test pods
+- **Insecure Port Detection**: Comprehensive scanning for insecure ports (10255, 10250-10256, 2379-2380)
+- **Network Policies**: Applies restrictive network policies blocking insecure kubelet access
+- **Automatic Lockdown**: Executes security lockdown script (`lockitdown.sh`) when security issues are detected
+- **RBAC Validation**: Verifies proper role-based access control configuration post-deployment
 
 ### Supported Regions & Zones
 
@@ -113,6 +144,8 @@ The production script will collect your LaunchDarkly SDK key, Spot API token, an
 - **Kubernetes Manifests**: Validates all YAML manifests with kustomize
 - **Security Configuration**: Checks for runAsNonRoot, resource limits
 - **Secret Detection**: Scans for hardcoded credentials
+- **Insecure Port Detection**: Validates cluster configuration for insecure ports
+- **RBAC Validation**: Tests role-based access control configuration
 
 ### Retry Logic & Error Handling
 
@@ -160,11 +193,11 @@ export WEBHOOK_SECRET="your-webhook-secret"
 
 ## ☁️ Cloud Provider Support
 
-| Provider | Script                              | Requirements          |
-|----------|-------------------------------------|------------------------|
-| GKE      | `scripts/providers/gke.sh`          | `gcloud`, enabled APIs |
-| EKS      | `scripts/providers/eks.sh`          | `aws`, `eksctl`        |
-| AKS      | `scripts/providers/aks.sh`          | `az`, login session    |
+| Provider | Script                              | Requirements          | Security Features |
+|----------|-------------------------------------|------------------------|-------------------|
+| GKE      | `scripts/providers/gke.sh`          | `gcloud`, enabled APIs | Enhanced security hardening, insecure port detection, RBAC validation |
+| EKS      | `scripts/providers/eks.sh`          | `aws`, `eksctl`        | Standard security controls |
+| AKS      | `scripts/providers/aks.sh`          | `az`, login session    | Standard security controls |
 
 ---
 
@@ -198,6 +231,10 @@ ocean-surge/
 │   │   ├── service.yaml             # LoadBalancer + Ingress
 │   │   ├── configmap.yaml           # Application code + configuration
 │   │   └── secret.yaml              # API keys and webhooks
+│   ├── sec_fixes/                   # Security validation and hardening (GKE-specific)
+│   │   ├── rbac_authmap.yaml        # RBAC authentication mapping
+│   │   ├── rbac_namespace_fix.yaml  # RBAC namespace role binding
+│   │   └── sectest_validate.yaml    # Security validation test pod
 │   └── finops/                      # FinOps controller manifests
 │       └── kustomization.yaml
 ├── tests/
@@ -222,10 +259,14 @@ ocean-surge/
 
 - [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
 - [x] **Robust Error Handling**: Comprehensive retry logic and validation
-- [x] **Security Hardening**: Embedded security checks and validation
+- [x] **Security Hardening**: Embedded security checks and validation with insecure port detection
 - [x] **Local Testing Suite**: Built-in validation with syntax, security, and manifest checks
 - [x] **Cluster Management**: Smart detection and handling of existing clusters
 - [x] **Interactive Configuration**: User-friendly deployment with guided setup
+- [x] **Enhanced Deployment Logic**: Improved argument parsing, validation, and multi-provider support with intelligent defaults
+- [x] **Existing Cluster Management**: Smart detection and handling of existing clusters with user choice options
+- [x] **Security Workloads Integration**: RBAC validation, authenticated kubelet access testing, and defensive security measures (GKE-specific)
+- [x] **Enhanced GKE Security**: Integrated security workloads deployment, comprehensive insecure port detection, and automatic security lockdown script execution
 - [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
 - [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
 - [x] **Production Middleware**: Flask app with proper security
@@ -240,6 +281,13 @@ ocean-surge/
 - **Namespace isolation**: Dedicated `oceansurge` namespace for all resources
 - **Validation hooks**: Pre-commit hooks for security and syntax validation
 - **Region restrictions**: Cloud deployment restricted to approved regions only
+- **Insecure port hardening**: Automatic detection and mitigation of insecure ports (10255, 10250-10256, 2379-2380) - GKE deployments
+- **Network policies**: Restrictive network policies blocking insecure kubelet access - GKE deployments  
+- **RBAC validation**: Comprehensive role-based access control with authenticated kubelet access testing - GKE deployments
+- **Security workloads**: Integrated security validation pods and defensive security measures - GKE deployments
+- **Cluster hardening**: Enhanced GKE cluster creation with shielded nodes, private networking, and disabled legacy authorization
+
+> **Note**: The security workloads in `manifests/sec_fixes/` are specifically designed for GKE deployments to address Google Cloud-specific security configurations. **AKS and EKS users do not need these security fixes** as Azure and AWS managed Kubernetes services have different security models and built-in protections.
 
 ## 🧠 Roadmap 
 
@@ -300,10 +348,11 @@ kubectl logs -f deployment/ld-spot-middleware -n oceansurge
 # Run local validation before deployment
 ./test-local.sh
 
-# Test specific provider deployment
+# Test specific provider deployment with custom cluster name
 export STORM_REGION="us-central1"
 export STORM_ZONE="us-central1-a" 
 export STORM_NODES="3"
+export STORM_CLUSTER_NAME="my-test-cluster"
 ./scripts/providers/gke.sh
 ```
 
@@ -323,6 +372,20 @@ export STORM_NODES="3"
 # 3) Cancel deployment
 ```
 
+**Custom Cluster Naming**
+```bash
+# Interactive mode prompts for cluster name
+./scripts/deploy.sh --provider=gke
+# Enter custom name or press Enter for default: storm-surge-gke
+
+# Non-interactive mode with custom name
+./scripts/deploy.sh --provider=gke --cluster-name=production-cluster --yes
+
+# Invalid names automatically fall back to defaults
+./scripts/deploy.sh --provider=gke --cluster-name=invalid@name --yes
+# Will use: storm-surge-gke (default)
+```
+
 **Retry Logic in Action**
 ```bash
 # Deployment operations will automatically retry on failure:
@@ -334,6 +397,7 @@ export STORM_NODES="3"
 
 ---
 
-**Version**: v0.1.4-alpha-poc  
+**Version**: v0.1.5-alpha-poc  
+**Updated**: 2025-07-17 - Enhanced deployment logic with intelligent argument parsing, existing cluster management, and GKE security workloads integration  
 **Status**: NOT PRODUCTION READY - For Alpha Testing Only -   
 Made with ❤️ for the FinOps Practicioner and Developer Community

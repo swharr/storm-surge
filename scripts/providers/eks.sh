@@ -5,7 +5,7 @@ set -e
 REGION=${STORM_REGION:-"us-west-2"}
 ZONE=${STORM_ZONE:-"us-west-2a"}
 NODES=${STORM_NODES:-"2"}
-CLUSTER_NAME="storm-surge-eks"
+CLUSTER_NAME=${STORM_CLUSTER_NAME:-"storm-surge-eks"}
 RETRY_COUNT=${STORM_RETRY_COUNT:-"3"}
 RETRY_DELAY=${STORM_RETRY_DELAY:-"30"}
 

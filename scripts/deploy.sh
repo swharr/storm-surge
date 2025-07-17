@@ -10,11 +10,13 @@ if [ -f .env ]; then
 fi
 
 show_usage() {
-  echo "Usage: $0 [--provider=gke|eks|aks|all] [--region=REGION] [--zone=ZONE] [--nodes=COUNT]"
+  echo "Usage: $0 [--provider=gke|eks|aks|all] [--region=REGION] [--zone=ZONE] [--nodes=COUNT] [--cluster-name=NAME] [--yes]"
   echo "  --provider: Cloud provider (gke, eks, aks, or all)"
   echo "  --region: Cloud region (e.g., us-central1, us-east-1, eastus)"
   echo "  --zone: Availability zone (must match region)"
   echo "  --nodes: Number of nodes (1-10, default: 4)"
+  echo "  --cluster-name: Custom cluster name (default: storm-surge-PROVIDER)"
+  echo "  --yes: Skip interactive prompts (use defaults)"
   exit 1
 }
 
@@ -23,6 +25,8 @@ PROVIDER=""
 REGION=""
 ZONE=""
 NODES=""
+CLUSTER_NAME=""
+NON_INTERACTIVE=false
 
 for arg in "$@"; do
   case $arg in
@@ -42,6 +46,14 @@ for arg in "$@"; do
       NODES="${arg#*=}"
       shift
       ;;
+    --cluster-name=*)
+      CLUSTER_NAME="${arg#*=}"
+      shift
+      ;;
+    --yes)
+      NON_INTERACTIVE=true
+      shift
+      ;;
     --all)
       PROVIDER="all"
       shift
@@ -59,8 +71,98 @@ done
 echo "🌩️ Deploying Storm Surge via deploy.sh"
 echo "======================================"
 
+# Provider configuration data (bash 3.2 compatible)
+get_provider_config() {
+  local provider=$1
+  case $provider in
+    "gke")
+      echo 'regions:us-central1:Iowa:a,b,c,f|us-east1:South Carolina:b,c,d|us-west1:Oregon:a,b,c|us-west2:California:a,b,c|europe-west1:Belgium:b,c,d|asia-east1:Taiwan:a,b,c|cli_tool:gcloud'
+      ;;
+    "eks")
+      echo 'regions:us-east-1:N. Virginia:a,b,c,d,e,f|us-east-2:Ohio:a,b,c|us-west-1:N. California:a,c|us-west-2:Oregon:a,b,c,d|eu-west-1:Ireland:a,b,c|ap-southeast-1:Singapore:a,b,c|cli_tool:aws'
+      ;;
+    "aks")
+      echo 'regions:eastus:East US:1,2,3|westus2:West US 2:1,2,3|centralus:Central US:1,2,3|westeurope:West Europe:1,2,3|southeastasia:Southeast Asia:1,2,3|cli_tool:az'
+      ;;
+  esac
+}
+
+# Parse region data from config string
+parse_regions() {
+  local provider=$1
+  local config=$(get_provider_config "$provider")
+  echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | cut -d':' -f1 | sort
+}
+
+# Parse zones for a specific region
+parse_zones() {
+  local provider=$1
+  local region=$2
+  local config=$(get_provider_config "$provider")
+  echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | grep "^$region:" | cut -d':' -f3 | tr ',' ' '
+}
+
+# Parse region name
+parse_region_name() {
+  local provider=$1
+  local region=$2
+  local config=$(get_provider_config "$provider")
+  echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | grep "^$region:" | cut -d':' -f2
+}
+
+# Get CLI tool for provider
+get_cli_tool() {
+  local provider=$1
+  local config=$(get_provider_config "$provider")
+  echo "$config" | grep -o 'cli_tool:[^|]*' | cut -d':' -f2
+}
+
+# Get cluster name for provider (custom or default)
+get_cluster_name_for_provider() {
+  local provider=$1
+  if [ -n "$CLUSTER_NAME" ]; then
+    echo "$CLUSTER_NAME"
+  else
+    echo "storm-surge-$provider"
+  fi
+}
+
+# Check if CLI tools are available
+CLI_TOOLS_CHECKED=false
+CLI_TOOLS_AVAILABLE=()
+check_cli_tools() {
+  if [ "$CLI_TOOLS_CHECKED" = "true" ]; then
+    return 0
+  fi
+  
+  for tool in gcloud aws az; do
+    if command -v "$tool" &> /dev/null; then
+      CLI_TOOLS_AVAILABLE+=("$tool")
+    fi
+  done
+  CLI_TOOLS_CHECKED=true
+}
+
+# Check if specific CLI tool is available
+is_cli_available() {
+  local tool=$1
+  check_cli_tools
+  for available in "${CLI_TOOLS_AVAILABLE[@]}"; do
+    if [ "$available" = "$tool" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Interactive provider selection
 get_provider() {
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    PROVIDER="gke"
+    echo "🤖 Non-interactive mode: Using default provider 'gke'"
+    return
+  fi
+  
   while true; do
     echo "📋 Available cloud providers:"
     echo "  1) gke  - Google Kubernetes Engine"
@@ -83,73 +185,43 @@ get_provider() {
 # Interactive region selection based on provider
 get_region() {
   local provider=$1
-  while true; do
+  
+  if [ "$NON_INTERACTIVE" = "true" ]; then
     case $provider in
-      "gke")
-        echo "📍 Available GCP regions:"
-        echo "  1) us-central1    (Iowa)"
-        echo "  2) us-east1       (South Carolina)"
-        echo "  3) us-west1       (Oregon)"
-        echo "  4) us-west2       (California)"
-        echo "  5) europe-west1   (Belgium)"
-        echo "  6) asia-east1     (Taiwan)"
-        echo
-        read -p "Select region (1-6 or enter region name): " choice
-        case $choice in
-          1) REGION="us-central1"; break ;;
-          2) REGION="us-east1"; break ;;
-          3) REGION="us-west1"; break ;;
-          4) REGION="us-west2"; break ;;
-          5) REGION="europe-west1"; break ;;
-          6) REGION="asia-east1"; break ;;
-          us-central1|us-east1|us-west1|us-west2|europe-west1|asia-east1)
-            REGION="$choice"; break ;;
-          *) echo "❌ Invalid choice. Please try again."; echo ;;
-        esac
-        ;;
-      "eks")
-        echo "📍 Available AWS regions:"
-        echo "  1) us-east-1      (N. Virginia)"
-        echo "  2) us-east-2      (Ohio)"
-        echo "  3) us-west-1      (N. California)"
-        echo "  4) us-west-2      (Oregon)"
-        echo "  5) eu-west-1      (Ireland)"
-        echo "  6) ap-southeast-1 (Singapore)"
-        echo
-        read -p "Select region (1-6 or enter region name): " choice
-        case $choice in
-          1) REGION="us-east-1"; break ;;
-          2) REGION="us-east-2"; break ;;
-          3) REGION="us-west-1"; break ;;
-          4) REGION="us-west-2"; break ;;
-          5) REGION="eu-west-1"; break ;;
-          6) REGION="ap-southeast-1"; break ;;
-          us-east-1|us-east-2|us-west-1|us-west-2|eu-west-1|ap-southeast-1)
-            REGION="$choice"; break ;;
-          *) echo "❌ Invalid choice. Please try again."; echo ;;
-        esac
-        ;;
-      "aks")
-        echo "📍 Available Azure regions:"
-        echo "  1) eastus         (East US)"
-        echo "  2) westus2        (West US 2)"
-        echo "  3) centralus      (Central US)"
-        echo "  4) westeurope     (West Europe)"
-        echo "  5) southeastasia  (Southeast Asia)"
-        echo
-        read -p "Select region (1-5 or enter region name): " choice
-        case $choice in
-          1) REGION="eastus"; break ;;
-          2) REGION="westus2"; break ;;
-          3) REGION="centralus"; break ;;
-          4) REGION="westeurope"; break ;;
-          5) REGION="southeastasia"; break ;;
-          eastus|westus2|centralus|westeurope|southeastasia)
-            REGION="$choice"; break ;;
-          *) echo "❌ Invalid choice. Please try again."; echo ;;
-        esac
-        ;;
+      "gke") REGION="us-central1" ;;
+      "eks") REGION="us-east-1" ;;
+      "aks") REGION="eastus" ;;
     esac
+    echo "🤖 Non-interactive mode: Using default region '$REGION'"
+    return
+  fi
+  
+  local regions=($(parse_regions "$provider"))
+  local i=1
+  
+  echo "📍 Available $provider regions:"
+  for region in "${regions[@]}"; do
+    local name=$(parse_region_name "$provider" "$region")
+    printf "  %d) %-15s (%s)\n" $i "$region" "$name"
+    ((i++))
+  done
+  echo
+  
+  while true; do
+    read -p "Select region (1-${#regions[@]} or enter region name): " choice
+    
+    # Check if it's a number
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#regions[@]}" ]; then
+      REGION="${regions[$((choice-1))]}"
+      break
+    # Check if it's a valid region name
+    elif printf '%s\n' "${regions[@]}" | grep -q "^$choice$"; then
+      REGION="$choice"
+      break
+    else
+      echo "❌ Invalid choice. Please try again."
+      echo
+    fi
   done
 }
 
@@ -157,73 +229,58 @@ get_region() {
 get_zone() {
   local provider=$1
   local region=$2
+  local zones=($(parse_zones "$provider" "$region"))
+  
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    ZONE="${zones[0]}"
+    if [ "$provider" = "gke" ]; then
+      ZONE="${region}-${zones[0]}"
+    elif [ "$provider" = "eks" ]; then
+      ZONE="${region}${zones[0]}"
+    fi
+    echo "🤖 Non-interactive mode: Using default zone '$ZONE'"
+    return
+  fi
+  
   while true; do
+    echo "🗺️  Available zones in $region:"
+    echo "  ${zones[*]}"
+    echo
+    
     case $provider in
       "gke")
-        echo "🗺️  Available zones in $region:"
-        case $region in
-          us-central1) echo "  a, b, c, f" ;;
-          us-east1) echo "  b, c, d" ;;
-          us-west1) echo "  a, b, c" ;;
-          us-west2) echo "  a, b, c" ;;
-          europe-west1) echo "  b, c, d" ;;
-          asia-east1) echo "  a, b, c" ;;
-        esac
-        echo
         read -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
         ZONE="${region}-${zone_suffix}"
-        
-        # Validate zone exists for region
-        case $region in
-          us-central1) [[ "$zone_suffix" =~ ^[abcf]$ ]] && break ;;
-          us-east1) [[ "$zone_suffix" =~ ^[bcd]$ ]] && break ;;
-          us-west1|us-west2) [[ "$zone_suffix" =~ ^[abc]$ ]] && break ;;
-          europe-west1) [[ "$zone_suffix" =~ ^[bcd]$ ]] && break ;;
-          asia-east1) [[ "$zone_suffix" =~ ^[abc]$ ]] && break ;;
-        esac
-        echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
-        echo
         ;;
       "eks")
-        echo "🗺️  Available zones in $region:"
-        case $region in
-          us-east-1) echo "  a, b, c, d, e, f" ;;
-          us-east-2) echo "  a, b, c" ;;
-          us-west-1) echo "  a, c" ;;
-          us-west-2) echo "  a, b, c, d" ;;
-          eu-west-1) echo "  a, b, c" ;;
-          ap-southeast-1) echo "  a, b, c" ;;
-        esac
-        echo
         read -p "Enter zone suffix (e.g., 'a' for ${region}a): " zone_suffix
         ZONE="${region}${zone_suffix}"
-        
-        # Validate zone exists for region
-        case $region in
-          us-east-1) [[ "$zone_suffix" =~ ^[abcdef]$ ]] && break ;;
-          us-east-2|eu-west-1|ap-southeast-1) [[ "$zone_suffix" =~ ^[abc]$ ]] && break ;;
-          us-west-1) [[ "$zone_suffix" =~ ^[ac]$ ]] && break ;;
-          us-west-2) [[ "$zone_suffix" =~ ^[abcd]$ ]] && break ;;
-        esac
-        echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
-        echo
         ;;
       "aks")
-        echo "🗺️  Azure zones in $region:"
-        echo "  1, 2, 3 (availability zones)"
-        echo
-        read -p "Enter zone number (1-3): " zone_num
-        case $zone_num in
-          1|2|3) ZONE="$zone_num"; break ;;
-          *) echo "❌ Invalid zone. Please enter 1, 2, or 3."; echo ;;
-        esac
+        read -p "Enter zone number (1-3): " zone_suffix
+        ZONE="$zone_suffix"
         ;;
     esac
+    
+    # Validate zone exists in the zones array
+    local zone_suffix_to_check="$zone_suffix"
+    if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix_to_check$"; then
+      break
+    else
+      echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
+      echo
+    fi
   done
 }
 
 # Interactive node count selection
 get_node_count() {
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    NODES=4
+    echo "🤖 Non-interactive mode: Using default node count '4'"
+    return
+  fi
+  
   while true; do
     echo "🖥️  Node configuration:"
     echo "  • Default: 4 nodes (recommended)"
@@ -248,6 +305,80 @@ get_node_count() {
   done
 }
 
+# Interactive cluster name selection
+get_cluster_name() {
+  local provider=$1
+  local default_name="storm-surge-$provider"
+  
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    CLUSTER_NAME="$default_name"
+    echo "🤖 Non-interactive mode: Using default cluster name '$CLUSTER_NAME'"
+    return
+  fi
+  
+  echo "🏷️  Cluster naming:"
+  echo "  • Default: $default_name"
+  echo "  • Custom: Enter your preferred name (alphanumeric and hyphens only)"
+  echo
+  read -p "Enter cluster name (or press Enter for default): " name_input
+  
+  if [ -z "$name_input" ]; then
+    CLUSTER_NAME="$default_name"
+  else
+    # Validate cluster name format
+    if [[ "$name_input" =~ ^[a-zA-Z0-9-]+$ ]] && [[ ! "$name_input" =~ ^- ]] && [[ ! "$name_input" =~ -$ ]]; then
+      CLUSTER_NAME="$name_input"
+    else
+      echo "❌ Invalid cluster name. Must contain only alphanumeric characters and hyphens, and cannot start or end with a hyphen."
+      echo "Using default name: $default_name"
+      CLUSTER_NAME="$default_name"
+    fi
+  fi
+  
+  echo "✅ Cluster name set to: $CLUSTER_NAME"
+}
+
+# Validate arguments
+validate_arguments() {
+  local errors=()
+  
+  if [ -n "$PROVIDER" ] && [ "$PROVIDER" != "gke" ] && [ "$PROVIDER" != "eks" ] && [ "$PROVIDER" != "aks" ] && [ "$PROVIDER" != "all" ]; then
+    errors+=("Invalid provider: $PROVIDER. Must be gke, eks, aks, or all")
+  fi
+  
+  if [ -n "$NODES" ] && { [ "$NODES" -lt 1 ] || [ "$NODES" -gt 10 ]; }; then
+    errors+=("Invalid node count: $NODES. Must be between 1-10")
+  fi
+  
+  if [ -n "$CLUSTER_NAME" ] && [[ ! "$CLUSTER_NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
+    errors+=("Invalid cluster name: $CLUSTER_NAME. Must contain only alphanumeric characters and hyphens")
+  fi
+  
+  if [ -n "$CLUSTER_NAME" ] && [[ "$CLUSTER_NAME" =~ ^- ]] || [[ "$CLUSTER_NAME" =~ -$ ]]; then
+    errors+=("Invalid cluster name: $CLUSTER_NAME. Cannot start or end with a hyphen")
+  fi
+  
+  if [ -n "$REGION" ] && [ -n "$PROVIDER" ] && [ "$PROVIDER" != "all" ]; then
+    local valid_regions=($(parse_regions "$PROVIDER"))
+    if ! printf '%s\n' "${valid_regions[@]}" | grep -q "^$REGION$"; then
+      errors+=("Invalid region '$REGION' for provider '$PROVIDER'")
+    fi
+  fi
+  
+  if [ ${#errors[@]} -gt 0 ]; then
+    echo "❌ Validation errors:"
+    for error in "${errors[@]}"; do
+      echo "  - $error"
+    done
+    exit 1
+  fi
+}
+
+# Only validate if arguments were provided
+if [ -n "$PROVIDER" ] || [ -n "$REGION" ] || [ -n "$ZONE" ] || [ -n "$NODES" ]; then
+  validate_arguments
+fi
+
 if [ -z "$PROVIDER" ]; then
   echo "❓ No provider specified."
   get_provider
@@ -260,28 +391,22 @@ check_cluster_exists() {
   local provider=$1
   local region=$2
   local zone=$3
+  local cli_tool=$(get_cli_tool "$provider")
+  local cluster_name=$(get_cluster_name_for_provider "$provider")
+  
+  if ! is_cli_available "$cli_tool"; then
+    return 1
+  fi
   
   case $provider in
     "gke")
-      if command -v gcloud &> /dev/null; then
-        gcloud container clusters describe "storm-surge-gke" --zone="$zone" &>/dev/null
-      else
-        return 1
-      fi
+      gcloud container clusters describe "$cluster_name" --zone="$zone" &>/dev/null
       ;;
     "eks")
-      if command -v aws &> /dev/null; then
-        aws eks describe-cluster --name "storm-surge-eks" --region="$region" &>/dev/null
-      else
-        return 1
-      fi
+      aws eks describe-cluster --name "$cluster_name" --region="$region" &>/dev/null
       ;;
     "aks")
-      if command -v az &> /dev/null; then
-        az aks show --resource-group "storm-surge-rg" --name "storm-surge-aks" &>/dev/null
-      else
-        return 1
-      fi
+      az aks show --resource-group "storm-surge-rg" --name "$cluster_name" &>/dev/null
       ;;
     *)
       return 1
@@ -292,8 +417,16 @@ check_cluster_exists() {
 # Prompt user for action when cluster exists
 handle_existing_cluster() {
   local provider=$1
+  local cluster_name=$(get_cluster_name_for_provider "$provider")
   
-  echo "🔍 Found existing storm-surge-$provider cluster!"
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    echo "🔍 Found existing $cluster_name cluster!"
+    echo "🤖 Non-interactive mode: Using existing cluster"
+    export STORM_SKIP_CLUSTER_CREATION="true"
+    return 0
+  fi
+  
+  echo "🔍 Found existing $cluster_name cluster!"
   echo
   echo "   What would you like to do?"
   echo "   1) Deploy workloads only (faster, uses existing cluster)"
@@ -329,11 +462,12 @@ handle_existing_cluster() {
 # Delete existing cluster
 delete_existing_cluster() {
   local provider=$1
+  local cluster_name=$(get_cluster_name_for_provider "$provider")
   
-  echo "🗑️  Deleting existing $provider cluster..."
+  echo "🗑️  Deleting existing $cluster_name cluster..."
   case $provider in
     "gke")
-      if gcloud container clusters delete "storm-surge-gke" --zone="$ZONE" --quiet; then
+      if gcloud container clusters delete "$cluster_name" --zone="$ZONE" --quiet; then
         echo "✅ GKE cluster deleted"
       else
         echo "❌ Failed to delete GKE cluster"
@@ -341,7 +475,7 @@ delete_existing_cluster() {
       fi
       ;;
     "eks")
-      if eksctl delete cluster "storm-surge-eks" --region="$REGION"; then
+      if eksctl delete cluster "$cluster_name" --region="$REGION"; then
         echo "✅ EKS cluster deleted"
       else
         echo "❌ Failed to delete EKS cluster"
@@ -349,7 +483,7 @@ delete_existing_cluster() {
       fi
       ;;
     "aks")
-      if az aks delete --resource-group "storm-surge-rg" --name "storm-surge-aks" --yes; then
+      if az aks delete --resource-group "storm-surge-rg" --name "$cluster_name" --yes; then
         echo "✅ AKS cluster deleted"
       else
         echo "❌ Failed to delete AKS cluster"
@@ -363,23 +497,41 @@ run_provider() {
   local p=$1
   local script="${SCRIPTS_DIR}/${p}.sh"
   
-  if [ -f "$script" ]; then
-    echo "🚀 Running deployment script for $p..."
-    echo "   Region: $REGION"
-    echo "   Zone: $ZONE"
-    echo "   Nodes: $NODES"
-    echo
-    
-    # Export variables for the provider script
-    export STORM_REGION="$REGION"
-    export STORM_ZONE="$ZONE"
-    export STORM_NODES="$NODES"
-    
-    bash "$script"
-  else
-    echo "❌ Deployment script for provider '$p' not found."
+  if [ ! -f "$script" ]; then
+    echo "❌ Deployment script for provider '$p' not found at: $script"
     exit 1
   fi
+  
+  local cli_tool=$(get_cli_tool "$p")
+  
+  if ! is_cli_available "$cli_tool"; then
+    echo "❌ CLI tool '$cli_tool' not found. Please install it first."
+    case $cli_tool in
+      "gcloud") echo "  Install: https://cloud.google.com/sdk/docs/install" ;;
+      "aws") echo "  Install: https://aws.amazon.com/cli/" ;;
+      "az") echo "  Install: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli" ;;
+    esac
+    exit 1
+  fi
+  
+  echo "🚀 Running deployment script for $p..."
+  echo "   Region: $REGION"
+  echo "   Zone: $ZONE"
+  echo "   Nodes: $NODES"
+  echo
+  
+  # Export variables for the provider script
+  export STORM_REGION="$REGION"
+  export STORM_ZONE="$ZONE"
+  export STORM_NODES="$NODES"
+  export STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
+  
+  if ! bash "$script"; then
+    echo "❌ Deployment failed for provider '$p'"
+    exit 1
+  fi
+  
+  echo "✅ Deployment completed successfully for provider '$p'"
 }
 
 # Collect configuration for each provider
@@ -401,6 +553,10 @@ if [ "$PROVIDER" = "all" ]; then
     
     if [ -z "$NODES" ]; then
       get_node_count
+    fi
+    
+    if [ -z "$CLUSTER_NAME" ]; then
+      get_cluster_name $p
     fi
     
     # Check if cluster exists and handle accordingly
@@ -430,6 +586,10 @@ else
     get_node_count
   fi
   
+  if [ -z "$CLUSTER_NAME" ]; then
+    get_cluster_name $PROVIDER
+  fi
+  
   # Check if cluster exists and handle accordingly
   if check_cluster_exists "$PROVIDER" "$REGION" "$ZONE"; then
     handle_existing_cluster "$PROVIDER"
@@ -441,18 +601,24 @@ else
   echo "   Region: $REGION"
   echo "   Zone: $ZONE"
   echo "   Nodes: $NODES"
+  echo "   Cluster Name: $(get_cluster_name_for_provider "$PROVIDER")"
   echo
   
-  read -p "Proceed with deployment? (y/N): " confirm
-  case $confirm in
-    [Yy]|[Yy][Ee][Ss])
-      run_provider $PROVIDER
-      ;;
-    *)
-      echo "❌ Deployment cancelled."
-      exit 0
-      ;;
-  esac
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    echo "🤖 Non-interactive mode: Proceeding with deployment"
+    run_provider $PROVIDER
+  else
+    read -p "Proceed with deployment? (y/N): " confirm
+    case $confirm in
+      [Yy]|[Yy][Ee][Ss])
+        run_provider $PROVIDER
+        ;;
+      *)
+        echo "❌ Deployment cancelled."
+        exit 0
+        ;;
+    esac
+  fi
 fi
 
 echo "✅ All deployments completed."
