@@ -165,7 +165,7 @@ pre-commit run --all-files
 
 # Pre-commit automatically runs on git commits to validate:
 # - YAML syntax and formatting
-# - Markdown lint checks  
+# - Markdown lint checks
 # - Trailing whitespace removal
 # - End-of-file formatting
 ```
