@@ -22,6 +22,8 @@
   - Fixed false positive detection in `tests/hooks/validate-security.sh` for non-deployment resources
   - Updated deployment detection logic to check first `kind:` field only: `first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')`
   - Prevents HPA, NetworkPolicy, and other resources from being incorrectly flagged as missing security contexts
+  - Enhanced hardcoded secret detection to ignore dummy/example values (dummy, example, changeme, placeholder, test, sample, fake, mock)
+  - Reduces false positives from development artifacts while maintaining detection of actual security issues
   - More precise validation reduces noise and focuses on actual deployment security issues
 - **Trailing Whitespace Cleanup**
   - Removed trailing whitespace from all project files
