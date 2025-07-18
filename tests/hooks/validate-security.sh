@@ -13,7 +13,8 @@ check_security_contexts() {
 
     # Find all deployment files
     while IFS= read -r file; do
-        if grep -q "kind: Deployment" "$file"; then
+        first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
+        if [[ "$first_kind" == "Deployment" ]]; then
             echo "    📄 Checking $(basename "$file")"
 
             # Check for runAsNonRoot
@@ -52,7 +53,8 @@ check_resource_limits() {
     local violations=0
 
     while IFS= read -r file; do
-        if grep -q "kind: Deployment" "$file"; then
+        first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
+        if [[ "$first_kind" == "Deployment" ]]; then
             echo "    📄 Checking $(basename "$file")"
 
             # Check for resource requests

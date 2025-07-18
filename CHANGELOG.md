@@ -10,6 +10,19 @@
   - Updated `yamllint` from v1.35.1 to v1.37.1 for latest validation rules
   - Updated `markdownlint-cli` from v0.41.0 to v0.45.0 for improved markdown linting
   - All pre-commit hooks now run without warnings and support latest features
+
+- **Security Context Enhancements**
+  - Added comprehensive security contexts to all deployments in `manifests/base/storm-surge-app.yaml`
+  - Implemented `runAsNonRoot: true` and `runAsUser: 65534` for all containers (product-catalog, shopping-cart, frontend)
+  - Added pod-level security contexts with `fsGroup: 65534` for proper file permissions
+  - Enhanced container security with `allowPrivilegeEscalation: false` and capability dropping
+  - All deployments now run as non-root users meeting security best practices
+
+- **Security Validation Script Improvements**
+  - Fixed false positive detection in `tests/hooks/validate-security.sh` for non-deployment resources
+  - Updated deployment detection logic to check first `kind:` field only: `first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')`
+  - Prevents HPA, NetworkPolicy, and other resources from being incorrectly flagged as missing security contexts
+  - More precise validation reduces noise and focuses on actual deployment security issues
 - **Trailing Whitespace Cleanup**
   - Removed trailing whitespace from all project files
   - Fixed `manifests/base/kustomization.yaml`, `tests/hooks/validate-deploy-scripts.sh`, and `git-storm-surge-create.sh`
