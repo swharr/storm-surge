@@ -9,10 +9,12 @@
   - Fixed URLs in `fix-repo-naming.sh`, `docs/REPOSITORY.md`, `git-storm-surge-create.sh`, and `scripts/deploy-finops.sh`
   - Repository now correctly points to the actual GitHub location
 
-- **Test Suite Exit Code Fix**
-  - Fixed `./tests/test-suite.sh` to exit with code 0 on successful test runs
-  - Prevents GitHub Actions and tools from interpreting successful tests as errors
-  - Added explicit `exit 0` after successful main function execution
+- **Test Suite Exit Code Logic Improvements**
+  - Redesigned `./tests/test-suite.sh` exit code handling to distinguish between expected test failures and deployment-blocking errors
+  - Added `expected_failure()` function for tests that should fail (help output, invalid parameters, validation checks)
+  - Script now exits with code 0 when validation tests fail as expected (proper behavior)
+  - Only exits with code 1 for actual deployment-blocking issues that would prevent production deployment
+  - Prevents CI/CD tools from interpreting successful validation testing as pipeline failures
 
 - **GitHub Actions CLI Tool Management**
   - Enhanced CI workflow to check for existing CLI tools before installation
