@@ -22,9 +22,17 @@
   - Fixed false positive detection in `tests/hooks/validate-security.sh` for non-deployment resources
   - Updated deployment detection logic to check first `kind:` field only: `first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')`
   - Prevents HPA, NetworkPolicy, and other resources from being incorrectly flagged as missing security contexts
-  - Enhanced hardcoded secret detection to ignore dummy/example values (dummy, example, changeme, placeholder, test, sample, fake, mock)
+  - Enhanced hardcoded secret detection to ignore dummy/example values (dummy, example, changeme, placeholder, test, sample, fake, mock, yourdomain, ocn-)
+  - Added filtering for environment variable names and Kubernetes field names (`name:`, `key:`) to prevent false positives
+  - Excludes proper Kubernetes secret references (`secretKeyRef`, `configMapKeyRef`, `valueFrom`) from secret detection
   - Reduces false positives from development artifacts while maintaining detection of actual security issues
   - More precise validation reduces noise and focuses on actual deployment security issues
+
+- **Container Image Security Compliance**
+  - Fixed `manifests/sec_fixes/sectest_validate.yaml` to use specific image tag instead of `:latest`
+  - Updated Google Cloud Builder curl image from `:latest` to `:20241014` for reproducible deployments
+  - All container images now use pinned versions eliminating security risks from floating tags
+  - Achieved 100% compliance with image tag security best practices across all manifests
 - **Trailing Whitespace Cleanup**
   - Removed trailing whitespace from all project files
   - Fixed `manifests/base/kustomization.yaml`, `tests/hooks/validate-deploy-scripts.sh`, and `git-storm-surge-create.sh`

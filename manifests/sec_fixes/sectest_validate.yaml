@@ -6,7 +6,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: kubelet-readonly-example
-    image: us-docker.pkg.dev/cloud-builders/ga/v1/curl:latest
+    image: us-docker.pkg.dev/cloud-builders/ga/v1/curl:20241014
     env:
     - name: NODE_ADDRESS
       valueFrom:

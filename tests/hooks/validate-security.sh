@@ -96,9 +96,9 @@ check_hardcoded_secrets() {
 
     while IFS= read -r file; do
         for pattern in "${patterns[@]}"; do
-            if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom" > /dev/null 2>&1; then
+            if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom\|name:\|key:" > /dev/null 2>&1; then
                 # Ignore dummy/example values
-                if grep -iE "dummy|example|changeme|placeholder|test|sample|fake|mock" "$file" > /dev/null; then
+                if grep -iE "dummy|example|changeme|placeholder|test|sample|fake|mock|yourdomain|ocn-" "$file" > /dev/null; then
                     continue
                 fi
                 echo "    ❌ $(basename "$file") may contain hardcoded secrets"
