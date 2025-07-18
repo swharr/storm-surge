@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 INTENSITY=${1:-"moderate"}
 DURATION=${2:-"300"}

@@ -80,7 +80,7 @@ for arg in "$@"; do
             show_usage
             ;;
         *)
-            echo "Unknown option: $arg"
+            echo "Unknown option: \"$arg\""
             show_usage
             ;;
     esac

@@ -147,18 +147,23 @@ main() {
     fi
     
     local total_violations=0
+    local violations
     
     check_security_contexts
-    total_violations=$((total_violations + $?))
+    violations=$?
+    total_violations=$((total_violations + violations))
     
     check_resource_limits
-    total_violations=$((total_violations + $?))
+    violations=$?
+    total_violations=$((total_violations + violations))
     
     check_hardcoded_secrets
-    total_violations=$((total_violations + $?))
+    violations=$?
+    total_violations=$((total_violations + violations))
     
     check_image_tags
-    total_violations=$((total_violations + $?))
+    violations=$?
+    total_violations=$((total_violations + violations))
     
     check_network_policies
     

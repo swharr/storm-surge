@@ -19,7 +19,7 @@ for arg in "$@"; do
             FORCE=true
             ;;
         *)
-            echo "❌ Unknown argument: $arg" | tee -a "$LOG_FILE"
+            echo "❌ Unknown argument: \"$arg\"" | tee -a "$LOG_FILE"
             exit 1
             ;;
     esac
@@ -31,7 +31,14 @@ ALL_NAMESPACES=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}')
 # Find namespaces to delete
 NAMESPACES_TO_DELETE=()
 for ns in $ALL_NAMESPACES; do
-    if [[ ! " ${PROTECTED_NAMESPACES[@]} " =~ " $ns " ]]; then
+    skip=0
+    for pns in "${PROTECTED_NAMESPACES[@]}"; do
+        if [[ "$ns" == "$pns" ]]; then
+            skip=1
+            break
+        fi
+    done
+    if [[ $skip -eq 0 ]]; then
         NAMESPACES_TO_DELETE+=("$ns")
     fi
 done

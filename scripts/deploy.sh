@@ -62,7 +62,7 @@ for arg in "$@"; do
       show_usage
       ;;
     *)
-      echo "❌ Unknown argument: $arg"
+      echo "❌ Unknown argument: \"$arg\""
       show_usage
       ;;
   esac

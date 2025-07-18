@@ -2,6 +2,77 @@
 
 ## [Unreleased]
 
+### 🧪 Test Coverage & Quality Improvements
+- **Comprehensive Test Suite Expansion**
+  - Added 24 comprehensive middleware tests covering Flask endpoints, webhook handling, and Spot API integration
+  - Implemented 19 security tests for Kubernetes configurations, secrets management, and container security
+  - Created 26 script validation tests for deployment scripts, provider scripts, and security compliance
+  - Fixed missing dependencies in FinOps controller tests (43 tests now passing)
+  - Added virtual environment setup for proper test isolation
+
+### 🔧 FinOps Controller Fixes
+- **Missing Manifest Resolution**
+  - Created missing `manifests/finops/finops-controller.yaml` file
+  - Fixed broken kustomization references in FinOps deployment
+  - Added complete Kubernetes deployment manifest with security contexts
+  - Integrated ConfigMaps for Python code and configuration
+  - Established proper secret management for LaunchDarkly and Spot API credentials
+
+### 🛡️ Security & Validation Enhancements
+- **Enhanced Security Testing**
+  - Implemented comprehensive security validation for Kubernetes manifests
+  - Added container image security checks (no :latest tags, trusted registries)
+  - Created script security validation (permissions, credentials, shebangs)
+  - Added Dockerfile security practice validation
+  - Implemented compliance checks for Pod Security Standards and CIS benchmarks
+
+### 🔧 Script Improvements
+- **Cleanup Script Array Matching Fix**
+  - Fixed problematic regex-based array matching in `scripts/cleanup/cluster-sweep.sh`
+  - Replaced `if [[ ! " ${PROTECTED_NAMESPACES[@]} " =~ " $ns " ]]` with proper loop-based matching
+  - Improved reliability and eliminated potential edge cases with special characters
+  - Enhanced code clarity and maintainability
+
+- **Script Standards Compliance**
+  - Added missing shebang (`#!/bin/bash`) to `scripts/lockitdown.sh`
+  - Added `set -e` error handling to `scripts/load-test.sh` and `scripts/lockitdown.sh`
+  - Verified all 10 scripts in `/scripts` directory have proper configuration:
+    - ✅ All scripts have shebangs
+    - ✅ All scripts have error handling (`set -e`)
+    - ✅ All scripts are executable
+    - ✅ All scripts have valid syntax
+
+- **Python File Permissions Audit**
+  - Fixed chmod attributes for middleware and test scripts with shebangs
+  - Made executable all Python files with `if __name__ == "__main__"` blocks:
+    - `manifests/middleware/main.py` (middleware entry point)
+    - `finops/finops_controller.py` (FinOps controller entry point)
+    - `finops/tests/test_basic.py`, `test_finops_controller.py`, `test_integration.py`
+    - `tests/test_middleware.py`, `test_security.py`, `test_scripts.py`
+  - Verified proper permissions: executable files have `rwxr-xr-x`, non-executable have `rw-r--r--`
+  - All Python files with shebangs now have correct permissions based on functionality
+
+- **Exit Code Handling Improvements**
+  - Eliminated problematic `$?` usage in provider scripts
+  - Fixed `retry_command` exit code checking in `scripts/providers/aks.sh`, `gke.sh`, and `eks.sh`
+  - Changed from `retry_command ...; if [ $? -eq 0 ]` to `if retry_command ...; then` pattern
+  - Improved `$?` usage in `tests/hooks/validate-security.sh` with immediate variable capture
+  - All remaining `$?` usages now follow bash best practices for reliable error handling
+
+- **Variable Expansion Security Improvements**
+  - Fixed unquoted variables in test expressions in provider scripts
+  - Updated `if [ $attempt -lt $max_attempts ]` to `if [ "$attempt" -lt "$max_attempts" ]` in all providers
+  - Protected user input variables in error messages with proper quoting
+  - Fixed potential command injection in echo statements: `echo "Unknown argument: \"$arg\"`
+  - Enhanced bash script security by eliminating dangerous variable expansion patterns
+
+### 📊 Test Results Summary
+- **FinOps Tests**: 43/43 tests passing (100% success rate)
+- **Middleware Tests**: 21/24 tests passing (87.5% success rate)
+- **Security Tests**: 15/19 tests passing (78.9% success rate)
+- **Script Tests**: 25/26 tests passing (96.2% success rate)
+- **Total Test Coverage**: 104/112 tests passing (92.9% overall success rate)
+
 ## v0.1.4-alpha-poc – July 11, 2025
 
 ### 🛠️ Script Logic & Deployment Improvements

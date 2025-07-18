@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 # This function checks if a Kubernetes resource is using the insecure port 10255.
 #
 # Arguments:

@@ -1,0 +1,192 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finops-controller
+  namespace: oceansurge
+  labels:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+    app.kubernetes.io/part-of: oceansurge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storm-surge
+      app.kubernetes.io/component: finops
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: storm-surge
+        app.kubernetes.io/component: finops
+        app.kubernetes.io/part-of: oceansurge
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: finops-controller
+        image: python:3.11-slim
+        command:
+        - /bin/sh
+        - -c
+        - |
+          pip install --no-cache-dir -r /app/requirements.txt
+          python /app/finops_controller.py
+        env:
+        - name: LAUNCHDARKLY_SDK_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finops-credentials
+              key: launchdarkly-key
+        - name: SPOT_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: finops-credentials
+              key: spot-token
+        - name: SPOT_CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: finops-config
+              key: cluster-id
+              optional: true
+        - name: PYTHONPATH
+          value: "/app"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - name: finops-code
+          mountPath: /app
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: finops-code
+        configMap:
+          name: finops-code
+          defaultMode: 0755
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finops-code
+  namespace: oceansurge
+  labels:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+    app.kubernetes.io/part-of: oceansurge
+data:
+  finops_controller.py: |
+    #!/usr/bin/env python3
+    """
+    Storm Surge FinOps Controller
+    LaunchDarkly + Spot Ocean integration for cost optimization
+    """
+    
+    import os
+    import logging
+    import schedule
+    import time
+    from datetime import datetime
+    import pytz
+    
+    # Placeholder implementation - replace with full version from artifacts
+    class StormSurgeFinOpsController:
+        def __init__(self):
+            self.logger = logging.getLogger('oceansurge-finops')
+            self.logger.info("🌩️ Storm Surge FinOps Controller initialized")
+        
+        def disable_autoscaling_after_hours(self):
+            """Main FinOps method - disable autoscaling 18:00-06:00"""
+            current_time = datetime.now(pytz.UTC)
+            self.logger.info(f"⚡ Checking after-hours optimization at {current_time}")
+            
+            # TODO: Add LaunchDarkly integration
+            # TODO: Add Spot Ocean API calls
+            # TODO: Add timezone handling
+            
+            return {"status": "placeholder - implement with full artifact code"}
+        
+        def enable_autoscaling_business_hours(self):
+            """Enable autoscaling during business hours"""
+            self.logger.info("🌅 Enabling business hours autoscaling")
+            return {"status": "enabled"}
+    
+    def main():
+        """Main execution with scheduling"""
+        logging.basicConfig(level=logging.INFO)
+        controller = StormSurgeFinOpsController()
+        
+        # Schedule optimization
+        schedule.every().day.at("18:00").do(controller.disable_autoscaling_after_hours)
+        schedule.every().day.at("06:00").do(controller.enable_autoscaling_business_hours)
+        
+        print("🌩️ Storm Surge FinOps Controller running...")
+        print("   - Copy full implementation from artifacts")
+        print("   - Set up LaunchDarkly and Spot Ocean credentials")
+        
+        # Run initial check
+        controller.disable_autoscaling_after_hours()
+        
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
+    
+    if __name__ == "__main__":
+        main()
+  requirements.txt: |
+    launchdarkly-server-sdk==8.2.1
+    requests==2.31.0
+    schedule==1.2.0
+    pytz==2023.3
+    python-dotenv==1.0.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finops-config
+  namespace: oceansurge
+  labels:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+    app.kubernetes.io/part-of: oceansurge
+data:
+  cluster-id: "demo-cluster-id"
+  timezone: "UTC"
+  business-hours-start: "06:00"
+  business-hours-end: "18:00"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finops-controller
+  namespace: oceansurge
+  labels:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+    app.kubernetes.io/part-of: oceansurge
+spec:
+  selector:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

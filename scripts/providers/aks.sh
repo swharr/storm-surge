@@ -25,7 +25,7 @@ retry_command() {
             echo "✅ $description succeeded"
             return 0
         else
-            if [ $attempt -lt $max_attempts ]; then
+            if [ "$attempt" -lt "$max_attempts" ]; then
                 echo "⚠️  $description failed, retrying in ${delay}s..."
                 sleep "$delay"
             else
@@ -109,10 +109,8 @@ retry_command "FinOps controller deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
 
 echo "⏳ Waiting for deployments to be ready..."
 echo "   This may take up to 5 minutes..."
-retry_command "Deployment readiness check" "$RETRY_COUNT" "$RETRY_DELAY" \
-    kubectl wait --for=condition=available --timeout=300s deployment --all -n oceansurge
-
-if [ $? -eq 0 ]; then
+if retry_command "Deployment readiness check" "$RETRY_COUNT" "$RETRY_DELAY" \
+    kubectl wait --for=condition=available --timeout=300s deployment --all -n oceansurge; then
     echo "✅ All deployments are ready!"
 else
     echo "⚠️  Some deployments took longer than expected, but may still be starting..."
