@@ -46,7 +46,7 @@ class TestFinOpsController(unittest.TestCase):
         """Test time-based decision logic"""
         # Mock business hours (9 AM UTC)
         mock_datetime.now.return_value = datetime(2024, 1, 1, 9, 0, 0, tzinfo=pytz.UTC)
-        
+
         result = self.controller.disable_autoscaling_after_hours()
         self.assertIsInstance(result, dict)
 
@@ -116,7 +116,7 @@ class TestSchedulingLogic(unittest.TestCase):
         # This would test the main() function scheduling
         # Since it's a placeholder, we test the interface
         mock_schedule.every.return_value.day.at.return_value.do = Mock()
-        
+
         # Test that scheduling calls would work
         self.assertTrue(callable(self.controller.disable_autoscaling_after_hours))
         self.assertTrue(callable(self.controller.enable_autoscaling_business_hours))
@@ -147,7 +147,7 @@ class TestErrorHandling(unittest.TestCase):
         # Test that controller handles network issues gracefully
         with patch('requests.get') as mock_get:
             mock_get.side_effect = ConnectionError("Network error")
-            
+
             # Controller should handle network errors gracefully
             result = self.controller.disable_autoscaling_after_hours()
             self.assertIsInstance(result, dict)
@@ -156,6 +156,6 @@ class TestErrorHandling(unittest.TestCase):
 if __name__ == '__main__':
     # Set up test environment
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Run tests
     unittest.main(verbosity=2)

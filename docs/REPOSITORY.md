@@ -16,7 +16,7 @@ We use a dual naming strategy:
 - **Kubernetes Namespace**: `oceansurge`
 - **Docker Images**: `oceansurge/service-name`
 
-### Product Level  
+### Product Level
 - **Product Name**: Storm Surge
 - **Version Tags**: `v1.0-storm-surge`
 - **Documentation**: References "Storm Surge"

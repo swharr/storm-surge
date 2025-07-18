@@ -27,7 +27,7 @@ pip install -r requirements.txt
 echo -e "${BLUE}🔧 Running unit tests...${NC}"
 python -m pytest test_finops_controller.py -v
 
-# Run integration tests  
+# Run integration tests
 echo -e "${BLUE}🔗 Running integration tests...${NC}"
 python -m pytest test_integration.py -v
 

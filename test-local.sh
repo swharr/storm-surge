@@ -63,7 +63,7 @@ if command -v kustomize &> /dev/null; then
         kustomize build manifests/base/ 2>&1 | head -5
         exit 1
     fi
-    
+
     if kustomize build manifests/middleware/ > /dev/null 2>&1; then
         success "Middleware manifests are valid"
     else
@@ -81,7 +81,7 @@ elif command -v kubectl &> /dev/null; then
             kubectl kustomize manifests/base/ 2>&1 | head -5
             exit 1
         fi
-        
+
         if kubectl kustomize manifests/middleware/ > /dev/null 2>&1; then
             success "Middleware manifests are valid"
         else
@@ -101,13 +101,13 @@ echo "5️⃣  Testing security configurations..."
 violations=0
 
 # Check for runAsNonRoot in deployments
-if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} + | xargs -r grep -c "runAsNonRoot: true" > /dev/null 2>&1; then
+if ! find manifests -name "*.yaml" -print0 | xargs -0 grep -l "kind: Deployment" | xargs -r grep -c "runAsNonRoot: true" > /dev/null 2>&1; then
     warning "Some deployments may be missing runAsNonRoot: true"
     violations=$((violations + 1))
 fi
 
 # Check for resource limits
-if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} + | xargs -r grep -c "limits:" > /dev/null 2>&1; then
+if ! find manifests -name "*.yaml" -print0 | xargs -0 grep -l "kind: Deployment" | xargs -r grep -c "limits:" > /dev/null 2>&1; then
     warning "Some deployments may be missing resource limits"
     violations=$((violations + 1))
 fi

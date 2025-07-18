@@ -138,7 +138,7 @@ check_cli_tools() {
   if [ "$CLI_TOOLS_CHECKED" = "true" ]; then
     return 0
   fi
-  
+
   for tool in gcloud aws az; do
     if command -v "$tool" &> /dev/null; then
       CLI_TOOLS_AVAILABLE+=("$tool")
@@ -166,7 +166,7 @@ get_provider() {
     echo "🤖 Non-interactive mode: Using default provider 'gke'"
     return
   fi
-  
+
   while true; do
     echo "📋 Available cloud providers:"
     echo "  1) gke  - Google Kubernetes Engine"
@@ -175,7 +175,7 @@ get_provider() {
     echo "  4) all  - Deploy to all providers"
     echo
     read -r -p "Select provider (1-4 or gke/eks/aks/all): " choice
-    
+
     case $choice in
       1|gke) PROVIDER="gke"; break ;;
       2|eks) PROVIDER="eks"; break ;;
@@ -189,7 +189,7 @@ get_provider() {
 # Interactive region selection based on provider
 get_region() {
   local provider=$1
-  
+
   if [ "$NON_INTERACTIVE" = "true" ]; then
     case $provider in
       "gke") REGION="us-central1" ;;
@@ -199,11 +199,11 @@ get_region() {
     echo "🤖 Non-interactive mode: Using default region '$REGION'"
     return
   fi
-  
+
   local regions
   mapfile -t regions < <(parse_regions "$provider")
   local i=1
-  
+
   echo "📍 Available $provider regions:"
   for region in "${regions[@]}"; do
     local name
@@ -212,10 +212,10 @@ get_region() {
     ((i++))
   done
   echo
-  
+
   while true; do
     read -r -p "Select region (1-${#regions[@]} or enter region name): " choice
-    
+
     # Check if it's a number
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#regions[@]}" ]; then
       REGION="${regions[$((choice-1))]}"
@@ -237,7 +237,7 @@ get_zone() {
   local region=$2
   local zones
   mapfile -t zones < <(parse_zones "$provider" "$region")
-  
+
   if [ "$NON_INTERACTIVE" = "true" ]; then
     ZONE="${zones[0]}"
     if [ "$provider" = "gke" ]; then
@@ -248,12 +248,12 @@ get_zone() {
     echo "🤖 Non-interactive mode: Using default zone '$ZONE'"
     return
   fi
-  
+
   while true; do
     echo "🗺️  Available zones in $region:"
     echo "  ${zones[*]}"
     echo
-    
+
     case $provider in
       "gke")
         read -r -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
@@ -268,7 +268,7 @@ get_zone() {
         ZONE="$zone_suffix"
         ;;
     esac
-    
+
     # Validate zone exists in the zones array
     local zone_suffix_to_check="$zone_suffix"
     if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix_to_check$"; then
@@ -287,14 +287,14 @@ get_node_count() {
     echo "🤖 Non-interactive mode: Using default node count '4'"
     return
   fi
-  
+
   while true; do
     echo "🖥️  Node configuration:"
     echo "  • Default: 4 nodes (recommended)"
     echo "  • Range: 1-10 nodes maximum"
     echo
     read -r -p "Enter number of nodes (1-10, or 'default' for 4): " node_input
-    
+
     case $node_input in
       "default"|"Default"|"DEFAULT"|"")
         NODES=4
@@ -316,19 +316,19 @@ get_node_count() {
 get_cluster_name() {
   local provider=$1
   local default_name="storm-surge-$provider"
-  
+
   if [ "$NON_INTERACTIVE" = "true" ]; then
     CLUSTER_NAME="$default_name"
     echo "🤖 Non-interactive mode: Using default cluster name '$CLUSTER_NAME'"
     return
   fi
-  
+
   echo "🏷️  Cluster naming:"
   echo "  • Default: $default_name"
   echo "  • Custom: Enter your preferred name (alphanumeric and hyphens only)"
   echo
   read -r -p "Enter cluster name (or press Enter for default): " name_input
-  
+
   if [ -z "$name_input" ]; then
     CLUSTER_NAME="$default_name"
   else
@@ -341,30 +341,30 @@ get_cluster_name() {
       CLUSTER_NAME="$default_name"
     fi
   fi
-  
+
   echo "✅ Cluster name set to: $CLUSTER_NAME"
 }
 
 # Validate arguments
 validate_arguments() {
   local errors=()
-  
+
   if [ -n "$PROVIDER" ] && [ "$PROVIDER" != "gke" ] && [ "$PROVIDER" != "eks" ] && [ "$PROVIDER" != "aks" ] && [ "$PROVIDER" != "all" ]; then
     errors+=("Invalid provider: $PROVIDER. Must be gke, eks, aks, or all")
   fi
-  
+
   if [ -n "$NODES" ] && { [ "$NODES" -lt 1 ] || [ "$NODES" -gt 10 ]; }; then
     errors+=("Invalid node count: $NODES. Must be between 1-10")
   fi
-  
+
   if [ -n "$CLUSTER_NAME" ] && [[ ! "$CLUSTER_NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
     errors+=("Invalid cluster name: $CLUSTER_NAME. Must contain only alphanumeric characters and hyphens")
   fi
-  
+
   if [ -n "$CLUSTER_NAME" ] && [[ "$CLUSTER_NAME" =~ ^- ]] || [[ "$CLUSTER_NAME" =~ -$ ]]; then
     errors+=("Invalid cluster name: $CLUSTER_NAME. Cannot start or end with a hyphen")
   fi
-  
+
   if [ -n "$REGION" ] && [ -n "$PROVIDER" ] && [ "$PROVIDER" != "all" ]; then
     local valid_regions
     mapfile -t valid_regions < <(parse_regions "$PROVIDER")
@@ -372,7 +372,7 @@ validate_arguments() {
       errors+=("Invalid region '$REGION' for provider '$PROVIDER'")
     fi
   fi
-  
+
   if [ ${#errors[@]} -gt 0 ]; then
     echo "❌ Validation errors:"
     for error in "${errors[@]}"; do
@@ -403,11 +403,11 @@ check_cluster_exists() {
   cli_tool=$(get_cli_tool "$provider")
   local cluster_name
   cluster_name=$(get_cluster_name_for_provider "$provider")
-  
+
   if ! is_cli_available "$cli_tool"; then
     return 1
   fi
-  
+
   case $provider in
     "gke")
       gcloud container clusters describe "$cluster_name" --zone="$zone" &>/dev/null
@@ -429,14 +429,14 @@ handle_existing_cluster() {
   local provider=$1
   local cluster_name
   cluster_name=$(get_cluster_name_for_provider "$provider")
-  
+
   if [ "$NON_INTERACTIVE" = "true" ]; then
     echo "🔍 Found existing $cluster_name cluster!"
     echo "🤖 Non-interactive mode: Using existing cluster"
     export STORM_SKIP_CLUSTER_CREATION="true"
     return 0
   fi
-  
+
   echo "🔍 Found existing $cluster_name cluster!"
   echo
   echo "   What would you like to do?"
@@ -444,7 +444,7 @@ handle_existing_cluster() {
   echo "   2) Delete and recreate cluster (slower, fresh start)"
   echo "   3) Cancel deployment"
   echo
-  
+
   while true; do
     read -r -p "Select option (1-3): " choice
     case $choice in
@@ -475,7 +475,7 @@ delete_existing_cluster() {
   local provider=$1
   local cluster_name
   cluster_name=$(get_cluster_name_for_provider "$provider")
-  
+
   echo "🗑️  Deleting existing $cluster_name cluster..."
   case $provider in
     "gke")
@@ -508,15 +508,15 @@ delete_existing_cluster() {
 run_provider() {
   local p=$1
   local script="${SCRIPTS_DIR}/${p}.sh"
-  
+
   if [ ! -f "$script" ]; then
     echo "❌ Deployment script for provider '$p' not found at: $script"
     exit 1
   fi
-  
+
   local cli_tool
   cli_tool=$(get_cli_tool "$p")
-  
+
   if ! is_cli_available "$cli_tool"; then
     echo "❌ CLI tool '$cli_tool' not found. Please install it first."
     case $cli_tool in
@@ -526,25 +526,25 @@ run_provider() {
     esac
     exit 1
   fi
-  
+
   echo "🚀 Running deployment script for $p..."
   echo "   Region: $REGION"
   echo "   Zone: $ZONE"
   echo "   Nodes: $NODES"
   echo
-  
+
   # Export variables for the provider script
   export STORM_REGION="$REGION"
   export STORM_ZONE="$ZONE"
   export STORM_NODES="$NODES"
   STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
   export STORM_CLUSTER_NAME
-  
+
   if ! bash "$script"; then
     echo "❌ Deployment failed for provider '$p'"
     exit 1
   fi
-  
+
   echo "✅ Deployment completed successfully for provider '$p'"
 }
 
@@ -553,33 +553,33 @@ if [ "$PROVIDER" = "all" ]; then
   echo "🌍 Deploying to all providers..."
   echo "You'll need to configure each provider separately:"
   echo
-  
+
   for p in gke eks aks; do
     echo "=== Configuring $p ==="
-    
+
     if [ -z "$REGION" ]; then
       get_region $p
     fi
-    
+
     if [ -z "$ZONE" ]; then
       get_zone "$p" "$REGION"
     fi
-    
+
     if [ -z "$NODES" ]; then
       get_node_count
     fi
-    
+
     if [ -z "$CLUSTER_NAME" ]; then
       get_cluster_name $p
     fi
-    
+
     # Check if cluster exists and handle accordingly
     if check_cluster_exists "$p" "$REGION" "$ZONE"; then
       handle_existing_cluster "$p"
     fi
-    
+
     run_provider $p
-    
+
     # Reset for next provider
     REGION=""
     ZONE=""
@@ -591,24 +591,24 @@ else
   if [ -z "$REGION" ]; then
     get_region "$PROVIDER"
   fi
-  
+
   if [ -z "$ZONE" ]; then
     get_zone "$PROVIDER" "$REGION"
   fi
-  
+
   if [ -z "$NODES" ]; then
     get_node_count
   fi
-  
+
   if [ -z "$CLUSTER_NAME" ]; then
     get_cluster_name "$PROVIDER"
   fi
-  
+
   # Check if cluster exists and handle accordingly
   if check_cluster_exists "$PROVIDER" "$REGION" "$ZONE"; then
     handle_existing_cluster "$PROVIDER"
   fi
-  
+
   echo
   echo "🎯 Deployment Configuration:"
   echo "   Provider: $PROVIDER"
@@ -617,7 +617,7 @@ else
   echo "   Nodes: $NODES"
   echo "   Cluster Name: $(get_cluster_name_for_provider "$PROVIDER")"
   echo
-  
+
   if [ "$NON_INTERACTIVE" = "true" ]; then
     echo "🤖 Non-interactive mode: Proceeding with deployment"
     run_provider "$PROVIDER"

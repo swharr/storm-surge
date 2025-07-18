@@ -28,7 +28,7 @@ fi
 validate_dir() {
     local dir=$1
     echo "  📂 Validating $dir..."
-    
+
     if [[ -f "$dir/kustomization.yaml" ]]; then
         # Use kustomize for validation
         if $KUSTOMIZE_CMD "$dir" > /dev/null 2>&1; then

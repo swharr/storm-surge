@@ -30,7 +30,7 @@ finops/
 
 ## 🚀 Current Status
 
-**Status**: Placeholder Implementation  
+**Status**: Placeholder Implementation
 **Version**: v0.1.1-rebase
 
 The current implementation is a placeholder that demonstrates the structure and interfaces for full LaunchDarkly and Spot Ocean integration. It includes:
@@ -229,6 +229,6 @@ The controller integrates with the OceanSurge middleware for webhook processing 
 
 ---
 
-**Status**: Ready for full implementation  
-**Integration**: OceanSurge v0.1.1-rebase  
+**Status**: Ready for full implementation
+**Integration**: OceanSurge v0.1.1-rebase
 **License**: Same as parent OceanSurge project

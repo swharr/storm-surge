@@ -43,9 +43,11 @@ if command -v wrk &> /dev/null; then
     wrk -t4 -c"$CONCURRENT" -d"${DURATION}"s "http://$FRONTEND_URL"
 else
     echo "Using curl (install wrk for better load testing)"
-    for i in $(seq 1 "$CONCURRENT"); do  # shellcheck disable=SC2034
+    # shellcheck disable=SC2034  # Loop variables are intentionally unused
+    for i in $(seq 1 "$CONCURRENT"); do
         (
-            for j in $(seq 1 $((DURATION/5))); do  # shellcheck disable=SC2034
+            # shellcheck disable=SC2034  # Loop variables are intentionally unused
+            for j in $(seq 1 $((DURATION/5))); do
                 curl -s "http://$FRONTEND_URL" > /dev/null
                 sleep 5
             done

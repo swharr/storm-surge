@@ -16,10 +16,10 @@ retry_command() {
     local delay="$3"
     shift 3
     local command=("$@")
-    
+
     for ((attempt=1; attempt<=max_attempts; attempt++)); do
         echo "📋 $description (attempt $attempt/$max_attempts)..."
-        
+
         if "${command[@]}"; then
             echo "✅ $description succeeded"
             return 0
@@ -90,11 +90,11 @@ else
 
   echo "🔑 Getting cluster credentials..."
   gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="$ZONE"
-  
+
   echo "🔒 Applying additional security hardening..."
   # Disable insecure ports on kubelet
   kubectl patch daemonset kube-proxy -n kube-system --type='strategic' --patch='{"spec":{"template":{"spec":{"containers":[{"name":"kube-proxy","args":["--proxy-mode=iptables","--cluster-cidr=10.0.0.0/16","--healthz-port=0","--metrics-port=0"]}]}}}}' 2>/dev/null || echo "   kube-proxy patch not needed"
-  
+
   # Apply security policies
   kubectl apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
@@ -215,7 +215,7 @@ if [ "$security_issues_found" = true ]; then
     echo "🔧 Running security lockdown script due to security issues..."
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     LOCKDOWN_SCRIPT="$SCRIPT_DIR/../lockitdown.sh"
-    
+
     if [ -f "$LOCKDOWN_SCRIPT" ]; then
         chmod +x "$LOCKDOWN_SCRIPT"
         bash "$LOCKDOWN_SCRIPT"

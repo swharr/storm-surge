@@ -94,12 +94,12 @@ def mock_spot_api():
         }
         mock_get_response.status_code = 200
         mock_get.return_value = mock_get_response
-        
+
         # Mock PUT scaling response
         mock_put_response = Mock()
         mock_put_response.status_code = 200
         mock_put.return_value = mock_put_response
-        
+
         yield {"get": mock_get, "put": mock_put}
 
 
@@ -121,15 +121,15 @@ def mock_api_failure():
     """Mock API failure scenarios"""
     def _mock_failure(service="both"):
         patches = []
-        
+
         if service in ["launchdarkly", "both"]:
             patches.append(patch('requests.get', side_effect=ConnectionError("LaunchDarkly API down")))
-        
+
         if service in ["spot", "both"]:
             patches.append(patch('requests.put', side_effect=ConnectionError("Spot API down")))
-        
+
         return patches
-    
+
     return _mock_failure
 
 

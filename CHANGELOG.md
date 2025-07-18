@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### 🧹 Code Quality & Shell Script Improvements - July 18, 2025
+
+- **Pre-commit Configuration Updates**
+  - Updated `.pre-commit-config.yaml` to resolve deprecation warnings
+  - Updated `pre-commit-hooks` from v4.6.0 to v5.0.0 (removes deprecated stage names)
+  - Updated `yamllint` from v1.35.1 to v1.37.1 for latest validation rules
+  - Updated `markdownlint-cli` from v0.41.0 to v0.45.0 for improved markdown linting
+  - All pre-commit hooks now run without warnings and support latest features
 - **Trailing Whitespace Cleanup**
   - Removed trailing whitespace from all project files
   - Fixed `manifests/base/kustomization.yaml`, `tests/hooks/validate-deploy-scripts.sh`, and `git-storm-surge-create.sh`
@@ -19,16 +26,27 @@
   - Implemented graceful fallbacks: full validation → offline validation → basic YAML validation
   - Fixed API server dependency issues for offline environments
 
-- **Comprehensive ShellCheck Compliance**
-  - Fixed 15 `read` commands missing `-r` flag across deployment scripts
-  - Fixed trap quoting issue in `scripts/prod_deploy_preview.sh` (double quotes → single quotes)
-  - Added proper variable quoting for safety:
+- **Comprehensive ShellCheck Compliance (19 Scripts Analyzed)**
+  - **Variable Quoting & Safety**: Fixed 15+ variable quoting issues across all scripts
     - Fixed boolean variable tests in `scripts/cleanup/cluster-sweep.sh`
-    - Quoted URL variables in curl commands (3 files)
+    - Quoted URL variables in curl commands (3 files: fix-repo-naming.sh, git-storm-surge-create.sh, load-test.sh)
     - Fixed function parameter quoting in deployment scripts
-    - Separated local declaration from assignment to avoid masking return values
-  - Enhanced script robustness against special characters and word splitting
-  - All critical ShellCheck warnings resolved across 19 shell scripts
+    - Enhanced command substitution quoting throughout codebase
+  - **Array Operations**: Replaced unsafe array creation with robust methods
+    - Used `mapfile -t` instead of `$(...)` arrays in `scripts/deploy.sh`
+    - Implemented `read -ra` for safer array creation in `chaos-testing/lightning-strike.sh`
+  - **Local Variable Declarations**: Separated 12+ local declarations from assignments
+    - Fixed in `scripts/deploy.sh`, `tests/hooks/validate-deploy-scripts.sh`, `tests/test-suite.sh`
+    - Prevents masking of return values and improves error detection
+  - **Pipeline Subshell Issues**: Rewrote validation functions to avoid variable scope problems
+    - Fixed all functions in `tests/hooks/validate-security.sh` using process substitution
+    - Replaced pipelines with `< <(...)` pattern for proper variable scoping
+  - **Find Command Safety**: Enhanced find operations for special characters
+    - Replaced `find ... | xargs` with `find ... -exec ... +` in validation scripts
+    - Added `-r` flag to xargs commands for empty input handling
+  - **Trap Quoting**: Fixed trap command in `scripts/prod_deploy_preview.sh` (double quotes → single quotes)
+  - **Read Command Safety**: Added `-r` flag to 15+ read commands to prevent backslash escaping
+  - All critical ShellCheck warnings resolved across entire codebase
 
 ### 🧪 Test Coverage & Quality Improvements
 - **Comprehensive Test Suite Expansion**
@@ -111,7 +129,7 @@
   - Better error handling and recovery mechanisms throughout deployment process
   - Enhanced cloud region restrictions and security validation
 
-### 🔒 Security & Validation Enhancements  
+### 🔒 Security & Validation Enhancements
 - **Advanced Security Controls**
   - Cloud region restrictions enforced across all providers
   - Enhanced error handling with detailed validation feedback
@@ -145,7 +163,7 @@
   - Pre-commit hooks for automated validation on every commit
   - GitHub Actions CI/CD pipeline with multi-cloud validation
   - Security scanning with Trivy vulnerability detection
-  
+
 - **Test Coverage**
   - Script syntax validation
   - Parameter and zone/region validation
@@ -189,12 +207,12 @@
 
 ## 📦 Storm Surge v0.1.1-Alpha-POC
 
-_Released: July 2025_  
+_Released: July 2025_
 This release introduces the first working implementation of the FinOps Controller, early-stage testing harnesses, and updated documentation for extensibility and scaling experiments.
 
 ### 🚀 Highlights
 
-- ✅ **Initial FinOps Controller prototype**  
+- ✅ **Initial FinOps Controller prototype**
   - `finops/finops_controller.py` includes a scheduled job framework using `schedule`, with stubbed methods for after-hours autoscaling disablement.
   - Placeholder logging and control structure for integrating LaunchDarkly feature flags and Spot Ocean APIs.
   - Prepares ground for real-time cost-aware infrastructure decisions.

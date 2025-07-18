@@ -38,33 +38,33 @@ error() {
 # Setup test environment
 setup_test_env() {
     log "Setting up test environment..."
-    
+
     # Create logs directory
     mkdir -p "$LOG_DIR"
-    
+
     # Check if minikube is installed
     if ! command -v minikube &> /dev/null; then
         error "minikube is not installed. Install from: https://minikube.sigs.k8s.io/docs/start/"
     fi
-    
+
     # Check if kubectl is installed
     if ! command -v kubectl &> /dev/null; then
         error "kubectl is not installed. Install from: https://kubernetes.io/docs/tasks/tools/"
     fi
-    
+
     success "Prerequisites verified"
 }
 
 # Start minikube cluster
 start_minikube() {
     log "Starting minikube cluster..."
-    
+
     # Delete existing profile if it exists
     if minikube profile list | grep -q "$MINIKUBE_PROFILE"; then
         warning "Existing test cluster found, deleting..."
         minikube delete -p "$MINIKUBE_PROFILE" > "$LOG_DIR/minikube-delete.log" 2>&1
     fi
-    
+
     # Start fresh minikube cluster
     minikube start \
         --profile="$MINIKUBE_PROFILE" \
@@ -73,38 +73,38 @@ start_minikube() {
         --disk-size=20g \
         --driver=docker \
         > "$LOG_DIR/minikube-start.log" 2>&1
-    
+
     # Use the test profile
     minikube profile "$MINIKUBE_PROFILE"
-    
+
     # Wait for cluster to be ready
     kubectl wait --for=condition=Ready nodes --all --timeout=60s
-    
+
     success "Minikube cluster started"
 }
 
 # Test deployment validation
 test_deployments() {
     log "Testing Kubernetes manifests..."
-    
+
     # Create test namespace
     kubectl create namespace "$TEST_NAMESPACE" || true
-    
+
     # Test base manifests
     log "Validating base manifests..."
     kubectl apply -k manifests/base/ --namespace="$TEST_NAMESPACE" --dry-run=client > "$LOG_DIR/base-validation.log" 2>&1
     success "Base manifests validation passed"
-    
-    # Test middleware manifests  
+
+    # Test middleware manifests
     log "Validating middleware manifests..."
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" --dry-run=client > "$LOG_DIR/middleware-validation.log" 2>&1
     success "Middleware manifests validation passed"
-    
+
     # Deploy and test actual resources
     log "Deploying to test namespace..."
     kubectl apply -k manifests/base/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/base-deploy.log" 2>&1
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/middleware-deploy.log" 2>&1
-    
+
     # Wait for deployments to be ready
     log "Waiting for deployments to be ready..."
     if kubectl wait --for=condition=available --timeout="${TIMEOUT}s" deployment --all -n "$TEST_NAMESPACE"; then
@@ -118,7 +118,7 @@ test_deployments() {
 # Test deployment script parameters
 test_deploy_script() {
     log "Testing deployment script..."
-    
+
     # Test help output
     log "Testing --help parameter..."
     if ./scripts/deploy.sh --help > "$LOG_DIR/deploy-help.log" 2>&1; then
@@ -126,7 +126,7 @@ test_deploy_script() {
     else
         success "Help output working correctly"
     fi
-    
+
     # Test invalid provider
     log "Testing invalid provider validation..."
     if echo "n" | ./scripts/deploy.sh --provider=invalid > "$LOG_DIR/deploy-invalid.log" 2>&1; then
@@ -134,49 +134,49 @@ test_deploy_script() {
     else
         success "Invalid provider validation working"
     fi
-    
+
     # Test zone/region validation for GKE
     log "Testing zone/region validation..."
     export STORM_REGION="us-central1"
     export STORM_ZONE="us-west-2-a"
     export STORM_NODES="3"
-    
+
     if ./scripts/providers/gke.sh > "$LOG_DIR/zone-validation.log" 2>&1; then
         error "GKE script should reject mismatched zone/region"
     else
         success "Zone/region validation working"
     fi
-    
+
     unset STORM_REGION STORM_ZONE STORM_NODES
 }
 
 # Test health endpoints
 test_health_endpoints() {
     log "Testing application health endpoints..."
-    
+
     # Port forward to test services
     kubectl port-forward -n "$TEST_NAMESPACE" service/frontend-service 8080:80 > "$LOG_DIR/port-forward-frontend.log" 2>&1 &
     FRONTEND_PID=$!
-    
+
     kubectl port-forward -n "$TEST_NAMESPACE" service/ld-spot-middleware 8081:80 > "$LOG_DIR/port-forward-middleware.log" 2>&1 &
     MIDDLEWARE_PID=$!
-    
+
     sleep 5
-    
+
     # Test frontend health
     if curl -s http://localhost:8080/health > "$LOG_DIR/frontend-health.log" 2>&1; then
         success "Frontend health endpoint responding"
     else
         warning "Frontend health endpoint not responding"
     fi
-    
-    # Test middleware health  
+
+    # Test middleware health
     if curl -s http://localhost:8081/health > "$LOG_DIR/middleware-health.log" 2>&1; then
         success "Middleware health endpoint responding"
     else
         warning "Middleware health endpoint not responding"
     fi
-    
+
     # Clean up port forwards
     kill $FRONTEND_PID $MIDDLEWARE_PID 2>/dev/null || true
 }
@@ -184,18 +184,18 @@ test_health_endpoints() {
 # Test resource requests and limits
 test_resource_constraints() {
     log "Testing resource constraints..."
-    
+
     # Check if all pods have resource requests and limits
     local pods
     pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
-    
+
     for pod in $pods; do
         if kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].resources}' | grep -q '"requests"'; then
             success "Pod $pod has resource requests"
         else
             warning "Pod $pod missing resource requests"
         fi
-        
+
         if kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].resources}' | grep -q '"limits"'; then
             success "Pod $pod has resource limits"
         else
@@ -207,10 +207,10 @@ test_resource_constraints() {
 # Test security contexts
 test_security_contexts() {
     log "Testing security contexts..."
-    
+
     local pods
     pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
-    
+
     for pod in $pods; do
         # Check for non-root user
         local runAsUser
@@ -220,7 +220,7 @@ test_security_contexts() {
         else
             warning "Pod $pod security context issue (runAsUser: $runAsUser)"
         fi
-        
+
         # Check for runAsNonRoot
         local runAsNonRoot
         runAsNonRoot=$(kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
@@ -235,14 +235,14 @@ test_security_contexts() {
 # Test cleanup scripts
 test_cleanup() {
     log "Testing cleanup functionality..."
-    
+
     # Test that cleanup script exists and is executable
     if [[ -x "./scripts/cleanup/cluster-sweep.sh" ]]; then
         success "Cleanup script is executable"
     else
         error "Cleanup script not found or not executable"
     fi
-    
+
     # Test namespace cleanup
     kubectl delete namespace "$TEST_NAMESPACE" --ignore-not-found=true
     success "Test namespace cleaned up"
@@ -251,9 +251,9 @@ test_cleanup() {
 # Generate test report
 generate_report() {
     log "Generating test report..."
-    
+
     local report_file="$LOG_DIR/test-report.md"
-    
+
     cat > "$report_file" << EOF
 # Storm Surge Test Report
 
@@ -294,13 +294,13 @@ EOF
 # Cleanup test environment
 cleanup_test_env() {
     log "Cleaning up test environment..."
-    
+
     # Delete test namespace
     kubectl delete namespace "$TEST_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1
-    
+
     # Stop minikube cluster
     minikube delete -p "$MINIKUBE_PROFILE" > /dev/null 2>&1
-    
+
     success "Test environment cleaned up"
 }
 
@@ -309,10 +309,10 @@ main() {
     echo "🧪 Storm Surge Test Suite"
     echo "========================="
     echo
-    
+
     # Trap to ensure cleanup on exit
     trap cleanup_test_env EXIT
-    
+
     setup_test_env
     start_minikube
     test_deploy_script
@@ -322,7 +322,7 @@ main() {
     test_security_contexts
     test_cleanup
     generate_report
-    
+
     echo
     success "All tests completed successfully!"
     echo

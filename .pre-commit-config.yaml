@@ -9,7 +9,7 @@ repos:
         language: script
         files: ^manifests/.*\.(yaml|yml)$
         pass_filenames: false
-        
+
       # Deployment script validation
       - id: deployment-script-validation
         name: Validate Deployment Scripts
@@ -17,7 +17,7 @@ repos:
         language: script
         files: ^scripts/.*\.sh$
         pass_filenames: false
-        
+
       # Security validation
       - id: security-validation
         name: Security Validation
@@ -28,7 +28,7 @@ repos:
 
   # Standard pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -48,14 +48,14 @@ repos:
 
   # YAML validation and formatting
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
+    rev: v1.37.1
     hooks:
       - id: yamllint
         args: ['-d', 'relaxed']
 
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
+    rev: v0.45.0
     hooks:
       - id: markdownlint
         args: ['--disable', 'MD013', 'MD041']  # Disable line length and first line rules

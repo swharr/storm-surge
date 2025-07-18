@@ -5,7 +5,7 @@ Storm Surge is designed to test Kubernetes elasticity with realistic workloads.
 ## Components
 
 - **Frontend**: Load balancer entry point
-- **Shopping Cart**: CPU-intensive service for scaling tests  
+- **Shopping Cart**: CPU-intensive service for scaling tests
 - **Product Catalog**: Baseline service
 - **FinOps Controller**: Cost optimization with LaunchDarkly
 - **Chaos Testing**: Resilience validation

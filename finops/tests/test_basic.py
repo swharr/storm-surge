@@ -52,10 +52,10 @@ class TestBasicFinOpsController(unittest.TestCase):
         if CONTROLLER_AVAILABLE:
             result1 = self.controller.disable_autoscaling_after_hours()
             result2 = self.controller.enable_autoscaling_business_hours()
-            
+
             self.assertIsInstance(result1, dict)
             self.assertIsInstance(result2, dict)
-            
+
             # Check that status key exists
             self.assertIn("status", result1)
             self.assertIn("status", result2)
@@ -69,11 +69,11 @@ class TestBasicFinOpsController(unittest.TestCase):
     def test_file_structure(self):
         """Test that required files exist"""
         finops_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
         # Check main files exist
         self.assertTrue(os.path.exists(os.path.join(finops_dir, 'finops_controller.py')))
         self.assertTrue(os.path.exists(os.path.join(finops_dir, 'requirements.txt')))
-        
+
         # Check tests directory exists
         tests_dir = os.path.join(finops_dir, 'tests')
         self.assertTrue(os.path.exists(tests_dir))
@@ -84,7 +84,7 @@ class TestBasicFinOpsController(unittest.TestCase):
         # Test that environment variables can be accessed
         test_var = os.getenv('TEST_VAR', 'default_value')
         self.assertEqual(test_var, 'default_value')
-        
+
         # Test with environment variable set
         with patch.dict(os.environ, {'TEST_VAR': 'test_value'}):
             test_var = os.getenv('TEST_VAR')
@@ -97,7 +97,7 @@ class TestFinOpsControllerStructure(unittest.TestCase):
     def test_project_structure(self):
         """Test that project has correct structure"""
         finops_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
         # Expected files
         expected_files = [
             'finops_controller.py',
@@ -110,7 +110,7 @@ class TestFinOpsControllerStructure(unittest.TestCase):
             'tests/requirements.txt',
             'tests/run_tests.sh'
         ]
-        
+
         for file_path in expected_files:
             full_path = os.path.join(finops_dir, file_path)
             self.assertTrue(os.path.exists(full_path), f"File {file_path} should exist")
@@ -119,21 +119,21 @@ class TestFinOpsControllerStructure(unittest.TestCase):
         """Test that test runner is executable"""
         finops_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         test_runner = os.path.join(finops_dir, 'tests', 'run_tests.sh')
-        
+
         # Check file exists
         self.assertTrue(os.path.exists(test_runner))
-        
+
         # Check file is executable
         self.assertTrue(os.access(test_runner, os.X_OK))
 
     def test_requirements_files_exist(self):
         """Test that requirements files exist"""
         finops_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
         # Main requirements
         main_requirements = os.path.join(finops_dir, 'requirements.txt')
         self.assertTrue(os.path.exists(main_requirements))
-        
+
         # Test requirements
         test_requirements = os.path.join(finops_dir, 'tests', 'requirements.txt')
         self.assertTrue(os.path.exists(test_requirements))
@@ -141,11 +141,11 @@ class TestFinOpsControllerStructure(unittest.TestCase):
     def test_python_import_paths(self):
         """Test that Python import paths are correct"""
         finops_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
         # Test that we can construct the correct import path
         expected_path = os.path.join(finops_dir, 'finops_controller.py')
         self.assertTrue(os.path.exists(expected_path))
-        
+
         # Test that the path is in sys.path after our setup
         self.assertIn(finops_dir, sys.path)
 
@@ -154,13 +154,13 @@ if __name__ == '__main__':
     # Print test information
     print("🧪 Running Basic FinOps Controller Tests")
     print("=" * 40)
-    
+
     if CONTROLLER_AVAILABLE:
         print("✅ FinOps Controller is available")
     else:
         print("⚠️  FinOps Controller import failed - some tests will be skipped")
-    
+
     print()
-    
+
     # Run tests
     unittest.main(verbosity=2)

@@ -279,7 +279,7 @@ Product name: Storm Surge
 Repository: OceanSurge
 
 Features:
-⚡ Realistic e-commerce workloads  
+⚡ Realistic e-commerce workloads
 🌊 Spot Ocean integration
 💰 FinOps cost optimization with LaunchDarkly
 🔥 Chaos engineering capabilities
@@ -290,7 +290,7 @@ Ready to weather any Kubernetes scaling storm!"
 
 # Future releases
 # v1.1 - Lightning Strike
-# v1.2 - Thunder Roll  
+# v1.2 - Thunder Roll
 # v2.0 - Perfect Storm
 EOF
 
@@ -316,7 +316,7 @@ We use a dual naming strategy:
 - **Kubernetes Namespace**: `oceansurge`
 - **Docker Images**: `oceansurge/service-name`
 
-### Product Level  
+### Product Level
 - **Product Name**: Storm Surge
 - **Version Tags**: `v1.0-storm-surge`
 - **Documentation**: References "Storm Surge"
@@ -363,7 +363,7 @@ echo "✅ Repository update complete!"
 echo ""
 echo "📋 Summary:"
 echo "  Repository: OceanSurge"
-echo "  Product: Storm Surge"  
+echo "  Product: Storm Surge"
 echo "  Namespace: oceansurge"
 echo "  URL: https://github.com/Shon-Harris_flexera/OceanSurge"
 echo ""

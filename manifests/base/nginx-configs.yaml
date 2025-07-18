@@ -8,12 +8,12 @@ data:
     server {
         listen 8080;
         server_name localhost;
-        
+
         location / {
             root /usr/share/nginx/html;
             index index.html;
         }
-        
+
         location /health {
             access_log off;
             return 200 "healthy\n";
@@ -32,18 +32,18 @@ data:
     server {
         listen 8080;
         server_name localhost;
-        
+
         location / {
             root /usr/share/nginx/html;
             index index.html;
         }
-        
+
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
-        
+
         # API endpoints for cart functionality
         location /api/ {
             root /usr/share/nginx/html;

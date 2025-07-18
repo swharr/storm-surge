@@ -16,10 +16,10 @@ retry_command() {
     local delay="$3"
     shift 3
     local command=("$@")
-    
+
     for ((attempt=1; attempt<=max_attempts; attempt++)); do
         echo "📋 $description (attempt $attempt/$max_attempts)..."
-        
+
         if "${command[@]}"; then
             echo "✅ $description succeeded"
             return 0

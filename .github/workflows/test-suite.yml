@@ -13,25 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Install pre-commit
         run: pip install pre-commit PyYAML
-        
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: 'latest'
-          
+
       - name: Install kustomize
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
-          
+
       - name: Run pre-commit hooks
         run: pre-commit run --all-files
 
@@ -42,16 +42,16 @@ jobs:
     needs: pre-commit
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install minikube
         uses: medyagh/setup-minikube@latest
         with:
           cpus: 4
           memory: 8192m
-          
+
       - name: Run test suite
         run: ./tests/test-suite.sh
-        
+
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
@@ -70,40 +70,40 @@ jobs:
         provider: [gke, eks, aks]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install cloud CLI tools
         run: |
           # Install gcloud CLI
           curl https://sdk.cloud.google.com | bash
           source ~/google-cloud-sdk/path.bash.inc
-          
+
           # Install AWS CLI
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install
-          
+
           # Install Azure CLI
           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: 'latest'
-          
+
       - name: Install kustomize
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
-          
+
       - name: Test ${{ matrix.provider }} script syntax
         run: bash -n scripts/providers/${{ matrix.provider }}.sh
-        
+
       - name: Test ${{ matrix.provider }} script validation
         run: |
           export STORM_REGION="us-central1"
           export STORM_ZONE="us-west-2-a"  # Intentionally mismatched
           export STORM_NODES="3"
-          
+
           # Should fail due to zone/region mismatch
           if scripts/providers/${{ matrix.provider }}.sh; then
             echo "ERROR: Script should have failed validation"
@@ -119,7 +119,7 @@ jobs:
     needs: pre-commit
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -127,7 +127,7 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
-          
+
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -140,13 +140,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Validate README links
         uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           use-quiet-mode: 'yes'
           use-verbose-mode: 'yes'
-          
+
       - name: Check for required documentation
         run: |
           required_docs=(
@@ -155,7 +155,7 @@ jobs:
             "CHANGELOG.md"
             "LICENSE"
           )
-          
+
           for doc in "${required_docs[@]}"; do
             if [[ -f "$doc" ]]; then
               echo "✅ $doc exists"
@@ -173,7 +173,7 @@ jobs:
     needs: [minikube-test, script-validation, security-scan, docs-validation]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check version tags
         run: |
           if git describe --tags --exact-match HEAD 2>/dev/null; then
@@ -181,7 +181,7 @@ jobs:
           else
             echo "ℹ️  Commit is not tagged (development build)"
           fi
-          
+
       - name: Validate changelog
         run: |
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
@@ -189,7 +189,7 @@ jobs:
           else
             echo "✅ CHANGELOG.md is up to date"
           fi
-          
+
       - name: Create release summary
         run: |
           echo "## 🚀 Release Readiness Summary" >> $GITHUB_STEP_SUMMARY

@@ -122,7 +122,7 @@ if [ -z "$LAUNCHDARKLY_SDK_KEY" ]; then
     echo "4. Copy the Server-side SDK key"
     echo ""
     read -r -p "Enter your LaunchDarkly SDK Key: " LAUNCHDARKLY_SDK_KEY
-    
+
     if [ -z "$LAUNCHDARKLY_SDK_KEY" ]; then
         log_error "LaunchDarkly SDK Key is required"
         exit 1
@@ -140,7 +140,7 @@ if [ -z "$SPOT_API_TOKEN" ]; then
     echo "4. Copy the token value"
     echo ""
     read -r -p "Enter your Spot API Token: " SPOT_API_TOKEN
-    
+
     if [ -z "$SPOT_API_TOKEN" ]; then
         log_error "Spot API Token is required"
         exit 1
@@ -157,7 +157,7 @@ if [ -z "$SPOT_CLUSTER_ID" ]; then
     echo "3. Find your cluster and copy the ID (format: ocn-xxxxxxxx)"
     echo ""
     read -r -p "Enter your Spot Cluster ID: " SPOT_CLUSTER_ID
-    
+
     if [ -z "$SPOT_CLUSTER_ID" ]; then
         log_error "Spot Cluster ID is required"
         exit 1
@@ -169,7 +169,7 @@ if [ -z "$WEBHOOK_SECRET" ]; then
     echo ""
     log_info "Webhook Secret is optional but recommended for security"
     read -r -p "Enter a webhook secret (or press Enter to skip): " WEBHOOK_SECRET
-    
+
     if [ -z "$WEBHOOK_SECRET" ]; then
         WEBHOOK_SECRET="oceansurge-webhook-$(openssl rand -hex 16)"
         log_info "Generated webhook secret: $WEBHOOK_SECRET"
@@ -186,7 +186,7 @@ if [ -z "$PROVIDER" ]; then
     echo "4) All providers"
     echo ""
     read -r -p "Enter your choice (1-4): " PROVIDER_CHOICE
-    
+
     case $PROVIDER_CHOICE in
         1) PROVIDER="gke" ;;
         2) PROVIDER="eks" ;;
@@ -248,7 +248,7 @@ SCRIPTS_DIR=$(dirname "$0")/providers
 deploy_base_app() {
     local provider=$1
     local script="${SCRIPTS_DIR}/${provider}.sh"
-    
+
     if [ -f "$script" ]; then
         log_info "Deploying base application to $provider..."
         bash "$script"
@@ -260,23 +260,23 @@ deploy_base_app() {
 
 deploy_middleware() {
     log_info "Deploying middleware components..."
-    
+
     # Apply middleware manifests
     kubectl apply -k "$TEMP_DIR/middleware/"
-    
+
     # Wait for middleware deployment to be ready
     log_info "Waiting for middleware deployment to be ready..."
     kubectl wait --for=condition=available --timeout=300s deployment/ld-spot-middleware -n oceansurge
-    
+
     # Get middleware service details
     log_info "Middleware service details:"
     kubectl get svc ld-spot-middleware -n oceansurge -o wide
-    
+
     # Check if ingress is available
     if kubectl get ingress ld-spot-middleware-ingress -n oceansurge &>/dev/null; then
         log_info "Ingress configuration:"
         kubectl get ingress ld-spot-middleware-ingress -n oceansurge
-        
+
         echo ""
         log_warning "Configure LaunchDarkly webhook URL:"
         echo "1. Get the external IP/hostname from the ingress above"
@@ -288,7 +288,7 @@ deploy_middleware() {
 
 validate_deployment() {
     log_info "Validating deployment..."
-    
+
     # Check base application
     if kubectl get deployment frontend -n oceansurge &>/dev/null; then
         log_success "Base application deployed successfully"
@@ -297,7 +297,7 @@ validate_deployment() {
         log_error "Base application deployment failed"
         return 1
     fi
-    
+
     # Check middleware if not skipped
     if [ "$SKIP_MIDDLEWARE" = false ]; then
         if kubectl get deployment ld-spot-middleware -n oceansurge &>/dev/null; then
@@ -308,11 +308,11 @@ validate_deployment() {
             return 1
         fi
     fi
-    
+
     # Check services
     log_info "Service status:"
     kubectl get svc -n oceansurge
-    
+
     # Check HPA
     if kubectl get hpa -n oceansurge &>/dev/null; then
         log_info "HPA status:"

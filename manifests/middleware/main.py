@@ -33,7 +33,7 @@ SPOT_CLUSTER_ID = os.getenv('SPOT_CLUSTER_ID', '')
 
 class SpotOceanManager:
     """Handles Spot Ocean API interactions"""
-    
+
     def __init__(self, api_token: str, cluster_id: str):
         self.api_token = api_token
         self.cluster_id = cluster_id
@@ -41,7 +41,7 @@ class SpotOceanManager:
             'Authorization': f'Bearer {api_token}',
             'Content-Type': 'application/json'
         }
-    
+
     def get_cluster_info(self) -> Dict[str, Any]:
         """Get current cluster configuration"""
         try:
@@ -54,16 +54,16 @@ class SpotOceanManager:
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get cluster info: {e}")
             return {}
-    
+
     def scale_cluster(self, action: str, scale_factor: float = 1.2) -> bool:
         """Scale cluster based on cost optimization flag"""
         try:
             cluster_info = self.get_cluster_info()
             if not cluster_info:
                 return False
-            
+
             current_capacity = cluster_info.get('response', {}).get('capacity', {})
-            
+
             if action == 'optimize':
                 # Scale down for cost optimization
                 new_capacity = {
@@ -80,7 +80,7 @@ class SpotOceanManager:
                     'maximum': current_capacity.get('maximum', 10)
                 }
                 logger.info(f"Scaling up cluster for performance: {new_capacity}")
-            
+
             response = requests.put(
                 f"{SPOT_API_BASE_URL}/cluster/{self.cluster_id}",
                 headers=self.headers,
@@ -88,7 +88,7 @@ class SpotOceanManager:
             )
             response.raise_for_status()
             return True
-            
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to scale cluster: {e}")
             return False
@@ -99,13 +99,13 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
     if not WEBHOOK_SECRET:
         logger.warning("No webhook secret configured - skipping signature verification")
         return True
-    
+
     expected_signature = hmac.new(
         WEBHOOK_SECRET.encode('utf-8'),
         payload,
         hashlib.sha256
     ).hexdigest()
-    
+
     return hmac.compare_digest(signature, expected_signature)
 
 
@@ -128,24 +128,24 @@ def handle_launchdarkly_webhook():
         if not verify_webhook_signature(request.data, signature):
             logger.error("Invalid webhook signature")
             return jsonify({'error': 'Invalid signature'}), 401
-        
+
         # Parse webhook payload
         payload = request.get_json()
         if not payload:
             return jsonify({'error': 'Invalid JSON payload'}), 400
-        
+
         logger.info(f"Received LaunchDarkly webhook: {payload.get('kind', 'unknown')}")
-        
+
         # Process flag change events
         if payload.get('kind') == 'flag':
             flag_key = payload.get('data', {}).get('key', '')
-            
+
             if flag_key == 'enable-cost-optimizer':
                 flag_value = payload.get('data', {}).get('value', False)
-                
+
                 # Initialize Spot Ocean manager
                 spot_manager = SpotOceanManager(SPOT_API_TOKEN, SPOT_CLUSTER_ID)
-                
+
                 if flag_value:
                     # Cost optimization enabled - scale down
                     success = spot_manager.scale_cluster('optimize')
@@ -154,23 +154,23 @@ def handle_launchdarkly_webhook():
                     # Cost optimization disabled - scale up
                     success = spot_manager.scale_cluster('performance')
                     action = 'cost_optimization_disabled'
-                
+
                 logger.info(f"Processed flag change: {action}, success: {success}")
-                
+
                 return jsonify({
                     'status': 'processed',
                     'action': action,
                     'success': success,
                     'timestamp': time.time()
                 })
-        
+
         # Default response for other webhook types
         return jsonify({
             'status': 'received',
             'kind': payload.get('kind', 'unknown'),
             'timestamp': time.time()
         })
-        
+
     except Exception as e:
         logger.error(f"Error processing webhook: {e}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -182,14 +182,14 @@ def get_cluster_status():
     try:
         spot_manager = SpotOceanManager(SPOT_API_TOKEN, SPOT_CLUSTER_ID)
         cluster_info = spot_manager.get_cluster_info()
-        
+
         return jsonify({
             'cluster_id': SPOT_CLUSTER_ID,
             'status': 'active' if cluster_info else 'unavailable',
             'capacity': cluster_info.get('response', {}).get('capacity', {}),
             'timestamp': time.time()
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting cluster status: {e}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -200,5 +200,5 @@ if __name__ == '__main__':
     logger.info(f"LaunchDarkly SDK Key configured: {'Yes' if LAUNCHDARKLY_SDK_KEY else 'No'}")
     logger.info(f"Spot API Token configured: {'Yes' if SPOT_API_TOKEN else 'No'}")
     logger.info(f"Spot Cluster ID: {SPOT_CLUSTER_ID}")
-    
+
     app.run(host='0.0.0.0', port=8000, debug=False)

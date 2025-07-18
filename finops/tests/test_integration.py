@@ -51,7 +51,7 @@ class TestLaunchDarklyIntegration(unittest.TestCase):
                 "value": True
             }
         }
-        
+
         # Test webhook processing
         # Currently placeholder implementation
         result = self.controller.disable_autoscaling_after_hours()
@@ -91,7 +91,7 @@ class TestSpotOceanIntegration(unittest.TestCase):
         }
         mock_response.status_code = 200
         mock_get.return_value = mock_response
-        
+
         # Test cluster info retrieval
         result = self.controller.disable_autoscaling_after_hours()
         self.assertIsInstance(result, dict)
@@ -103,7 +103,7 @@ class TestSpotOceanIntegration(unittest.TestCase):
         mock_response = Mock()
         mock_response.status_code = 200
         mock_put.return_value = mock_response
-        
+
         # Test scaling operations
         result = self.controller.enable_autoscaling_business_hours()
         self.assertEqual(result["status"], "enabled")
@@ -131,11 +131,11 @@ class TestEndToEndScenarios(unittest.TestCase):
     def test_full_cost_optimization_flow(self):
         """Test complete cost optimization flow"""
         # Test: LaunchDarkly flag change -> Spot API scaling
-        
+
         # Step 1: Flag evaluation
         result1 = self.controller.disable_autoscaling_after_hours()
         self.assertIsInstance(result1, dict)
-        
+
         # Step 2: Scaling action
         result2 = self.controller.enable_autoscaling_business_hours()
         self.assertEqual(result2["status"], "enabled")
@@ -146,7 +146,7 @@ class TestEndToEndScenarios(unittest.TestCase):
         with patch('finops_controller.datetime') as mock_datetime:
             # Mock business hours (9 AM UTC)
             mock_datetime.now.return_value = datetime(2024, 1, 1, 9, 0, 0, tzinfo=pytz.UTC)
-            
+
             result = self.controller.enable_autoscaling_business_hours()
             self.assertEqual(result["status"], "enabled")
 
@@ -156,7 +156,7 @@ class TestEndToEndScenarios(unittest.TestCase):
         with patch('finops_controller.datetime') as mock_datetime:
             # Mock after hours (10 PM UTC)
             mock_datetime.now.return_value = datetime(2024, 1, 1, 22, 0, 0, tzinfo=pytz.UTC)
-            
+
             result = self.controller.disable_autoscaling_after_hours()
             self.assertIsInstance(result, dict)
 
@@ -166,7 +166,7 @@ class TestEndToEndScenarios(unittest.TestCase):
         with patch('finops_controller.datetime') as mock_datetime:
             # Mock weekend (Saturday 10 AM UTC)
             mock_datetime.now.return_value = datetime(2024, 1, 6, 10, 0, 0, tzinfo=pytz.UTC)
-            
+
             result = self.controller.disable_autoscaling_after_hours()
             self.assertIsInstance(result, dict)
 
@@ -183,7 +183,7 @@ class TestFailureRecovery(unittest.TestCase):
         # Test graceful handling of LaunchDarkly API failures
         with patch('requests.get') as mock_get:
             mock_get.side_effect = ConnectionError("LaunchDarkly API down")
-            
+
             # Controller should handle API failures gracefully
             result = self.controller.disable_autoscaling_after_hours()
             self.assertIsInstance(result, dict)
@@ -193,7 +193,7 @@ class TestFailureRecovery(unittest.TestCase):
         # Test graceful handling of Spot API failures
         with patch('requests.put') as mock_put:
             mock_put.side_effect = ConnectionError("Spot API down")
-            
+
             # Controller should handle API failures gracefully
             result = self.controller.enable_autoscaling_business_hours()
             self.assertIsInstance(result, dict)
@@ -243,6 +243,6 @@ class TestMetricsAndMonitoring(unittest.TestCase):
 if __name__ == '__main__':
     # Set up test environment
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Run integration tests
     unittest.main(verbosity=2)

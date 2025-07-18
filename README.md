@@ -154,6 +154,22 @@ sudo mv kustomize /usr/local/bin/
 
 The validation scripts automatically detect available tools and connectivity, providing graceful fallbacks for offline environments.
 
+### Pre-commit Hooks Setup
+```bash
+# Install pre-commit hooks for automated validation
+pip install pre-commit
+pre-commit install
+
+# Run pre-commit on all files manually
+pre-commit run --all-files
+
+# Pre-commit automatically runs on git commits to validate:
+# - YAML syntax and formatting
+# - Markdown lint checks  
+# - Trailing whitespace removal
+# - End-of-file formatting
+```
+
 ### Advanced Test Suites
 ```bash
 # Run individual test suites
@@ -281,7 +297,7 @@ ocean-surge/
 │   │   └── cluster-sweep.sh         # Comprehensive cluster cleanup
 │   └── providers/
 │       ├── gke.sh                   # Google Kubernetes Engine with retry logic
-│       ├── eks.sh                   # Amazon EKS with retry logic  
+│       ├── eks.sh                   # Amazon EKS with retry logic
 │       └── aks.sh                   # Azure AKS with retry logic
 ├── manifests/
 │   ├── base/                        # Core application manifests
@@ -350,17 +366,17 @@ ocean-surge/
 - **Validation hooks**: Pre-commit hooks for security and syntax validation
 - **Region restrictions**: Cloud deployment restricted to approved regions only
 - **Insecure port hardening**: Automatic detection and mitigation of insecure ports (10255, 10250-10256, 2379-2380) - GKE deployments
-- **Network policies**: Restrictive network policies blocking insecure kubelet access - GKE deployments  
+- **Network policies**: Restrictive network policies blocking insecure kubelet access - GKE deployments
 - **RBAC validation**: Comprehensive role-based access control with authenticated kubelet access testing - GKE deployments
 - **Security workloads**: Integrated security validation pods and defensive security measures - GKE deployments
 - **Cluster hardening**: Enhanced GKE cluster creation with shielded nodes, private networking, and disabled legacy authorization
 
 > **Note**: The security workloads in `manifests/sec_fixes/` are specifically designed for GKE deployments to address Google Cloud-specific security configurations. **AKS and EKS users do not need these security fixes** as Azure and AWS managed Kubernetes services have different security models and built-in protections.
 
-## 🧠 Roadmap 
+## 🧠 Roadmap
 
 - [ ] OpenFeature + flagd support
-- [ ] Backstage IDP Scaffolding 
+- [ ] Backstage IDP Scaffolding
 - [ ] Microsoft Azure DevOps Pipeline
 - [ ] Github Runners for Deploy
 - [ ] FinOps Alerts based on infra changes
@@ -369,8 +385,8 @@ ocean-surge/
 - [ ] FinOps Dashboard plugin
 - [ ] Multi-cluster support
 - [ ] Advanced cost analytics
-- [ ] Karpenter Support? 
-- [ ] Bring your own Application to test with 
+- [ ] Karpenter Support?
+- [ ] Bring your own Application to test with
 - [ ] NetApp Trident / Cloud Insights integration for Storage control (and testing)
 
 ---
@@ -418,7 +434,7 @@ kubectl logs -f deployment/ld-spot-middleware -n oceansurge
 
 # Test specific provider deployment with custom cluster name
 export STORM_REGION="us-central1"
-export STORM_ZONE="us-central1-a" 
+export STORM_ZONE="us-central1-a"
 export STORM_NODES="3"
 export STORM_CLUSTER_NAME="my-test-cluster"
 ./scripts/providers/gke.sh
@@ -436,7 +452,7 @@ export STORM_CLUSTER_NAME="my-test-cluster"
 ```bash
 # The deployment script will prompt you to:
 # 1) Deploy workloads only (reuse existing cluster)
-# 2) Delete and recreate cluster (fresh start)  
+# 2) Delete and recreate cluster (fresh start)
 # 3) Cancel deployment
 ```
 
@@ -465,7 +481,7 @@ export STORM_CLUSTER_NAME="my-test-cluster"
 
 ---
 
-**Version**: v0.1.5-alpha-poc  
-**Updated**: 2025-07-18 - Code quality improvements with ShellCheck compliance, offline validation support, and comprehensive file formatting cleanup  
-**Status**: NOT PRODUCTION READY - For Alpha Testing Only -   
+**Version**: v0.1.5-alpha-poc
+**Updated**: 2025-07-18 - Code quality improvements with ShellCheck compliance, offline validation support, and comprehensive file formatting cleanup
+**Status**: NOT PRODUCTION READY - For Alpha Testing Only -
 Made with ❤️ for the FinOps Practicioner and Developer Community
