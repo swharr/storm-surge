@@ -200,12 +200,14 @@ get_region() {
     return
   fi
   
-  local regions=($(parse_regions "$provider"))
+  local regions
+  mapfile -t regions < <(parse_regions "$provider")
   local i=1
   
   echo "📍 Available $provider regions:"
   for region in "${regions[@]}"; do
-    local name=$(parse_region_name "$provider" "$region")
+    local name
+    name=$(parse_region_name "$provider" "$region")
     printf "  %d) %-15s (%s)\n" $i "$region" "$name"
     ((i++))
   done
@@ -233,7 +235,8 @@ get_region() {
 get_zone() {
   local provider=$1
   local region=$2
-  local zones=($(parse_zones "$provider" "$region"))
+  local zones
+  mapfile -t zones < <(parse_zones "$provider" "$region")
   
   if [ "$NON_INTERACTIVE" = "true" ]; then
     ZONE="${zones[0]}"
@@ -363,7 +366,8 @@ validate_arguments() {
   fi
   
   if [ -n "$REGION" ] && [ -n "$PROVIDER" ] && [ "$PROVIDER" != "all" ]; then
-    local valid_regions=($(parse_regions "$PROVIDER"))
+    local valid_regions
+    mapfile -t valid_regions < <(parse_regions "$PROVIDER")
     if ! printf '%s\n' "${valid_regions[@]}" | grep -q "^$REGION$"; then
       errors+=("Invalid region '$REGION' for provider '$PROVIDER'")
     fi
@@ -395,8 +399,10 @@ check_cluster_exists() {
   local provider=$1
   local region=$2
   local zone=$3
-  local cli_tool=$(get_cli_tool "$provider")
-  local cluster_name=$(get_cluster_name_for_provider "$provider")
+  local cli_tool
+  cli_tool=$(get_cli_tool "$provider")
+  local cluster_name
+  cluster_name=$(get_cluster_name_for_provider "$provider")
   
   if ! is_cli_available "$cli_tool"; then
     return 1
@@ -421,7 +427,8 @@ check_cluster_exists() {
 # Prompt user for action when cluster exists
 handle_existing_cluster() {
   local provider=$1
-  local cluster_name=$(get_cluster_name_for_provider "$provider")
+  local cluster_name
+  cluster_name=$(get_cluster_name_for_provider "$provider")
   
   if [ "$NON_INTERACTIVE" = "true" ]; then
     echo "🔍 Found existing $cluster_name cluster!"
@@ -466,7 +473,8 @@ handle_existing_cluster() {
 # Delete existing cluster
 delete_existing_cluster() {
   local provider=$1
-  local cluster_name=$(get_cluster_name_for_provider "$provider")
+  local cluster_name
+  cluster_name=$(get_cluster_name_for_provider "$provider")
   
   echo "🗑️  Deleting existing $cluster_name cluster..."
   case $provider in
@@ -506,7 +514,8 @@ run_provider() {
     exit 1
   fi
   
-  local cli_tool=$(get_cli_tool "$p")
+  local cli_tool
+  cli_tool=$(get_cli_tool "$p")
   
   if ! is_cli_available "$cli_tool"; then
     echo "❌ CLI tool '$cli_tool' not found. Please install it first."
@@ -528,7 +537,8 @@ run_provider() {
   export STORM_REGION="$REGION"
   export STORM_ZONE="$ZONE"
   export STORM_NODES="$NODES"
-  export STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
+  STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
+  export STORM_CLUSTER_NAME
   
   if ! bash "$script"; then
     echo "❌ Deployment failed for provider '$p'"
@@ -552,7 +562,7 @@ if [ "$PROVIDER" = "all" ]; then
     fi
     
     if [ -z "$ZONE" ]; then
-      get_zone $p $REGION
+      get_zone "$p" "$REGION"
     fi
     
     if [ -z "$NODES" ]; then
@@ -579,11 +589,11 @@ if [ "$PROVIDER" = "all" ]; then
 else
   # Single provider deployment
   if [ -z "$REGION" ]; then
-    get_region $PROVIDER
+    get_region "$PROVIDER"
   fi
   
   if [ -z "$ZONE" ]; then
-    get_zone $PROVIDER $REGION
+    get_zone "$PROVIDER" "$REGION"
   fi
   
   if [ -z "$NODES" ]; then
@@ -591,7 +601,7 @@ else
   fi
   
   if [ -z "$CLUSTER_NAME" ]; then
-    get_cluster_name $PROVIDER
+    get_cluster_name "$PROVIDER"
   fi
   
   # Check if cluster exists and handle accordingly
@@ -610,12 +620,12 @@ else
   
   if [ "$NON_INTERACTIVE" = "true" ]; then
     echo "🤖 Non-interactive mode: Proceeding with deployment"
-    run_provider $PROVIDER
+    run_provider "$PROVIDER"
   else
     read -r -p "Proceed with deployment? (y/N): " confirm
     case $confirm in
       [Yy]|[Yy][Ee][Ss])
-        run_provider $PROVIDER
+        run_provider "$PROVIDER"
         ;;
       *)
         echo "❌ Deployment cancelled."

@@ -14,11 +14,11 @@ if [ -z "$CART_PODS" ]; then
 fi
 
 # Pick random pod
-POD_ARRAY=($CART_PODS)
+read -ra POD_ARRAY <<< "$CART_PODS"
 RANDOM_POD=${POD_ARRAY[$RANDOM % ${#POD_ARRAY[@]}]}
 
 echo "⚡ Lightning strikes pod: $RANDOM_POD"
-kubectl delete pod $RANDOM_POD
+kubectl delete pod "$RANDOM_POD"
 
 echo "📊 Monitoring recovery..."
 for i in {1..30}; do

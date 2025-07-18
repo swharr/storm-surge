@@ -15,7 +15,7 @@ isUsingInsecurePort() {
   resource_name=$2
   namespace=$3
 
-  config=$(kubectl get $resource_type $resource_name -n $namespace -o yaml)
+  config=$(kubectl get "$resource_type" "$resource_name" -n "$namespace" -o yaml)
 
   # Check if kubectl output is empty
   if [[ -z "$config" ]]; then
@@ -35,8 +35,8 @@ configmaps=$(kubectl get configmaps -A -o custom-columns=NAMESPACE:.metadata.nam
 
 # Iterate over each ConfigMap
 for configmap in $configmaps; do
-  namespace=$(echo $configmap | cut -d/ -f1)
-  configmap_name=$(echo $configmap | cut -d/ -f2)
+  namespace=$(echo "$configmap" | cut -d/ -f1)
+  configmap_name=$(echo "$configmap" | cut -d/ -f2)
   isUsingInsecurePort "configmap" "$configmap_name" "$namespace"
 done
 
@@ -45,7 +45,7 @@ pods=$(kubectl get pods -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:
 
 # Iterate over each Pod
 for pod in $pods; do
-  namespace=$(echo $pod | cut -d/ -f1)
-  pod_name=$(echo $pod | cut -d/ -f2)
+  namespace=$(echo "$pod" | cut -d/ -f1)
+  pod_name=$(echo "$pod" | cut -d/ -f2)
   isUsingInsecurePort "pod" "$pod_name" "$namespace"
 done

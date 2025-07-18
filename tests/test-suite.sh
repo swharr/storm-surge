@@ -186,7 +186,8 @@ test_resource_constraints() {
     log "Testing resource constraints..."
     
     # Check if all pods have resource requests and limits
-    local pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
+    local pods
+    pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
     
     for pod in $pods; do
         if kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].resources}' | grep -q '"requests"'; then
@@ -207,11 +208,13 @@ test_resource_constraints() {
 test_security_contexts() {
     log "Testing security contexts..."
     
-    local pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
+    local pods
+    pods=$(kubectl get pods -n "$TEST_NAMESPACE" -o jsonpath='{.items[*].metadata.name}')
     
     for pod in $pods; do
         # Check for non-root user
-        local runAsUser=$(kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].securityContext.runAsUser}')
+        local runAsUser
+        runAsUser=$(kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].securityContext.runAsUser}')
         if [[ "$runAsUser" != "0" && "$runAsUser" != "" ]]; then
             success "Pod $pod runs as non-root user ($runAsUser)"
         else
@@ -219,7 +222,8 @@ test_security_contexts() {
         fi
         
         # Check for runAsNonRoot
-        local runAsNonRoot=$(kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
+        local runAsNonRoot
+        runAsNonRoot=$(kubectl get pod "$pod" -n "$TEST_NAMESPACE" -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
         if [[ "$runAsNonRoot" == "true" ]]; then
             success "Pod $pod has runAsNonRoot: true"
         else

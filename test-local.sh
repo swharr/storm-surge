@@ -101,13 +101,13 @@ echo "5️⃣  Testing security configurations..."
 violations=0
 
 # Check for runAsNonRoot in deployments
-if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} \; | xargs grep -c "runAsNonRoot: true" > /dev/null 2>&1; then
+if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} + | xargs -r grep -c "runAsNonRoot: true" > /dev/null 2>&1; then
     warning "Some deployments may be missing runAsNonRoot: true"
     violations=$((violations + 1))
 fi
 
 # Check for resource limits
-if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} \; | xargs grep -c "limits:" > /dev/null 2>&1; then
+if ! find manifests -name "*.yaml" -exec grep -l "kind: Deployment" {} + | xargs -r grep -c "limits:" > /dev/null 2>&1; then
     warning "Some deployments may be missing resource limits"
     violations=$((violations + 1))
 fi

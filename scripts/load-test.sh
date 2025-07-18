@@ -40,12 +40,12 @@ echo "Target: http://$FRONTEND_URL"
 
 # Use curl if wrk not available
 if command -v wrk &> /dev/null; then
-    wrk -t4 -c$CONCURRENT -d${DURATION}s http://$FRONTEND_URL
+    wrk -t4 -c"$CONCURRENT" -d"${DURATION}"s "http://$FRONTEND_URL"
 else
     echo "Using curl (install wrk for better load testing)"
-    for i in $(seq 1 $CONCURRENT); do
+    for i in $(seq 1 "$CONCURRENT"); do  # shellcheck disable=SC2034
         (
-            for j in $(seq 1 $((DURATION/5))); do
+            for j in $(seq 1 $((DURATION/5))); do  # shellcheck disable=SC2034
                 curl -s "http://$FRONTEND_URL" > /dev/null
                 sleep 5
             done

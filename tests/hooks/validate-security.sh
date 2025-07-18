@@ -12,7 +12,7 @@ check_security_contexts() {
     local violations=0
     
     # Find all deployment files
-    find manifests -name "*.yaml" -o -name "*.yml" | while read -r file; do
+    while IFS= read -r file; do
         if grep -q "kind: Deployment" "$file"; then
             echo "    📄 Checking $(basename "$file")"
             
@@ -40,7 +40,7 @@ check_security_contexts() {
                 echo "    ✅ $(basename "$file") no privileged containers"
             fi
         fi
-    done
+    done < <(find manifests -name "*.yaml" -o -name "*.yml")
     
     return $violations
 }
@@ -51,7 +51,7 @@ check_resource_limits() {
     
     local violations=0
     
-    find manifests -name "*.yaml" -o -name "*.yml" | while read -r file; do
+    while IFS= read -r file; do
         if grep -q "kind: Deployment" "$file"; then
             echo "    📄 Checking $(basename "$file")"
             
@@ -71,7 +71,7 @@ check_resource_limits() {
                 violations=$((violations + 1))
             fi
         fi
-    done
+    done < <(find manifests -name "*.yaml" -o -name "*.yml")
     
     return $violations
 }
@@ -92,7 +92,7 @@ check_hardcoded_secrets() {
         "apikey"
     )
     
-    find manifests -name "*.yaml" -o -name "*.yml" | while read -r file; do
+    while IFS= read -r file; do
         for pattern in "${patterns[@]}"; do
             if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom" > /dev/null 2>&1; then
                 echo "    ❌ $(basename "$file") may contain hardcoded secrets"
@@ -100,7 +100,7 @@ check_hardcoded_secrets() {
                 break
             fi
         done
-    done
+    done < <(find manifests -name "*.yaml" -o -name "*.yml")
     
     if [[ $violations -eq 0 ]]; then
         echo "    ✅ No hardcoded secrets detected"
@@ -115,7 +115,7 @@ check_image_tags() {
     
     local violations=0
     
-    find manifests -name "*.yaml" -o -name "*.yml" | while read -r file; do
+    while IFS= read -r file; do
         # Look for images with latest tag or no tag
         if grep "image:" "$file" | grep -E ":latest|:[[:space:]]*$" > /dev/null 2>&1; then
             echo "    ❌ $(basename "$file") uses 'latest' tag or no tag"
@@ -123,7 +123,7 @@ check_image_tags() {
         else
             echo "    ✅ $(basename "$file") uses specific image tags"
         fi
-    done
+    done < <(find manifests -name "*.yaml" -o -name "*.yml")
     
     return $violations
 }
@@ -132,7 +132,7 @@ check_image_tags() {
 check_network_policies() {
     echo "  🌐 Checking network policies..."
     
-    if find manifests -name "*.yaml" -o -name "*.yml" | xargs grep -l "kind: NetworkPolicy" > /dev/null 2>&1; then
+    if find manifests -name "*.yaml" -o -name "*.yml" -exec grep -l "kind: NetworkPolicy" {} + > /dev/null 2>&1; then
         echo "    ✅ Network policies found"
     else
         echo "    ⚠️  No network policies found (recommended for production)"

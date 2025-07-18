@@ -21,7 +21,8 @@ check_script_syntax() {
 # Check for required functions/variables
 check_script_requirements() {
     local script=$1
-    local basename_script=$(basename "$script")
+    local basename_script
+    basename_script=$(basename "$script")
 
     echo "  🔧 Checking requirements: $basename_script"
 
@@ -56,7 +57,8 @@ check_script_requirements() {
 # Test script parameter validation
 test_parameter_validation() {
     local script=$1
-    local basename_script=$(basename "$script")
+    local basename_script
+    basename_script=$(basename "$script")
 
     echo "  🧪 Testing parameter validation: $basename_script"
 

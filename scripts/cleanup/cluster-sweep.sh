@@ -52,7 +52,7 @@ if kubectl get deployment -A | grep -q ocean-controller; then
     if "$FORCE"; then
         # Delete ocean-controller and CRDs
         kubectl delete ns "$OCEAN_NS" --grace-period=0 --force >> "$LOG_FILE" 2>&1 || true
-        kubectl delete crd $(kubectl get crd | grep spotinst | awk '{print $1}') >> "$LOG_FILE" 2>&1 || true
+        kubectl delete crd "$(kubectl get crd | grep spotinst | awk '{print $1}')" >> "$LOG_FILE" 2>&1 || true
     else
         echo "⚠️  Ocean controller would be removed (dry-run)" | tee -a "$LOG_FILE"
     fi
