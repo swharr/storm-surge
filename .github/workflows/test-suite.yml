@@ -75,15 +75,11 @@ jobs:
         run: |
           # Check and setup gcloud CLI
           if command -v gcloud &> /dev/null; then
-            echo "✅ gcloud CLI found, updating components..."
-            sudo apt-get update && sudo apt-get --only-upgrade install \
-              google-cloud-cli-kpt \
-              google-cloud-cli-terraform-tools \
-              google-cloud-cli-app-engine-python-extras \
-              google-cloud-cli-cloud-build-local \
-              google-cloud-cli-gke-gcloud-auth-plugin \
-              google-cloud-cli-anthos-auth \
-              google-cloud-cli
+            echo "✅ gcloud CLI found, updating..."
+            # Update the base Google Cloud CLI package via apt
+            sudo apt-get update && sudo apt-get --only-upgrade install google-cloud-cli -y
+            # Update gcloud components (this works better in GH Actions)
+            gcloud components update --quiet || echo "Note: Some components may require manual update"
           else
             echo "📦 Installing gcloud CLI..."
             curl https://sdk.cloud.google.com | bash
