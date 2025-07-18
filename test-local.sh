@@ -72,8 +72,8 @@ if command -v kustomize &> /dev/null; then
         exit 1
     fi
 elif command -v kubectl &> /dev/null; then
-    # Fallback to kubectl if cluster is available
-    if kubectl cluster-info &> /dev/null; then
+    # Fallback to kubectl if cluster is available and not in CI
+    if [[ -z "$CI" && -z "$GITHUB_ACTIONS" ]] && kubectl cluster-info &> /dev/null; then
         if kubectl kustomize manifests/base/ > /dev/null 2>&1; then
             success "Base manifests are valid"
         else

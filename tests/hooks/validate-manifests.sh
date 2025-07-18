@@ -8,11 +8,13 @@ echo "🔍 Validating Kubernetes manifests..."
 # Check if kustomize is available (prefer standalone over kubectl)
 if command -v kustomize &> /dev/null; then
     KUSTOMIZE_CMD="kustomize build"
+    KUBECTL_AVAILABLE=false  # Use offline validation with standalone kustomize
 elif command -v kubectl &> /dev/null; then
     KUSTOMIZE_CMD="kubectl kustomize"
     # Check if connected to cluster for kubectl validation
-    if ! kubectl cluster-info &> /dev/null; then
-        echo "⚠️  No Kubernetes cluster connection - using basic YAML validation only"
+    # Also check for CI environment variables to force offline mode
+    if [[ -n "$CI" || -n "$GITHUB_ACTIONS" ]] || ! kubectl cluster-info &> /dev/null 2>&1; then
+        echo "⚠️  CI environment or no Kubernetes cluster connection - using basic YAML validation only"
         KUBECTL_AVAILABLE=false
     else
         KUBECTL_AVAILABLE=true
@@ -51,10 +53,38 @@ validate_dir() {
                     fi
                 else
                     # Basic YAML syntax validation when offline
-                    if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
-                        echo "  ✅ $(basename "$file") syntax is valid"
+                    # Try PyYAML first, fall back to basic validation
+                    if python3 -c "
+import sys
+try:
+    import yaml
+    with open('$file', 'r') as f:
+        docs = list(yaml.safe_load_all(f))
+    # Basic Kubernetes resource validation
+    for doc in docs:
+        if doc and isinstance(doc, dict):
+            if 'apiVersion' not in doc or 'kind' not in doc:
+                print('Missing apiVersion or kind', file=sys.stderr)
+                sys.exit(1)
+    sys.exit(0)
+except ImportError:
+    # PyYAML not available, use basic validation
+    sys.exit(2)
+except Exception as e:
+    print(f'YAML validation failed: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null; then
+                        echo "  ✅ $(basename "$file") is valid"
+                    elif [ $? -eq 2 ]; then
+                        # PyYAML not available, use basic validation
+                        if grep -q "apiVersion:" "$file" && grep -q "kind:" "$file"; then
+                            echo "  ✅ $(basename "$file") basic validation passed"
+                        else
+                            echo "  ❌ $(basename "$file") missing required apiVersion or kind"
+                            return 1
+                        fi
                     else
-                        echo "  ❌ $(basename "$file") has invalid YAML syntax"
+                        echo "  ❌ $(basename "$file") validation failed"
                         return 1
                     fi
                 fi

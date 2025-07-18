@@ -20,12 +20,17 @@ jobs:
           python-version: '3.11'
           
       - name: Install pre-commit
-        run: pip install pre-commit
+        run: pip install pre-commit PyYAML
         
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: 'latest'
+          
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
           
       - name: Run pre-commit hooks
         run: pre-commit run --all-files
@@ -84,6 +89,11 @@ jobs:
         uses: azure/setup-kubectl@v4
         with:
           version: 'latest'
+          
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
           
       - name: Test ${{ matrix.provider }} script syntax
         run: bash -n scripts/providers/${{ matrix.provider }}.sh
