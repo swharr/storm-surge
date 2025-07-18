@@ -106,7 +106,7 @@ echo "🔄 Updating git configuration..."
 # Update git remote if it exists
 if git remote get-url origin 2>/dev/null; then
     echo "Updating git remote URL..."
-    git remote set-url origin https://github.com/Shon-Harris_flexera/OceanSurge.git
+    git remote set-url origin https://github.com/swharr/storm-surge.git
 fi
 
 echo "📋 Updating deployment scripts with correct repository..."
@@ -155,7 +155,7 @@ echo "📊 Monitor with: kubectl get pods -n oceansurge"
 echo "📋 Logs: kubectl logs -l app=frontend -n oceansurge"
 echo ""
 echo "🌩️ Ready to weather the scaling storm!"
-echo "Repository: https://github.com/Shon-Harris_flexera/OceanSurge"
+echo "Repository: https://github.com/swharr/storm-surge"
 EOF
 
 # Update load test script
@@ -257,7 +257,7 @@ else
 fi
 
 echo "✅ FinOps controller deployment complete!"
-echo "💡 Repository: https://github.com/Shon-Harris_flexera/OceanSurge"
+echo "💡 Repository: https://github.com/swharr/storm-surge"
 echo "💡 Copy full implementation from artifacts for production use"
 EOF
 
@@ -269,7 +269,7 @@ echo "🏷️ Creating proper Git tags..."
 # Create version tags
 cat > .gittags << 'EOF'
 # Git tagging strategy for OceanSurge
-# Repository: https://github.com/Shon-Harris_flexera/OceanSurge
+# Repository: https://github.com/swharr/storm-surge
 
 # v1.0 - Storm Surge (Initial Release)
 git tag -a v1.0-storm-surge -m "🌩️ Storm Surge v1.0 - First Storm
@@ -303,7 +303,7 @@ cat > docs/REPOSITORY.md << 'EOF'
 ## Repository Information
 
 - **Repository Name**: OceanSurge
-- **Repository URL**: https://github.com/Shon-Harris_flexera/OceanSurge
+- **Repository URL**: https://github.com/swharr/storm-surge
 - **Product Name**: Storm Surge
 - **Namespace**: oceansurge
 
@@ -326,7 +326,7 @@ We use a dual naming strategy:
 
 ```bash
 # Clone repository
-git clone https://github.com/Shon-Harris_flexera/OceanSurge.git
+git clone https://github.com/swharr/storm-surge.git
 
 # Deploy Storm Surge
 cd OceanSurge
@@ -365,7 +365,7 @@ echo "📋 Summary:"
 echo "  Repository: OceanSurge"
 echo "  Product: Storm Surge"
 echo "  Namespace: oceansurge"
-echo "  URL: https://github.com/Shon-Harris_flexera/OceanSurge"
+echo "  URL: https://github.com/swharr/storm-surge"
 echo ""
 echo "🚀 Ready to commit and push:"
 echo "  git add ."

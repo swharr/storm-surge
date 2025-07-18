@@ -3,7 +3,7 @@
 ## Repository Information
 
 - **Repository Name**: OceanSurge
-- **Repository URL**: https://github.com/Shon-Harris_flexera/OceanSurge
+- **Repository URL**: https://github.com/swharr/storm-surge
 - **Product Name**: Storm Surge
 - **Namespace**: oceansurge
 
@@ -26,7 +26,7 @@ We use a dual naming strategy:
 
 ```bash
 # Clone repository
-git clone https://github.com/Shon-Harris_flexera/OceanSurge.git
+git clone https://github.com/swharr/storm-surge.git
 
 # Deploy Storm Surge
 cd OceanSurge

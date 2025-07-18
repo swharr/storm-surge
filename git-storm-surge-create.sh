@@ -89,7 +89,7 @@ Redis Cache
 
 ```bash
 # Clone repository
-git clone https://github.com/Shon-Harris_flexera/OceanSurge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
+git clone https://github.com/swharr/storm-surge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
 cd k8s-ecommerce-ocean-demo
 
 # Quick deploy on any Kubernetes cluster
@@ -105,7 +105,7 @@ kubectl get service frontend-service
 
 ```bash
 # Clone the repository
-git clone https://github.com/Shon-Harris_flexera/OceanSurge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
+git clone https://github.com/swharr/storm-surge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
 cd k8s-ecommerce-ocean-demo
 
 # Make scripts executable
@@ -487,7 +487,7 @@ spotctl get ocean
 
 ```bash
 # Clone your fork
-git clone https://github.com/Shon-Harris_flexera/OceanSurge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
+git clone https://github.com/swharr/storm-surge/k8s-ecommerce-ocean-demo.gits-ecommerce-ocean-demo.git
 
 # Install development dependencies
 pip install -r requirements-dev.txt

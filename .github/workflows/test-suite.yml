@@ -71,19 +71,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install cloud CLI tools
+      - name: Setup cloud CLI tools
         run: |
-          # Install gcloud CLI
-          curl https://sdk.cloud.google.com | bash
-          source ~/google-cloud-sdk/path.bash.inc
+          # Check and setup gcloud CLI
+          if command -v gcloud &> /dev/null; then
+            echo "✅ gcloud CLI found, updating..."
+            gcloud components update --quiet
+          else
+            echo "📦 Installing gcloud CLI..."
+            curl https://sdk.cloud.google.com | bash
+            source ~/google-cloud-sdk/path.bash.inc
+          fi
 
-          # Install AWS CLI
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
+          # Check and setup AWS CLI
+          if command -v aws &> /dev/null; then
+            echo "✅ AWS CLI found, updating..."
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install --update
+          else
+            echo "📦 Installing AWS CLI..."
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          fi
 
-          # Install Azure CLI
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          # Check and setup Azure CLI
+          if command -v az &> /dev/null; then
+            echo "✅ Azure CLI found, updating..."
+            az upgrade --yes
+          else
+            echo "📦 Installing Azure CLI..."
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          fi
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4

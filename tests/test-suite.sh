@@ -345,5 +345,6 @@ case "${1:-}" in
         ;;
     *)
         main "$@"
+        exit 0
         ;;
 esac

@@ -48,5 +48,5 @@ else
 fi
 
 echo "✅ FinOps controller deployment complete!"
-echo "💡 Repository: https://github.com/Shon-Harris_flexera/OceanSurge"
+echo "💡 Repository: https://github.com/swharr/storm-surge"
 echo "💡 Copy full implementation from artifacts for production use"

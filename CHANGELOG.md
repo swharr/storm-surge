@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### 🔧 Repository & CI/CD Improvements - July 18, 2025
+
+- **Repository URL Updates**
+  - Updated all references from `https://github.com/Shon-Harris_flexera/OceanSurge` to `https://github.com/swharr/storm-surge`
+  - Fixed URLs in `fix-repo-naming.sh`, `docs/REPOSITORY.md`, `git-storm-surge-create.sh`, and `scripts/deploy-finops.sh`
+  - Repository now correctly points to the actual GitHub location
+
+- **Test Suite Exit Code Fix**
+  - Fixed `./tests/test-suite.sh` to exit with code 0 on successful test runs
+  - Prevents GitHub Actions and tools from interpreting successful tests as errors
+  - Added explicit `exit 0` after successful main function execution
+
+- **GitHub Actions CLI Tool Management**
+  - Enhanced CI workflow to check for existing CLI tools before installation
+  - **Google Cloud CLI**: Uses `gcloud components update --quiet` for existing installations
+  - **AWS CLI**: Properly handles existing installations with `--update` flag to avoid "preexisting installation" errors
+  - **Azure CLI**: Uses `az upgrade --yes` for existing installations
+  - More efficient CI runs with proper tool management instead of reinstalling from scratch
+
 ### 🧹 Code Quality & Shell Script Improvements - July 18, 2025
 
 - **Pre-commit Configuration Updates**
