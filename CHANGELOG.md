@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+### 🧹 Code Quality & Shell Script Improvements - July 18, 2025
+- **Trailing Whitespace Cleanup**
+  - Removed trailing whitespace from all project files
+  - Fixed `manifests/base/kustomization.yaml`, `tests/hooks/validate-deploy-scripts.sh`, and `git-storm-surge-create.sh`
+  - Ensured all 70+ files end with a single newline character for consistent formatting
+
+- **File Permissions Standardization**
+  - Made `chaos-testing/lightning-strike.sh` executable with proper permissions
+  - Fixed shebang executable status for chaos testing script
+
+- **Offline Manifest Validation**
+  - Enhanced `tests/hooks/validate-manifests.sh` to support offline validation
+  - Updated `test-local.sh` to use standalone kustomize tool when available
+  - Added connectivity detection before attempting server-side validation
+  - Implemented graceful fallbacks: full validation → offline validation → basic YAML validation
+  - Fixed API server dependency issues for offline environments
+
+- **Comprehensive ShellCheck Compliance**
+  - Fixed 15 `read` commands missing `-r` flag across deployment scripts
+  - Fixed trap quoting issue in `scripts/prod_deploy_preview.sh` (double quotes → single quotes)
+  - Added proper variable quoting for safety:
+    - Fixed boolean variable tests in `scripts/cleanup/cluster-sweep.sh`
+    - Quoted URL variables in curl commands (3 files)
+    - Fixed function parameter quoting in deployment scripts
+    - Separated local declaration from assignment to avoid masking return values
+  - Enhanced script robustness against special characters and word splitting
+  - All critical ShellCheck warnings resolved across 19 shell scripts
+
 ### 🧪 Test Coverage & Quality Improvements
 - **Comprehensive Test Suite Expansion**
   - Added 24 comprehensive middleware tests covering Flask endpoints, webhook handling, and Spot API integration

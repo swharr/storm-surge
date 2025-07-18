@@ -207,7 +207,7 @@ else
     for i in $(seq 1 $CONCURRENT); do
         (
             for j in $(seq 1 $((DURATION/5))); do
-                curl -s http://$FRONTEND_URL > /dev/null
+                curl -s "http://$FRONTEND_URL" > /dev/null
                 sleep 5
             done
         ) &

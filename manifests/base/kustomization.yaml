@@ -22,7 +22,7 @@ images:
   newName: nginx
   newTag: alpine
 - name: storm-surge/product-catalog
-  newName: nginx  
+  newName: nginx
   newTag: alpine
 - name: storm-surge/shopping-cart
   newName: nginx

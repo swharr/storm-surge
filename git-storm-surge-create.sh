@@ -37,10 +37,10 @@ cat > README.md << 'EOF'
 
 A comprehensive e-commerce microservices application designed specifically for testing Kubernetes elasticity, autoscaling, and cost optimization across **GKE**, **EKS**, and **AKS** with **Spot.io Ocean** integration.
 
-## Who this is for 
-- DevOps, SRE, and Platform Engineering Teams 
-- Prospects and Existing Customers who want to explore the Flexera DevOps tools 
-- Anyone who wants to better understand core Kubernetes Concepts. 
+## Who this is for
+- DevOps, SRE, and Platform Engineering Teams
+- Prospects and Existing Customers who want to explore the Flexera DevOps tools
+- Anyone who wants to better understand core Kubernetes Concepts.
 
 ## 🌟 Features
 
@@ -272,7 +272,7 @@ kubectl port-forward svc/grafana 3000:3000
 ```bash
 # Basic load test
 ./scripts/load-test.sh light   # 10 RPS
-./scripts/load-test.sh medium  # 50 RPS  
+./scripts/load-test.sh medium  # 50 RPS
 ./scripts/load-test.sh heavy   # 100 RPS
 
 # Ocean-specific scaling test
@@ -389,7 +389,7 @@ k8s-ecommerce-ocean-demo/
 # Required for Ocean integration
 export SPOT_TOKEN="your-spot-token"
 export AWS_REGION="us-west-2"              # For AWS
-export GCP_PROJECT="your-project-id"       # For GCP  
+export GCP_PROJECT="your-project-id"       # For GCP
 export AZURE_RESOURCE_GROUP="your-rg"      # For Azure
 
 # Optional configurations
@@ -501,7 +501,7 @@ pip install -r requirements-dev.txt
 
 ## 📝 License
 
-This project code is licensed under the GNU GPL License 
+This project code is licensed under the GNU GPL License
 Flexera Spot Ocean Code and FinOps Reporting Tooling is provided under license(s) covered under the Flexera Software License Agreement.
 Other Tools, Plugins, and Features may be developed by outside groups, and covered under their specific licensing.
 
@@ -754,26 +754,26 @@ data:
     upstream product-catalog {
         server product-catalog-service:80;
     }
-    
+
     server {
         listen 80;
         server_name localhost;
-        
+
         location / {
             root /usr/share/nginx/html;
             index index.html;
         }
-        
+
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
-        
+
         location /api/cart/ {
             proxy_pass http://shopping-cart/;
         }
-        
+
         location /api/products/ {
             proxy_pass http://product-catalog/;
         }
@@ -812,21 +812,21 @@ data:
                 <h1>Storm Surge</h1>
                 <p>Weather the Kubernetes Scaling Storm</p>
             </div>
-            
+
             <div class="services">
                 <div class="service">
                     <h3>📦 Product Catalog</h3>
                     <p>Browse storm-ready products</p>
                     <button onclick="testService('/api/products')">Test Service</button>
                 </div>
-                
+
                 <div class="service">
                     <h3>🛍️ Shopping Cart</h3>
                     <p>CPU-intensive cart operations</p>
                     <button onclick="testService('/api/cart')">Test Service</button>
                 </div>
             </div>
-            
+
             <div class="load-test">
                 <h3>⚡ Storm Testing</h3>
                 <p>Generate scaling storms to test resilience:</p>
@@ -837,7 +837,7 @@ data:
                 <button onclick="stopStorm()">Eye of Storm 🌀</button>
                 <div id="stormStatus" class="status" style="display: none;"></div>
             </div>
-            
+
             <div class="metrics">
                 <div class="metric">
                     <h4>Active Pods</h4>
@@ -852,44 +852,44 @@ data:
                     <div id="survivalRate">100%</div>
                 </div>
             </div>
-            
+
             <div id="response" style="margin-top: 20px;"></div>
         </div>
-        
+
         <script>
             let stormInterval;
-            
+
             async function testService(endpoint) {
                 try {
                     const response = await fetch(endpoint);
                     const data = await response.text();
-                    document.getElementById('response').innerHTML = 
+                    document.getElementById('response').innerHTML =
                         '<h4>⚡ Storm Response from ' + endpoint + ':</h4>' +
                         '<pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">' + data + '</pre>';
                 } catch (error) {
-                    document.getElementById('response').innerHTML = 
+                    document.getElementById('response').innerHTML =
                         '<h4>🌊 Storm disrupted ' + endpoint + ':</h4>' +
                         '<pre style="background: rgba(255,0,0,0.3); padding: 15px; border-radius: 8px;">' + error.message + '</pre>';
                 }
             }
-            
+
             function startStorm(intensity) {
                 stopStorm();
-                
+
                 const storms = {
                     'light': { interval: 200, concurrent: 2, name: 'Light Storm ⛅', duration: 120 },
                     'moderate': { interval: 100, concurrent: 5, name: 'Moderate Storm 🌧️', duration: 300 },
                     'severe': { interval: 50, concurrent: 10, name: 'Severe Storm ⛈️', duration: 600 },
                     'hurricane': { interval: 25, concurrent: 20, name: 'Hurricane 🌪️', duration: 900 }
                 };
-                
+
                 const storm = storms[intensity];
                 const status = document.getElementById('stormStatus');
                 status.style.display = 'block';
                 status.innerHTML = `🌩️ ${storm.name} in progress for ${storm.duration}s...`;
-                
+
                 document.getElementById('stormLevel').textContent = storm.name;
-                
+
                 stormInterval = setInterval(() => {
                     for (let i = 0; i < storm.concurrent; i++) {
                         const endpoints = ['/api/products', '/api/cart'];
@@ -897,7 +897,7 @@ data:
                         fetch(randomEndpoint).catch(e => console.log('Storm request failed:', e));
                     }
                 }, storm.interval);
-                
+
                 // Auto-stop storm
                 setTimeout(() => {
                     if (stormInterval) {
@@ -905,7 +905,7 @@ data:
                     }
                 }, storm.duration * 1000);
             }
-            
+
             function stopStorm() {
                 if (stormInterval) {
                     clearInterval(stormInterval);
@@ -918,7 +918,7 @@ data:
                     }, 3000);
                 }
             }
-            
+
             // Initialize
             window.onload = function() {
                 testService('/health');
@@ -1017,18 +1017,18 @@ class StormSurgeFinOpsController:
     def __init__(self):
         self.logger = logging.getLogger('storm-surge-finops')
         self.logger.info("🌩️ Storm Surge FinOps Controller initialized")
-    
+
     def disable_autoscaling_after_hours(self):
         """Main FinOps method - disable autoscaling 18:00-06:00"""
         current_time = datetime.now(pytz.UTC)
         self.logger.info(f"⚡ Checking after-hours optimization at {current_time}")
-        
+
         # TODO: Add LaunchDarkly integration
         # TODO: Add Spot Ocean API calls
         # TODO: Add timezone handling
-        
+
         return {"status": "placeholder - implement with full artifact code"}
-    
+
     def enable_autoscaling_business_hours(self):
         """Enable autoscaling during business hours"""
         self.logger.info("🌅 Enabling business hours autoscaling")
@@ -1038,18 +1038,18 @@ def main():
     """Main execution with scheduling"""
     logging.basicConfig(level=logging.INFO)
     controller = StormSurgeFinOpsController()
-    
+
     # Schedule optimization
     schedule.every().day.at("18:00").do(controller.disable_autoscaling_after_hours)
     schedule.every().day.at("06:00").do(controller.enable_autoscaling_business_hours)
-    
+
     print("🌩️ Storm Surge FinOps Controller running...")
     print("   - Copy full implementation from artifacts")
     print("   - Set up LaunchDarkly and Spot Ocean credentials")
-    
+
     # Run initial check
     controller.disable_autoscaling_after_hours()
-    
+
     while True:
         schedule.run_pending()
         time.sleep(60)
@@ -1160,7 +1160,7 @@ else
     for i in $(seq 1 $CONCURRENT); do
         (
             for j in $(seq 1 $((DURATION/5))); do
-                curl -s http://$FRONTEND_URL > /dev/null
+                curl -s "http://$FRONTEND_URL" > /dev/null
                 sleep 5
             done
         ) &
@@ -1268,7 +1268,7 @@ Storm Surge is designed to test Kubernetes elasticity with realistic workloads.
 ## Components
 
 - **Frontend**: Load balancer entry point
-- **Shopping Cart**: CPU-intensive service for scaling tests  
+- **Shopping Cart**: CPU-intensive service for scaling tests
 - **Product Catalog**: Baseline service
 - **FinOps Controller**: Cost optimization with LaunchDarkly
 - **Chaos Testing**: Resilience validation
@@ -1338,7 +1338,7 @@ cat > configs/clusters/clusters.json << 'EOF'
     {
       "cluster_id": "o-87654321",
       "cluster_name": "storm-surge-staging",
-      "environment": "staging", 
+      "environment": "staging",
       "timezone": "America/New_York",
       "cost_center": "qa",
       "business_critical": false
@@ -1348,7 +1348,7 @@ cat > configs/clusters/clusters.json << 'EOF'
       "cluster_name": "storm-surge-prod",
       "environment": "production",
       "timezone": "America/New_York",
-      "cost_center": "production", 
+      "cost_center": "production",
       "business_critical": true
     }
   ]

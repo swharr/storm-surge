@@ -9,7 +9,7 @@ echo "🔍 Validating deployment scripts..."
 check_script_syntax() {
     local script=$1
     echo "  📄 Checking syntax: $(basename "$script")"
-    
+
     if bash -n "$script"; then
         echo "  ✅ $(basename "$script") syntax is valid"
     else
@@ -22,9 +22,9 @@ check_script_syntax() {
 check_script_requirements() {
     local script=$1
     local basename_script=$(basename "$script")
-    
+
     echo "  🔧 Checking requirements: $basename_script"
-    
+
     # Provider scripts should use environment variables
     if [[ "$script" == *"/providers/"* ]]; then
         if grep -q "STORM_REGION" "$script" && grep -q "STORM_ZONE" "$script" && grep -q "STORM_NODES" "$script"; then
@@ -34,14 +34,14 @@ check_script_requirements() {
             return 1
         fi
     fi
-    
+
     # Check for proper error handling
     if grep -q "set -e" "$script"; then
         echo "  ✅ $basename_script has error handling enabled"
     else
         echo "  ⚠️  $basename_script missing 'set -e' for error handling"
     fi
-    
+
     # Check for help/usage function in main scripts
     if [[ "$basename_script" == "deploy.sh" ]]; then
         if grep -q "show_usage" "$script"; then
@@ -57,9 +57,9 @@ check_script_requirements() {
 test_parameter_validation() {
     local script=$1
     local basename_script=$(basename "$script")
-    
+
     echo "  🧪 Testing parameter validation: $basename_script"
-    
+
     # Test help parameter for main deploy script
     if [[ "$basename_script" == "deploy.sh" ]]; then
         if timeout 5 "$script" --help > /dev/null 2>&1; then
@@ -68,7 +68,7 @@ test_parameter_validation() {
         else
             echo "  ✅ deploy.sh help parameter working"
         fi
-        
+
         # Test invalid provider
         if echo "n" | timeout 5 "$script" --provider=invalid > /dev/null 2>&1; then
             echo "  ❌ deploy.sh should reject invalid provider"
@@ -77,20 +77,20 @@ test_parameter_validation() {
             echo "  ✅ deploy.sh invalid provider validation working"
         fi
     fi
-    
+
     # Test zone validation for provider scripts
     if [[ "$basename_script" == "gke.sh" ]]; then
         export STORM_REGION="us-central1"
         export STORM_ZONE="us-west-2-a"
         export STORM_NODES="3"
-        
+
         if timeout 5 "$script" > /dev/null 2>&1; then
             echo "  ❌ gke.sh should reject mismatched zone/region"
             return 1
         else
             echo "  ✅ gke.sh zone validation working"
         fi
-        
+
         unset STORM_REGION STORM_ZONE STORM_NODES
     fi
 }
@@ -100,7 +100,7 @@ if [[ -d "scripts" ]]; then
     find scripts -name "*.sh" -type f | while read -r script; do
         check_script_syntax "$script"
         check_script_requirements "$script"
-        
+
         # Only test parameter validation if script is executable
         if [[ -x "$script" ]]; then
             test_parameter_validation "$script"

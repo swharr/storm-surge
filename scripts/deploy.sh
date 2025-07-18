@@ -90,7 +90,8 @@ get_provider_config() {
 # Parse region data from config string
 parse_regions() {
   local provider=$1
-  local config=$(get_provider_config "$provider")
+  local config
+  config=$(get_provider_config "$provider")
   echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | cut -d':' -f1 | sort
 }
 
@@ -98,7 +99,8 @@ parse_regions() {
 parse_zones() {
   local provider=$1
   local region=$2
-  local config=$(get_provider_config "$provider")
+  local config
+  config=$(get_provider_config "$provider")
   echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | grep "^$region:" | cut -d':' -f3 | tr ',' ' '
 }
 
@@ -106,14 +108,16 @@ parse_zones() {
 parse_region_name() {
   local provider=$1
   local region=$2
-  local config=$(get_provider_config "$provider")
+  local config
+  config=$(get_provider_config "$provider")
   echo "$config" | grep -o 'regions:[^|]*' | sed 's/regions://' | tr '|' '\n' | grep "^$region:" | cut -d':' -f2
 }
 
 # Get CLI tool for provider
 get_cli_tool() {
   local provider=$1
-  local config=$(get_provider_config "$provider")
+  local config
+  config=$(get_provider_config "$provider")
   echo "$config" | grep -o 'cli_tool:[^|]*' | cut -d':' -f2
 }
 
@@ -170,7 +174,7 @@ get_provider() {
     echo "  3) aks  - Azure Kubernetes Service"
     echo "  4) all  - Deploy to all providers"
     echo
-    read -p "Select provider (1-4 or gke/eks/aks/all): " choice
+    read -r -p "Select provider (1-4 or gke/eks/aks/all): " choice
     
     case $choice in
       1|gke) PROVIDER="gke"; break ;;
@@ -208,7 +212,7 @@ get_region() {
   echo
   
   while true; do
-    read -p "Select region (1-${#regions[@]} or enter region name): " choice
+    read -r -p "Select region (1-${#regions[@]} or enter region name): " choice
     
     # Check if it's a number
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#regions[@]}" ]; then
@@ -249,15 +253,15 @@ get_zone() {
     
     case $provider in
       "gke")
-        read -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
+        read -r -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
         ZONE="${region}-${zone_suffix}"
         ;;
       "eks")
-        read -p "Enter zone suffix (e.g., 'a' for ${region}a): " zone_suffix
+        read -r -p "Enter zone suffix (e.g., 'a' for ${region}a): " zone_suffix
         ZONE="${region}${zone_suffix}"
         ;;
       "aks")
-        read -p "Enter zone number (1-3): " zone_suffix
+        read -r -p "Enter zone number (1-3): " zone_suffix
         ZONE="$zone_suffix"
         ;;
     esac
@@ -286,7 +290,7 @@ get_node_count() {
     echo "  • Default: 4 nodes (recommended)"
     echo "  • Range: 1-10 nodes maximum"
     echo
-    read -p "Enter number of nodes (1-10, or 'default' for 4): " node_input
+    read -r -p "Enter number of nodes (1-10, or 'default' for 4): " node_input
     
     case $node_input in
       "default"|"Default"|"DEFAULT"|"")
@@ -294,7 +298,7 @@ get_node_count() {
         break
         ;;
       [1-9]|10)
-        NODES=$node_input
+        NODES="$node_input"
         break
         ;;
       *)
@@ -320,7 +324,7 @@ get_cluster_name() {
   echo "  • Default: $default_name"
   echo "  • Custom: Enter your preferred name (alphanumeric and hyphens only)"
   echo
-  read -p "Enter cluster name (or press Enter for default): " name_input
+  read -r -p "Enter cluster name (or press Enter for default): " name_input
   
   if [ -z "$name_input" ]; then
     CLUSTER_NAME="$default_name"
@@ -435,7 +439,7 @@ handle_existing_cluster() {
   echo
   
   while true; do
-    read -p "Select option (1-3): " choice
+    read -r -p "Select option (1-3): " choice
     case $choice in
       1)
         echo "✅ Will deploy workloads to existing cluster"
@@ -608,7 +612,7 @@ else
     echo "🤖 Non-interactive mode: Proceeding with deployment"
     run_provider $PROVIDER
   else
-    read -p "Proceed with deployment? (y/N): " confirm
+    read -r -p "Proceed with deployment? (y/N): " confirm
     case $confirm in
       [Yy]|[Yy][Ee][Ss])
         run_provider $PROVIDER

@@ -121,7 +121,7 @@ if [ -z "$LAUNCHDARKLY_SDK_KEY" ]; then
     echo "3. Select your project and environment"
     echo "4. Copy the Server-side SDK key"
     echo ""
-    read -p "Enter your LaunchDarkly SDK Key: " LAUNCHDARKLY_SDK_KEY
+    read -r -p "Enter your LaunchDarkly SDK Key: " LAUNCHDARKLY_SDK_KEY
     
     if [ -z "$LAUNCHDARKLY_SDK_KEY" ]; then
         log_error "LaunchDarkly SDK Key is required"
@@ -139,7 +139,7 @@ if [ -z "$SPOT_API_TOKEN" ]; then
     echo "3. Generate a new API token"
     echo "4. Copy the token value"
     echo ""
-    read -p "Enter your Spot API Token: " SPOT_API_TOKEN
+    read -r -p "Enter your Spot API Token: " SPOT_API_TOKEN
     
     if [ -z "$SPOT_API_TOKEN" ]; then
         log_error "Spot API Token is required"
@@ -156,7 +156,7 @@ if [ -z "$SPOT_CLUSTER_ID" ]; then
     echo "2. Go to Ocean > Clusters"
     echo "3. Find your cluster and copy the ID (format: ocn-xxxxxxxx)"
     echo ""
-    read -p "Enter your Spot Cluster ID: " SPOT_CLUSTER_ID
+    read -r -p "Enter your Spot Cluster ID: " SPOT_CLUSTER_ID
     
     if [ -z "$SPOT_CLUSTER_ID" ]; then
         log_error "Spot Cluster ID is required"
@@ -168,7 +168,7 @@ fi
 if [ -z "$WEBHOOK_SECRET" ]; then
     echo ""
     log_info "Webhook Secret is optional but recommended for security"
-    read -p "Enter a webhook secret (or press Enter to skip): " WEBHOOK_SECRET
+    read -r -p "Enter a webhook secret (or press Enter to skip): " WEBHOOK_SECRET
     
     if [ -z "$WEBHOOK_SECRET" ]; then
         WEBHOOK_SECRET="oceansurge-webhook-$(openssl rand -hex 16)"
@@ -185,7 +185,7 @@ if [ -z "$PROVIDER" ]; then
     echo "3) AKS (Azure Kubernetes Service)"
     echo "4) All providers"
     echo ""
-    read -p "Enter your choice (1-4): " PROVIDER_CHOICE
+    read -r -p "Enter your choice (1-4): " PROVIDER_CHOICE
     
     case $PROVIDER_CHOICE in
         1) PROVIDER="gke" ;;
@@ -207,7 +207,7 @@ log_info "Creating configuration files..."
 
 # Create temp directory for processed manifests
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf $TEMP_DIR' EXIT
 
 # Process middleware secrets
 cp -r manifests/middleware "$TEMP_DIR/"
@@ -326,10 +326,10 @@ log_info "Starting deployment to provider: $PROVIDER"
 # Deploy to providers
 if [ "$PROVIDER" = "all" ]; then
     for p in gke eks aks; do
-        deploy_base_app $p
+        deploy_base_app "$p"
     done
 else
-    deploy_base_app $PROVIDER
+    deploy_base_app "$PROVIDER"
 fi
 
 # Deploy middleware if not skipped

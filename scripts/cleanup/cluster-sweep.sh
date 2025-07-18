@@ -49,7 +49,7 @@ if kubectl get deployment -A | grep -q ocean-controller; then
     OCEAN_NS=$(kubectl get deployment -A | grep ocean-controller | awk '{print $1}')
     echo "🔻 Ocean controller found in namespace '$OCEAN_NS'" | tee -a "$LOG_FILE"
     echo "☠️  Will deregister and delete Spot Ocean CRDs and resources" | tee -a "$LOG_FILE"
-    if $FORCE; then
+    if "$FORCE"; then
         # Delete ocean-controller and CRDs
         kubectl delete ns "$OCEAN_NS" --grace-period=0 --force >> "$LOG_FILE" 2>&1 || true
         kubectl delete crd $(kubectl get crd | grep spotinst | awk '{print $1}') >> "$LOG_FILE" 2>&1 || true
@@ -62,9 +62,9 @@ fi
 
 # Delete non-protected namespaces
 for ns in "${NAMESPACES_TO_DELETE[@]}"; do
-    if $DRY_RUN; then
+    if "$DRY_RUN"; then
         echo "🚫 Would delete namespace: $ns" | tee -a "$LOG_FILE"
-    elif $FORCE; then
+    elif "$FORCE"; then
         echo "🗑️ Deleting namespace: $ns" | tee -a "$LOG_FILE"
         kubectl delete ns "$ns" >> "$LOG_FILE" 2>&1 || true
     fi

@@ -14,11 +14,12 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 
 - **Intelligent Region/Zone Selection**: Interactive deployment with validation for all cloud providers
 - **Robust Retry Logic**: Automatic retry mechanisms for deployment operations with configurable timeouts
-- **Embedded Local Testing**: Built-in validation suite with security checks and manifest validation
+- **Embedded Local Testing**: Built-in validation suite with security checks and offline-capable manifest validation
 - **Enhanced Security**: Comprehensive security controls, RBAC validation, and insecure port hardening
 - **Security Workloads**: Integrated security validation tests and defensive security measures (GKE-specific)
 - **Cluster Management**: Smart cluster detection with options to reuse or recreate existing clusters
 - **Custom Cluster Naming**: Support for user-defined cluster names with validation and fallback defaults
+- **Shell Script Robustness**: ShellCheck compliant scripts with proper error handling and input validation
 
 ---
 
@@ -130,12 +131,28 @@ The production script will collect your LaunchDarkly SDK key, Spot API token, an
 
 ### Quick Local Tests
 ```bash
-# Run embedded local validation suite
+# Run embedded local validation suite (now supports offline validation)
 ./test-local.sh
 
 # Full test suite with comprehensive checks
 ./tests/test-suite.sh
 ```
+
+### Offline Validation Support
+The testing suite now supports offline validation when no Kubernetes cluster is available:
+
+```bash
+# Install standalone kustomize for offline validation (recommended)
+curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+sudo mv kustomize /usr/local/bin/
+
+# Validation priorities:
+# 1. Standalone kustomize (offline-friendly)
+# 2. kubectl with cluster connection (full validation)
+# 3. Basic YAML syntax validation (fallback)
+```
+
+The validation scripts automatically detect available tools and connectivity, providing graceful fallbacks for offline environments.
 
 ### Advanced Test Suites
 ```bash
@@ -309,13 +326,15 @@ ocean-surge/
 - [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
 - [x] **Robust Error Handling**: Comprehensive retry logic and validation
 - [x] **Security Hardening**: Embedded security checks and validation with insecure port detection
-- [x] **Local Testing Suite**: Built-in validation with syntax, security, and manifest checks
+- [x] **Local Testing Suite**: Built-in validation with syntax, security, and offline-capable manifest checks
 - [x] **Cluster Management**: Smart detection and handling of existing clusters
 - [x] **Interactive Configuration**: User-friendly deployment with guided setup
 - [x] **Enhanced Deployment Logic**: Improved argument parsing, validation, and multi-provider support with intelligent defaults
 - [x] **Existing Cluster Management**: Smart detection and handling of existing clusters with user choice options
 - [x] **Security Workloads Integration**: RBAC validation, authenticated kubelet access testing, and defensive security measures (GKE-specific)
 - [x] **Enhanced GKE Security**: Integrated security workloads deployment, comprehensive insecure port detection, and automatic security lockdown script execution
+- [x] **Offline Validation Support**: Standalone kustomize validation with graceful fallbacks for offline environments
+- [x] **Shell Script Quality**: ShellCheck compliant scripts with proper quoting, error handling, and input validation
 - [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
 - [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
 - [x] **Production Middleware**: Flask app with proper security
@@ -447,6 +466,6 @@ export STORM_CLUSTER_NAME="my-test-cluster"
 ---
 
 **Version**: v0.1.5-alpha-poc  
-**Updated**: 2025-07-17 - Enhanced deployment logic with intelligent argument parsing, existing cluster management, and GKE security workloads integration  
+**Updated**: 2025-07-18 - Code quality improvements with ShellCheck compliance, offline validation support, and comprehensive file formatting cleanup  
 **Status**: NOT PRODUCTION READY - For Alpha Testing Only -   
 Made with ❤️ for the FinOps Practicioner and Developer Community

@@ -52,26 +52,48 @@ fi
 
 unset STORM_REGION STORM_ZONE STORM_NODES
 
-# Test 4: Kubernetes manifest validation (if kubectl available)
+# Test 4: Kubernetes manifest validation (offline-friendly)
 echo "4️⃣  Testing Kubernetes manifests..."
-if command -v kubectl &> /dev/null; then
-    if kubectl kustomize manifests/base/ > /dev/null 2>&1; then
+if command -v kustomize &> /dev/null; then
+    # Use standalone kustomize for offline validation
+    if kustomize build manifests/base/ > /dev/null 2>&1; then
         success "Base manifests are valid"
     else
         error "Base manifests validation failed"
-        kubectl kustomize manifests/base/ 2>&1 | head -5
+        kustomize build manifests/base/ 2>&1 | head -5
         exit 1
     fi
     
-    if kubectl kustomize manifests/middleware/ > /dev/null 2>&1; then
+    if kustomize build manifests/middleware/ > /dev/null 2>&1; then
         success "Middleware manifests are valid"
     else
         error "Middleware manifests validation failed"
-        kubectl kustomize manifests/middleware/ 2>&1 | head -5
+        kustomize build manifests/middleware/ 2>&1 | head -5
         exit 1
     fi
+elif command -v kubectl &> /dev/null; then
+    # Fallback to kubectl if cluster is available
+    if kubectl cluster-info &> /dev/null; then
+        if kubectl kustomize manifests/base/ > /dev/null 2>&1; then
+            success "Base manifests are valid"
+        else
+            error "Base manifests validation failed"
+            kubectl kustomize manifests/base/ 2>&1 | head -5
+            exit 1
+        fi
+        
+        if kubectl kustomize manifests/middleware/ > /dev/null 2>&1; then
+            success "Middleware manifests are valid"
+        else
+            error "Middleware manifests validation failed"
+            kubectl kustomize manifests/middleware/ 2>&1 | head -5
+            exit 1
+        fi
+    else
+        warning "No Kubernetes cluster connection - skipping manifest validation"
+    fi
 else
-    warning "kubectl not found - skipping manifest validation"
+    warning "Neither kustomize nor kubectl found - skipping manifest validation"
 fi
 
 # Test 5: Security configuration check
