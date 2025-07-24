@@ -15,7 +15,7 @@ labels:
 - pairs:
     app.kubernetes.io/name: ocean-surge
     app.kubernetes.io/part-of: oceansurge
-    app.kubernetes.io/version: v0.1.1
+    app.kubernetes.io/version: beta-v1.1.0
 
 images:
 - name: storm-surge/frontend

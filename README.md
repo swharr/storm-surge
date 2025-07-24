@@ -245,17 +245,34 @@ Retry logic applies to:
 - Health check validations
 - API calls to cloud providers
 
-## ⚙️ LaunchDarkly + Spot API Setup
+## ⚙️ Feature Flag Provider Setup
 
-### LaunchDarkly Configuration
+Storm Surge supports both **LaunchDarkly** and **Statsig** for feature flag management. Use the interactive configuration script to set up your preferred provider.
+
+### Quick Setup
+```bash
+# Interactive configuration for feature flag provider
+python feature_flag_configure.py
+```
+
+### Manual Configuration
+
+#### LaunchDarkly Setup
 1. Create a boolean flag: `enable-cost-optimizer`
 2. Get your **Server-side SDK key** from LaunchDarkly (Account Settings > Projects > Environment)
 3. Configure webhook endpoint (after deployment):
    - URL: `https://your-domain.com/webhook/launchdarkly`
    - Secret: Generated during deployment
 
+#### Statsig Setup
+1. Create a feature gate: `enable_cost_optimizer`
+2. Get your **Server Key** from Statsig Console (Project Settings > Keys & Environments)
+3. Configure webhook endpoint (after deployment):
+   - URL: `https://your-domain.com/webhook/statsig`
+   - Secret: Generated during deployment
+
 ### Spot API Configuration
-** Pre-Requiste** You need to have a Spot Console (https://console.spotinst.com) base organization set up with your Admin account verified.
+**Pre-Requisite**: You need to have a Spot Console (https://console.spotinst.com) base organization set up with your Admin account verified.
 1. Get your **Spot API token** from Spot Console (Settings > API)
 2. Find your **Spot Cluster ID** (Ocean > Clusters)
 3. Ensure cluster has proper permissions for scaling
@@ -263,7 +280,9 @@ Retry logic applies to:
 ### Environment Variables
 ```bash
 # Required for production deployment
-export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"
+export FEATURE_FLAG_PROVIDER="launchdarkly"  # or "statsig"
+export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"  # if using LaunchDarkly
+export STATSIG_SERVER_KEY="secret-server-key-from-statsig"      # if using Statsig
 export SPOT_API_TOKEN="your-spot-api-token"
 export SPOT_CLUSTER_ID="ocn-cluster-id"
 export WEBHOOK_SECRET="your-webhook-secret"
@@ -481,7 +500,7 @@ export STORM_CLUSTER_NAME="my-test-cluster"
 
 ---
 
-**Version**: v0.1.5-alpha-poc
-**Updated**: 2025-07-18 - Code quality improvements with ShellCheck compliance, offline validation support, and comprehensive file formatting cleanup
-**Status**: NOT PRODUCTION READY - For Alpha Testing Only -
+**Version**: beta-v1.1.0
+**Updated**: 2025-07-24 - Beta release with complete authentication system, user management, role-based access control, and comprehensive frontend integration
+**Status**: BETA RELEASE - Ready for Testing and Evaluation -
 Made with ❤️ for the FinOps Practicioner and Developer Community

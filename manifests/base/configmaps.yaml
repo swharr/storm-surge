@@ -697,7 +697,7 @@ data:
     <body>
         <h1>🛍️ Product Catalog Service</h1>
         <p>Status: <span style="color:green">Active</span></p>
-        <p>Version: v0.1.1</p>
+        <p>Version: beta-v1.1.0</p>
         <div>Available Products: 1,247</div>
     </body>
     </html>
@@ -719,7 +719,7 @@ data:
     <body>
         <h1>🛒 Shopping Cart Service</h1>
         <p>Status: <span style="color:green">Active</span></p>
-        <p>Version: v0.1.1</p>
+        <p>Version: beta-v1.1.0</p>
         <div>Active Carts: 127</div>
     </body>
     </html>

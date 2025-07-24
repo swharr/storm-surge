@@ -18,7 +18,10 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manifests', 'middleware'))
 
 try:
-    from main import app, SpotOceanManager, verify_webhook_signature
+    from main import app, SpotOceanManager
+    from feature_flags import FeatureFlagManager
+    from logging_providers import LoggingManager
+    from api_routes import api_bp
     MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     MIDDLEWARE_AVAILABLE = False
@@ -257,22 +260,30 @@ class TestWebhookSecurity(unittest.TestCase):
         self.client = self.app.test_client()
 
     def test_webhook_signature_verification(self):
-        """Test webhook signature verification"""
-        secret = "test-secret"
-        payload = b'{"kind": "flag", "data": {"key": "test"}}'
+        """Test webhook signature verification via FeatureFlagManager"""
+        if not MIDDLEWARE_AVAILABLE:
+            self.skipTest("Middleware not available")
+        
+        # Test LaunchDarkly provider signature verification
+        with patch.dict(os.environ, {'FEATURE_FLAG_PROVIDER': 'launchdarkly', 'LAUNCHDARKLY_SDK_KEY': 'test-key', 'WEBHOOK_SECRET': 'test-secret'}):
+            flag_manager = FeatureFlagManager('launchdarkly')
+            provider = flag_manager.get_provider()
+            
+            secret = "test-secret"
+            payload = b'{"kind": "flag", "data": {"key": "test"}}'
 
-        # Create valid signature
-        signature = hmac.new(
-            secret.encode('utf-8'),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+            # Create valid signature
+            signature = hmac.new(
+                secret.encode('utf-8'),
+                payload,
+                hashlib.sha256
+            ).hexdigest()
 
-        # Test with correct signature
-        self.assertTrue(verify_webhook_signature(payload, signature))
+            # Test with correct signature
+            self.assertTrue(provider.verify_webhook_signature(payload, signature))
 
-        # Test with incorrect signature
-        self.assertFalse(verify_webhook_signature(payload, "invalid"))
+            # Test with incorrect signature
+            self.assertFalse(provider.verify_webhook_signature(payload, "invalid"))
 
     @patch.dict(os.environ, {'WEBHOOK_SECRET': 'test-secret'})
     def test_webhook_with_invalid_signature(self):

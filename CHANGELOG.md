@@ -1,5 +1,97 @@
 # 🌀 Storm Surge – Changelog
 
+## [beta-v1.1.0] - 2025-07-24
+
+### 🔐 Authentication & User Management System - Complete Implementation
+
+- **Complete Authentication System**
+  - JWT-based authentication with secure token generation and validation
+  - bcrypt password hashing with salt for maximum security
+  - Session management with token invalidation and logout functionality
+  - Account security features including failed login attempt tracking and account locking
+
+- **Role-Based Access Control (RBAC)**
+  - Three user roles: Admin, Operator, and Viewer with appropriate permissions
+  - Role-based API endpoint protection using decorators
+  - Frontend route protection based on user roles
+  - Admin-only user management capabilities
+
+- **User Management System**
+  - Complete CRUD operations for user accounts (Create, Read, Update, Delete)
+  - Admin interface for user registration, editing, and password resets
+  - User listing with status indicators and role management
+  - Password change functionality for users
+
+- **Frontend Authentication Integration**
+  - React-based user management interface with modal forms
+  - API service integration with automatic token handling
+  - Role-based navigation showing appropriate menu items
+  - Authentication state management with React Query
+  - Login/logout flow with proper error handling
+
+- **Comprehensive Test Suite**
+  - 19 authentication tests covering all aspects of the system
+  - Password security validation (hashing and verification)
+  - API endpoint authentication requirements
+  - Role-based access control testing
+  - Frontend integration verification
+  - Configuration and dependency validation
+
+- **Security Enhancements**
+  - Secure password storage using bcrypt with individual salts
+  - JWT tokens with configurable expiration times
+  - Protection against brute force attacks with account locking
+  - Proper session management and token invalidation
+  - Input validation and sanitization on all endpoints
+
+- **API Endpoints Added**
+  - `POST /api/auth/login` - User authentication
+  - `POST /api/auth/logout` - Session termination
+  - `GET /api/auth/me` - Current user information
+  - `POST /api/auth/register` - Admin user creation
+  - `POST /api/auth/change-password` - Password updates
+  - `GET /api/users` - List all users (admin only)
+  - `POST /api/users` - Create new user (admin only)
+  - `GET /api/users/{id}` - Get specific user (admin only)
+  - `PUT /api/users/{id}` - Update user (admin only)
+  - `DELETE /api/users/{id}` - Delete user (admin only)
+  - `POST /api/users/{id}/reset-password` - Admin password reset
+
+### 🎨 User Interface Enhancements
+
+- **New User Management Page**
+  - Comprehensive admin interface for user management
+  - User creation modal with form validation
+  - User editing with role and status management
+  - Password reset functionality
+  - User deletion with confirmation dialogs
+  - Status indicators for active/inactive users
+
+- **Enhanced Navigation**
+  - Dynamic navigation based on user roles
+  - Admin-only "User Management" menu item
+  - User profile display in sidebar and header
+  - Logout functionality in navigation
+
+- **Authentication Flow**
+  - Modern login page with proper error handling
+  - Automatic token refresh and session management
+  - Protected routes requiring authentication
+  - Graceful handling of expired sessions
+
+### 🛠️ Technical Improvements
+
+- **Dependencies Added**
+  - `bcrypt==4.0.1` for secure password hashing
+  - Enhanced Flask-SocketIO integration for authenticated WebSocket connections
+  - Updated API service with comprehensive authentication methods
+
+- **Code Quality & Structure**
+  - Modular authentication system with reusable decorators
+  - Proper error handling and input validation
+  - Consistent API response formats
+  - Clean separation of concerns between frontend and backend
+
 ## [Unreleased]
 
 ### 🔧 Repository & CI/CD Improvements - July 18, 2025

@@ -13,7 +13,7 @@ labels:
 - pairs:
     app.kubernetes.io/name: oceansurge-middleware
     app.kubernetes.io/part-of: oceansurge
-    app.kubernetes.io/version: v0.1.1
+    app.kubernetes.io/version: beta-v1.1.0
     app.kubernetes.io/component: middleware
 
 images:
@@ -24,6 +24,6 @@ images:
 configMapGenerator:
 - name: middleware-build-info
   literals:
-  - BUILD_VERSION=v0.1.1
+  - BUILD_VERSION=beta-v1.1.0
   - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   - COMPONENT=middleware

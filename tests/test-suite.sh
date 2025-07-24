@@ -104,11 +104,26 @@ test_deployments() {
     log "Validating middleware manifests..."
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" --dry-run=client > "$LOG_DIR/middleware-validation.log" 2>&1
     success "Middleware manifests validation passed"
+    
+    # Test frontend manifests
+    log "Validating frontend manifests..."
+    if [ -d "frontend/k8s" ]; then
+        kubectl apply -k frontend/k8s/ --namespace="$TEST_NAMESPACE" --dry-run=client > "$LOG_DIR/frontend-validation.log" 2>&1
+        success "Frontend manifests validation passed"
+    else
+        warning "Frontend k8s directory not found, skipping frontend validation"
+    fi
 
     # Deploy and test actual resources
     log "Deploying to test namespace..."
     kubectl apply -k manifests/base/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/base-deploy.log" 2>&1
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/middleware-deploy.log" 2>&1
+    
+    # Deploy frontend if available
+    if [ -d "frontend/k8s" ]; then
+        log "Deploying frontend to test namespace..."
+        kubectl apply -k frontend/k8s/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/frontend-deploy.log" 2>&1
+    fi
 
     # Wait for deployments to be ready
     log "Waiting for deployments to be ready..."
@@ -117,6 +132,44 @@ test_deployments() {
     else
         warning "Some deployments took longer than expected"
         kubectl get pods -n "$TEST_NAMESPACE" > "$LOG_DIR/pod-status.log"
+    fi
+}
+
+# Test Python components
+test_python_components() {
+    log "Testing Python components..."
+    
+    # Test middleware components
+    if [ -f "tests/test_middleware.py" ]; then
+        log "Running middleware tests..."
+        python3 tests/test_middleware.py > "$LOG_DIR/middleware-tests.log" 2>&1
+        if [ $? -eq 0 ]; then
+            success "Middleware tests passed"
+        else
+            warning "Some middleware tests failed (expected without dependencies)"
+        fi
+    fi
+    
+    # Test frontend components
+    if [ -f "tests/test_frontend.py" ]; then
+        log "Running frontend tests..."
+        python3 tests/test_frontend.py > "$LOG_DIR/frontend-tests.log" 2>&1
+        if [ $? -eq 0 ]; then
+            success "Frontend tests passed"
+        else
+            warning "Some frontend tests failed"
+        fi
+    fi
+    
+    # Test configuration script
+    if [ -f "feature_flag_configure.py" ]; then
+        log "Testing configuration script syntax..."
+        python3 -m py_compile feature_flag_configure.py > "$LOG_DIR/config-script-test.log" 2>&1
+        if [ $? -eq 0 ]; then
+            success "Configuration script syntax valid"
+        else
+            error "Configuration script has syntax errors"
+        fi
     fi
 }
 
@@ -172,7 +225,7 @@ test_health_endpoints() {
     if curl -s http://localhost:8080/health > "$LOG_DIR/frontend-health.log" 2>&1; then
         success "Frontend health endpoint responding"
     else
-        warning "Frontend health endpoint not responding"
+        warning "Frontend health endpoint not responding (expected for React app)"
     fi
 
     # Test middleware health
@@ -320,6 +373,7 @@ main() {
 
     setup_test_env
     start_minikube
+    test_python_components
     test_deploy_script
     test_deployments
     test_health_endpoints

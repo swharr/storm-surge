@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ld-spot-middleware
+  name: feature-flag-middleware
   namespace: oceansurge
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ld-spot-middleware
+      app: feature-flag-middleware
   template:
     metadata:
       labels:
-        app: ld-spot-middleware
+        app: feature-flag-middleware
     spec:
       securityContext:
         runAsNonRoot: true
@@ -50,35 +50,52 @@ spec:
           cd /app
           python main.py
         env:
+        - name: FEATURE_FLAG_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: feature-flag-config
+              key: FEATURE_FLAG_PROVIDER
+        - name: LOGGING_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: feature-flag-config
+              key: LOGGING_PROVIDER
         - name: LAUNCHDARKLY_SDK_KEY
           valueFrom:
             secretKeyRef:
-              name: ld-spot-secrets
+              name: feature-flag-secrets
               key: ld-sdk-key
+              optional: true
+        - name: STATSIG_SERVER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: feature-flag-secrets
+              key: statsig-server-key
+              optional: true
         - name: SPOT_API_TOKEN
           valueFrom:
             secretKeyRef:
-              name: ld-spot-secrets
+              name: feature-flag-secrets
               key: spot-api-token
         - name: SPOT_CLUSTER_ID
           valueFrom:
             configMapKeyRef:
-              name: ld-spot-config
+              name: feature-flag-config
               key: SPOT_CLUSTER_ID
         - name: WEBHOOK_SECRET
           valueFrom:
             secretKeyRef:
-              name: ld-spot-secrets
+              name: feature-flag-secrets
               key: webhook-secret
         - name: COST_IMPACT_THRESHOLD
           valueFrom:
             configMapKeyRef:
-              name: ld-spot-config
+              name: feature-flag-config
               key: COST_IMPACT_THRESHOLD
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: ld-spot-config
+              name: feature-flag-config
               key: LOG_LEVEL
         - name: ENVIRONMENT
           value: "production"
