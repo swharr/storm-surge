@@ -287,6 +287,7 @@ def handle_feature_flag_webhook(provider_name: str):
         span.set_attribute("http.method", request.method)
         span.set_attribute("http.url", request.url)
         
+        try:
             provider = flag_manager.get_provider()
             
             # Verify this is the correct provider

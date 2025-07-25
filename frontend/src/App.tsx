@@ -14,19 +14,20 @@ import UserManagement from './pages/UserManagement'
 import api from './services/api'
 import LoadingSpinner from './components/LoadingSpinner'
 import { useWebSocket } from './hooks/useWebSocket'
-import { initializeTelemetry, trackCustomEvent } from './telemetry'
+// import { initializeTelemetry, trackCustomEvent } from './telemetry'
 import { FeatureFlagProvider } from './providers/FeatureFlagProvider'
 
 function App() {
   const token = localStorage.getItem('storm_surge_token')
 
-  // Initialize OpenTelemetry on app startup
+  // Initialize OpenTelemetry on app startup (disabled for now)
   useEffect(() => {
-    initializeTelemetry()
-    trackCustomEvent('app_initialized', {
-      has_token: !!token,
-      timestamp: Date.now()
-    })
+    // initializeTelemetry()
+    // trackCustomEvent('app_initialized', {
+    //   has_token: !!token,
+    //   timestamp: Date.now()
+    // })
+    console.log('App initialized', { has_token: !!token })
   }, [])
 
   const { data: user, isLoading, error } = useQuery({
@@ -34,18 +35,24 @@ function App() {
     queryFn: api.getCurrentUser,
     enabled: !!token,
     retry: false,
-    onSuccess: (userData) => {
-      trackCustomEvent('user_authenticated', {
-        user_role: userData?.role || 'unknown',
-        user_id: userData?.id || 'unknown'
-      })
-    },
-    onError: () => {
-      trackCustomEvent('authentication_failed', {
-        has_token: !!token
-      })
-    }
   })
+
+  // Handle authentication success/failure with useEffect
+  useEffect(() => {
+    if (user) {
+      // trackCustomEvent('user_authenticated', {
+      //   user_role: user?.role || 'unknown',
+      //   user_id: user?.id || 'unknown'
+      // })
+      console.log('User authenticated', { user_role: user?.role, user_id: user?.id })
+    }
+    if (error) {
+      // trackCustomEvent('authentication_failed', {
+      //   has_token: !!token
+      // })
+      console.log('Authentication failed', { has_token: !!token })
+    }
+  }, [user, error, token])
 
   // Initialize WebSocket connection for authenticated users
   useWebSocket({
@@ -76,7 +83,7 @@ function App() {
       name: user?.name,
       role: user?.role,
       custom: {
-        organization: user?.organization || 'storm-surge',
+        organization: user && 'organization' in user ? (user as any).organization : 'storm-surge',
         environment: import.meta.env.VITE_ENVIRONMENT || 'development'
       }
     }}>
