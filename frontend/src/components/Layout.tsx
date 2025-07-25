@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, 
@@ -17,10 +17,10 @@ import {
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../services/api'
-import type { User, SystemHealth } from '../types'
+import type { User as UserType, SystemHealth } from '../types'
 
 interface LayoutProps {
-  user: User
+  user: UserType
   children: React.ReactNode
 }
 
@@ -58,7 +58,7 @@ export default function Layout({ user, children }: LayoutProps) {
     try {
       await api.logout()
       window.location.href = '/login'
-    } catch (error) {
+    } catch {
       // Force logout even if API call fails
       localStorage.removeItem('storm_surge_token')
       window.location.href = '/login'
@@ -177,10 +177,10 @@ export default function Layout({ user, children }: LayoutProps) {
 }
 
 interface SidebarContentProps {
-  navigation: typeof navigation
+  navigation: ReturnType<typeof getNavigation>
   location: { pathname: string }
   systemHealth?: SystemHealth
-  user: User
+  user: UserType
   onLogout: () => void
 }
 

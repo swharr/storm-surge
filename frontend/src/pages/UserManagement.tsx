@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import {
@@ -8,7 +8,6 @@ import {
   KeyIcon,
   UserCircleIcon,
   CheckCircleIcon,
-  XCircleIcon,
 } from 'lucide-react'
 import api from '../services/api'
 import type { User } from '../types'
@@ -95,8 +94,7 @@ const UserManagement: React.FC = () => {
       userId: editingUser.id,
       updates: {
         name: formData.get('name') as string,
-        role: formData.get('role') as string,
-        is_active: formData.get('is_active') === 'true',
+        role: formData.get('role') as 'admin' | 'operator' | 'viewer',
       },
     })
   }
@@ -197,18 +195,12 @@ const UserManagement: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    {user.is_active ? (
-                      <CheckCircleIcon className="w-4 h-4 text-green-500 mr-1" />
-                    ) : (
-                      <XCircleIcon className="w-4 h-4 text-red-500 mr-1" />
-                    )}
-                    <span className={user.is_active ? 'text-green-800' : 'text-red-800'}>
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <CheckCircleIcon className="w-4 h-4 text-green-500 mr-1" />
+                    <span className="text-green-800">Active</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                  {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <div className="flex space-x-2">
@@ -344,18 +336,6 @@ const UserManagement: React.FC = () => {
                     <option value="viewer">Viewer</option>
                     <option value="operator">Operator</option>
                     <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <select
-                    name="is_active"
-                    defaultValue={editingUser.is_active ? 'true' : 'false'}
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
                   </select>
                 </div>
               </div>
