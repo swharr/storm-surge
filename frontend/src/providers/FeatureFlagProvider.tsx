@@ -116,7 +116,7 @@ const LaunchDarklyWrapper: React.FC<{ user: User; children: ReactNode }> = ({ us
       ldClient.track(eventName, {
         ...metadata,
         userId: user.id,
-        timestamp: Date.now()
+        timestamp: Date.now().toString()
       });
       
       // Also track in OpenTelemetry (disabled for now)
@@ -199,7 +199,7 @@ const StatsigWrapper: React.FC<{ user: User; children: ReactNode }> = ({ user, c
       Statsig.logEvent(eventName, null, {
         ...metadata,
         userId: user.id,
-        timestamp: Date.now()
+        timestamp: Date.now().toString()
       });
       
       // Also track in OpenTelemetry (disabled for now)
