@@ -42,7 +42,7 @@ class TestFrontendAvailability(unittest.TestCase):
             "tailwind.config.js", 
             "vite.config.ts",
             "postcss.config.js",
-            ".eslintrc.cjs"
+            "eslint.config.js"
         ]
         
         for file in required_files:

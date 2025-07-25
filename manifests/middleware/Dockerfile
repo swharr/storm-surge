@@ -7,12 +7,22 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
+# Copy requirements files
+COPY requirements*.txt ./
+
+# Install base dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install provider-specific dependencies based on build argument
+ARG FEATURE_FLAG_PROVIDER=launchdarkly
+RUN if [ "$FEATURE_FLAG_PROVIDER" = "launchdarkly" ]; then \
+        pip install --no-cache-dir -r requirements-launchdarkly.txt; \
+    elif [ "$FEATURE_FLAG_PROVIDER" = "statsig" ]; then \
+        pip install --no-cache-dir -r requirements-statsig.txt; \
+    fi
+
 # Copy application code
-COPY main.py .
+COPY *.py ./
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

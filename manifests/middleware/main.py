@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-OceanSurge Middleware: Feature Flag to Spot API Integration
+Storm Surge Middleware: Feature Flag to Spot API Integration
 Handles feature flag webhook notifications and triggers Spot API actions
-Supports LaunchDarkly and Statsig providers
+Supports LaunchDarkly and Statsig providers with OpenTelemetry observability
 """
 
 import os
@@ -18,11 +18,14 @@ import atexit
 from feature_flags import FeatureFlagManager
 from logging_providers import LoggingManager
 from api_routes import api_bp
+from telemetry import initialize_telemetry, get_tracer, shutdown_telemetry
+from metrics import get_metrics
 
-# Configure logging
+# Configure logging first
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'storm-surge-secret-key-change-in-production')
 
@@ -31,6 +34,11 @@ CORS(app, origins=["http://localhost:3000", "https://storm-surge.local"])
 
 # Initialize SocketIO with CORS support
 socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "https://storm-surge.local"])
+
+# Initialize OpenTelemetry
+telemetry = initialize_telemetry(app)
+tracer = get_tracer()
+custom_metrics = get_metrics()
 
 # Register API blueprint
 app.register_blueprint(api_bp)
@@ -48,8 +56,13 @@ SPOT_CLUSTER_ID = os.getenv('SPOT_CLUSTER_ID', '')
 # Initialize feature flag manager
 try:
     flag_manager = FeatureFlagManager(FEATURE_FLAG_PROVIDER)
-    logger.info(f"Initialized feature flag provider: {FEATURE_FLAG_PROVIDER}")
-except ValueError as e:
+    if flag_manager.is_initialized():
+        logger.info(f"Initialized feature flag provider: {FEATURE_FLAG_PROVIDER}")
+    else:
+        logger.error(f"Failed to initialize feature flag provider: {FEATURE_FLAG_PROVIDER}")
+        logger.error("Check your SDK key and network connectivity")
+        exit(1)
+except Exception as e:
     logger.error(f"Failed to initialize feature flag provider: {e}")
     exit(1)
 
@@ -66,6 +79,15 @@ def cleanup():
     if logging_manager:
         logging_manager.flush_events()
         logger.info("Flushed pending events on shutdown")
+    
+    # Close feature flag manager
+    if flag_manager:
+        flag_manager.close()
+        logger.info("Feature flag manager closed")
+    
+    # Shutdown OpenTelemetry
+    shutdown_telemetry()
+    logger.info("OpenTelemetry shutdown complete")
 
 atexit.register(cleanup)
 
@@ -99,81 +121,133 @@ class SpotOceanManager:
         start_time = time.time()
         details = {"scale_factor": scale_factor, "action": action}
         
-        try:
-            cluster_info = self.get_cluster_info()
-            if not cluster_info:
-                details["error"] = "Failed to get cluster info"
+        # Start OpenTelemetry span for cluster scaling
+        with tracer.start_as_current_span("cluster_scaling") as span:
+            span.set_attribute("cluster.id", self.cluster_id)
+            span.set_attribute("scaling.action", action)
+            span.set_attribute("scaling.factor", scale_factor)
+            
+            try:
+                cluster_info = self.get_cluster_info()
+                if not cluster_info:
+                    details["error"] = "Failed to get cluster info"
+                    span.set_attribute("error", True)
+                    span.set_attribute("error.message", "Failed to get cluster info")
+                    duration_ms = (time.time() - start_time) * 1000
+                    
+                    if logging_manager:
+                        logging_manager.log_cluster_action(action, self.cluster_id, False, details)
+                    
+                    # Record metrics
+                    custom_metrics.record_cluster_scaling(
+                        self.cluster_id, action, False, duration_ms, 
+                        error="Failed to get cluster info"
+                    )
+                    return False
+
+                current_capacity = cluster_info.get('response', {}).get('capacity', {})
+                details["current_capacity"] = current_capacity
+                old_target = current_capacity.get('target', 2)
+
+                if action == 'optimize':
+                    # Scale down for cost optimization
+                    new_capacity = {
+                        'target': max(1, int(old_target * 0.8)),
+                        'minimum': current_capacity.get('minimum', 1),
+                        'maximum': current_capacity.get('maximum', 10)
+                    }
+                    logger.info(f"Scaling down cluster for cost optimization: {new_capacity}")
+                else:
+                    # Scale up for performance
+                    new_capacity = {
+                        'target': min(10, int(old_target * scale_factor)),
+                        'minimum': current_capacity.get('minimum', 1),
+                        'maximum': current_capacity.get('maximum', 10)
+                    }
+                    logger.info(f"Scaling up cluster for performance: {new_capacity}")
+
+                details["new_capacity"] = new_capacity
+                new_target = new_capacity['target']
+                
+                # Add span attributes for capacity changes
+                span.set_attribute("capacity.old_target", old_target)
+                span.set_attribute("capacity.new_target", new_target)
+                
+                response = requests.put(
+                    f"{SPOT_API_BASE_URL}/cluster/{self.cluster_id}",
+                    headers=self.headers,
+                    json={'cluster': {'capacity': new_capacity}}
+                )
+                response.raise_for_status()
+                
+                duration_ms = (time.time() - start_time) * 1000
+                details["duration_ms"] = int(duration_ms)
+                details["response_status"] = response.status_code
+                
+                # Mark span as successful
+                span.set_attribute("success", True)
+                span.set_attribute("http.status_code", response.status_code)
+                
+                # Log successful cluster action
+                if logging_manager:
+                    logging_manager.log_cluster_action(action, self.cluster_id, True, details)
+                
+                # Record metrics
+                custom_metrics.record_cluster_scaling(
+                    self.cluster_id, action, True, duration_ms, 
+                    old_nodes=old_target, new_nodes=new_target
+                )
+                
+                # Record cost optimization metrics
+                if action == 'optimize':
+                    estimated_savings = max(0, (old_target - new_target) * 0.1)  # $0.10 per node hour
+                    custom_metrics.record_cost_optimization(
+                        action, self.cluster_id, estimated_savings, new_target - old_target
+                    )
+                
+                # Emit WebSocket event for real-time updates
+                socketio.emit('cluster_scaled', {
+                    'cluster_id': self.cluster_id,
+                    'event_type': action,
+                    'success': True,
+                    'timestamp': time.time(),
+                    'details': details
+                })
+                
+                return True
+
+            except requests.exceptions.RequestException as e:
+                duration_ms = (time.time() - start_time) * 1000
+                details["error"] = str(e)
+                details["duration_ms"] = int(duration_ms)
+                
+                # Mark span as failed
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", str(e))
+                span.set_attribute("success", False)
+                
+                logger.error(f"Failed to scale cluster: {e}")
+                
+                # Log failed cluster action
                 if logging_manager:
                     logging_manager.log_cluster_action(action, self.cluster_id, False, details)
+                
+                # Record metrics
+                custom_metrics.record_cluster_scaling(
+                    self.cluster_id, action, False, duration_ms, 
+                    error=str(e)
+                )
+                
+                # Emit WebSocket event for failed scaling
+                socketio.emit('cluster_scaled', {
+                    'cluster_id': self.cluster_id,
+                    'event_type': action,
+                    'success': False,
+                    'timestamp': time.time(),
+                    'details': details
+                })
+                
                 return False
-
-            current_capacity = cluster_info.get('response', {}).get('capacity', {})
-            details["current_capacity"] = current_capacity
-
-            if action == 'optimize':
-                # Scale down for cost optimization
-                new_capacity = {
-                    'target': max(1, int(current_capacity.get('target', 2) * 0.8)),
-                    'minimum': current_capacity.get('minimum', 1),
-                    'maximum': current_capacity.get('maximum', 10)
-                }
-                logger.info(f"Scaling down cluster for cost optimization: {new_capacity}")
-            else:
-                # Scale up for performance
-                new_capacity = {
-                    'target': min(10, int(current_capacity.get('target', 2) * scale_factor)),
-                    'minimum': current_capacity.get('minimum', 1),
-                    'maximum': current_capacity.get('maximum', 10)
-                }
-                logger.info(f"Scaling up cluster for performance: {new_capacity}")
-
-            details["new_capacity"] = new_capacity
-            
-            response = requests.put(
-                f"{SPOT_API_BASE_URL}/cluster/{self.cluster_id}",
-                headers=self.headers,
-                json={'cluster': {'capacity': new_capacity}}
-            )
-            response.raise_for_status()
-            
-            details["duration_ms"] = int((time.time() - start_time) * 1000)
-            details["response_status"] = response.status_code
-            
-            # Log successful cluster action
-            if logging_manager:
-                logging_manager.log_cluster_action(action, self.cluster_id, True, details)
-            
-            # Emit WebSocket event for real-time updates
-            socketio.emit('cluster_scaled', {
-                'cluster_id': self.cluster_id,
-                'event_type': action,
-                'success': True,
-                'timestamp': time.time(),
-                'details': details
-            })
-            
-            return True
-
-        except requests.exceptions.RequestException as e:
-            details["error"] = str(e)
-            details["duration_ms"] = int((time.time() - start_time) * 1000)
-            
-            logger.error(f"Failed to scale cluster: {e}")
-            
-            # Log failed cluster action
-            if logging_manager:
-                logging_manager.log_cluster_action(action, self.cluster_id, False, details)
-            
-            # Emit WebSocket event for failed scaling
-            socketio.emit('cluster_scaled', {
-                'cluster_id': self.cluster_id,
-                'event_type': action,
-                'success': False,
-                'timestamp': time.time(),
-                'details': details
-            })
-            
-            return False
 
 
 
@@ -206,146 +280,256 @@ def handle_feature_flag_webhook(provider_name: str):
     response_status = 200
     webhook_metadata = {"provider": provider_name, "endpoint": request.endpoint}
     
-    try:
-        provider = flag_manager.get_provider()
+    # Start OpenTelemetry span for webhook processing
+    with tracer.start_as_current_span("webhook_processing") as span:
+        span.set_attribute("webhook.provider", provider_name)
+        span.set_attribute("webhook.endpoint", request.endpoint)
+        span.set_attribute("http.method", request.method)
+        span.set_attribute("http.url", request.url)
         
-        # Verify this is the correct provider
-        if flag_manager.get_provider_type() != provider_name:
-            response_status = 400
-            error_response = jsonify({'error': f'Wrong provider endpoint. Expected {flag_manager.get_provider_type()}'})
+            provider = flag_manager.get_provider()
             
-            # Log webhook event
-            if logging_manager:
-                webhook_metadata["error"] = "Wrong provider endpoint"
-                webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
-                logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
-            return error_response, response_status
-        
-        # Get signature header based on provider
-        if provider_name == 'launchdarkly':
-            signature = request.headers.get('X-LD-Signature', '')
-        elif provider_name == 'statsig':
-            signature = request.headers.get('X-Statsig-Signature', '')
-        else:
-            signature = ''
-        
-        # Verify webhook signature
-        if not provider.verify_webhook_signature(request.data, signature):
-            logger.error("Invalid webhook signature")
-            response_status = 401
-            error_response = jsonify({'error': 'Invalid signature'})
-            
-            # Log webhook event
-            if logging_manager:
-                webhook_metadata["error"] = "Invalid signature"
-                webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
-                logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
-            return error_response, response_status
-
-        # Parse webhook payload
-        payload = request.get_json()
-        if not payload:
-            response_status = 400
-            error_response = jsonify({'error': 'Invalid JSON payload'})
-            
-            # Log webhook event
-            if logging_manager:
-                webhook_metadata["error"] = "Invalid JSON payload"
-                webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
-                logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
-            return error_response, response_status
-
-        logger.info(f"Received {provider_name} webhook: {payload}")
-
-        # Parse flag data using provider-specific logic
-        flag_data = provider.parse_webhook_payload(payload)
-        
-        if flag_data:
-            flag_key = flag_data.get('flag_key')
-            flag_value = flag_data.get('flag_value')
-            
-            # Log flag evaluation
-            if logging_manager:
-                logging_manager.log_flag_evaluation(
-                    flag_key, 
-                    flag_value, 
-                    metadata={"source": "webhook", "provider": provider_name}
+            # Verify this is the correct provider
+            if flag_manager.get_provider_type() != provider_name:
+                response_status = 400
+                error_response = jsonify({'error': f'Wrong provider endpoint. Expected {flag_manager.get_provider_type()}'})
+                
+                # Mark span as failed
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", "Wrong provider endpoint")
+                span.set_attribute("http.status_code", response_status)
+                
+                duration_ms = (time.time() - start_time) * 1000
+                
+                # Log webhook event
+                if logging_manager:
+                    webhook_metadata["error"] = "Wrong provider endpoint"
+                    webhook_metadata["duration_ms"] = int(duration_ms)
+                    logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
+                
+                # Record metrics
+                custom_metrics.record_webhook_request(
+                    provider_name, request.endpoint, response_status, duration_ms,
+                    error="Wrong provider endpoint"
                 )
-            
-            # Emit WebSocket event for flag change
-            socketio.emit('flag_changed', {
-                'flag_key': flag_key,
-                'enabled': flag_value,
-                'timestamp': time.time(),
-                'provider': provider_name
-            })
-            
-            # Initialize Spot Ocean manager
-            spot_manager = SpotOceanManager(SPOT_API_TOKEN, SPOT_CLUSTER_ID)
-
-            if flag_value:
-                # Cost optimization enabled - scale down
-                success = spot_manager.scale_cluster('optimize')
-                action = 'cost_optimization_enabled'
+                
+                return error_response, response_status
+        
+            # Get signature header based on provider
+            if provider_name == 'launchdarkly':
+                signature = request.headers.get('X-LD-Signature', '')
+            elif provider_name == 'statsig':
+                signature = request.headers.get('X-Statsig-Signature', '')
             else:
-                # Cost optimization disabled - scale up
-                success = spot_manager.scale_cluster('performance')
-                action = 'cost_optimization_disabled'
-
-            logger.info(f"Processed flag change: {action}, success: {success}")
+                signature = ''
             
-            # Log webhook processing success
-            webhook_metadata.update({
-                "flag_key": flag_key,
-                "flag_value": flag_value,
-                "action": action,
-                "success": success,
-                "duration_ms": int((time.time() - start_time) * 1000)
-            })
-
-            response_data = {
-                'status': 'processed',
-                'action': action,
-                'success': success,
-                'provider': provider_name,
-                'flag_key': flag_key,
-                'timestamp': time.time()
-            }
-        else:
-            # No flag data to process
-            webhook_metadata.update({
-                "status": "received_no_action",
-                "duration_ms": int((time.time() - start_time) * 1000)
-            })
+            span.set_attribute("webhook.signature_present", bool(signature))
             
-            response_data = {
-                'status': 'received',
-                'provider': provider_name,
-                'timestamp': time.time()
-            }
+            # Verify webhook signature
+            if not provider.verify_webhook_signature(request.data, signature):
+                logger.error("Invalid webhook signature")
+                response_status = 401
+                error_response = jsonify({'error': 'Invalid signature'})
+                
+                # Mark span as failed
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", "Invalid signature")
+                span.set_attribute("http.status_code", response_status)
+                
+                duration_ms = (time.time() - start_time) * 1000
+                
+                # Log webhook event
+                if logging_manager:
+                    webhook_metadata["error"] = "Invalid signature"
+                    webhook_metadata["duration_ms"] = int(duration_ms)
+                    logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
+                
+                # Record metrics
+                custom_metrics.record_webhook_request(
+                    provider_name, request.endpoint, response_status, duration_ms,
+                    error="Invalid signature"
+                )
+                
+                return error_response, response_status
 
-        # Log successful webhook event
-        if logging_manager:
-            logging_manager.log_webhook_event("webhook_processed", payload, response_status, webhook_metadata)
+            # Parse webhook payload
+            payload = request.get_json()
+            if not payload:
+                response_status = 400
+                error_response = jsonify({'error': 'Invalid JSON payload'})
+                
+                # Mark span as failed
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", "Invalid JSON payload")
+                span.set_attribute("http.status_code", response_status)
+                
+                duration_ms = (time.time() - start_time) * 1000
+                
+                # Log webhook event
+                if logging_manager:
+                    webhook_metadata["error"] = "Invalid JSON payload"
+                    webhook_metadata["duration_ms"] = int(duration_ms)
+                    logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
+                
+                # Record metrics
+                custom_metrics.record_webhook_request(
+                    provider_name, request.endpoint, response_status, duration_ms,
+                    error="Invalid JSON payload"
+                )
+                
+                return error_response, response_status
 
-        return jsonify(response_data)
+            logger.info(f"Received {provider_name} webhook: {payload}")
+            span.set_attribute("webhook.payload_received", True)
 
-    except Exception as e:
-        logger.error(f"Error processing {provider_name} webhook: {e}")
-        response_status = 500
-        
-        # Log webhook error
-        if logging_manager:
-            webhook_metadata.update({
-                "error": str(e),
-                "duration_ms": int((time.time() - start_time) * 1000)
-            })
-            logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-        
-        return jsonify({'error': 'Internal server error'}), response_status
+            # Parse flag data using provider-specific logic
+            with tracer.start_as_current_span("flag_data_parsing") as parse_span:
+                parse_span.set_attribute("provider", provider_name)
+                flag_data = provider.parse_webhook_payload(payload)
+                parse_span.set_attribute("flag_data_found", bool(flag_data))
+            
+            if flag_data:
+                flag_key = flag_data.get('flag_key')
+                flag_value = flag_data.get('flag_value')
+                
+                # Add flag information to main span
+                span.set_attribute("flag.key", flag_key)
+                span.set_attribute("flag.value", flag_value)
+                
+                # Start span for flag evaluation processing
+                with tracer.start_as_current_span("flag_evaluation_processing") as eval_span:
+                    eval_span.set_attribute("flag.key", flag_key)
+                    eval_span.set_attribute("flag.value", flag_value)
+                    eval_span.set_attribute("source", "webhook")
+                    
+                    eval_start_time = time.time()
+                    
+                    # Log flag evaluation
+                    if logging_manager:
+                        logging_manager.log_flag_evaluation(
+                            flag_key, 
+                            flag_value, 
+                            metadata={"source": "webhook", "provider": provider_name}
+                        )
+                    
+                    # Record flag evaluation metrics
+                    eval_duration_ms = (time.time() - eval_start_time) * 1000
+                    custom_metrics.record_flag_evaluation(
+                        flag_key, flag_value, provider_name, eval_duration_ms,
+                        metadata={"source": "webhook"}
+                    )
+                
+                # Emit WebSocket event for flag change
+                socketio.emit('flag_changed', {
+                    'flag_key': flag_key,
+                    'enabled': flag_value,
+                    'timestamp': time.time(),
+                    'provider': provider_name
+                })
+                
+                # Initialize Spot Ocean manager and trigger scaling
+                with tracer.start_as_current_span("cluster_action_trigger") as action_span:
+                    spot_manager = SpotOceanManager(SPOT_API_TOKEN, SPOT_CLUSTER_ID)
+
+                    if flag_value:
+                        # Cost optimization enabled - scale down
+                        action = 'cost_optimization_enabled'
+                        action_span.set_attribute("scaling.direction", "down")
+                        success = spot_manager.scale_cluster('optimize')
+                    else:
+                        # Cost optimization disabled - scale up
+                        action = 'cost_optimization_disabled'
+                        action_span.set_attribute("scaling.direction", "up")
+                        success = spot_manager.scale_cluster('performance')
+                    
+                    action_span.set_attribute("action", action)
+                    action_span.set_attribute("success", success)
+
+                logger.info(f"Processed flag change: {action}, success: {success}")
+                
+                duration_ms = (time.time() - start_time) * 1000
+                
+                # Log webhook processing success
+                webhook_metadata.update({
+                    "flag_key": flag_key,
+                    "flag_value": flag_value,
+                    "action": action,
+                    "success": success,
+                    "duration_ms": int(duration_ms)
+                })
+
+                # Record flag change metrics
+                custom_metrics.record_flag_change(
+                    flag_key, not flag_value, flag_value, provider_name,
+                    metadata={"source": "webhook", "action": action}
+                )
+
+                response_data = {
+                    'status': 'processed',
+                    'action': action,
+                    'success': success,
+                    'provider': provider_name,
+                    'flag_key': flag_key,
+                    'timestamp': time.time()
+                }
+            else:
+                # No flag data to process
+                span.set_attribute("flag.data_processed", False)
+                duration_ms = (time.time() - start_time) * 1000
+                
+                webhook_metadata.update({
+                    "status": "received_no_action",
+                    "duration_ms": int(duration_ms)
+                })
+                
+                response_data = {
+                    'status': 'received',
+                    'provider': provider_name,
+                    'timestamp': time.time()
+                }
+
+            # Mark span as successful
+            span.set_attribute("success", True)
+            span.set_attribute("http.status_code", response_status)
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log successful webhook event
+            if logging_manager:
+                logging_manager.log_webhook_event("webhook_processed", payload, response_status, webhook_metadata)
+
+            # Record successful webhook metrics
+            custom_metrics.record_webhook_request(
+                provider_name, request.endpoint, response_status, duration_ms
+            )
+
+            return jsonify(response_data)
+
+        except Exception as e:
+            logger.error(f"Error processing {provider_name} webhook: {e}")
+            response_status = 500
+            
+            # Mark span as failed
+            span.set_attribute("error", True)
+            span.set_attribute("error.message", str(e))
+            span.set_attribute("http.status_code", response_status)
+            
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log webhook error
+            if logging_manager:
+                webhook_metadata.update({
+                    "error": str(e),
+                    "duration_ms": int(duration_ms)
+                })
+                logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
+            
+            # Record error metrics
+            custom_metrics.record_webhook_request(
+                provider_name, request.endpoint, response_status, duration_ms,
+                error=str(e)
+            )
+            
+            return jsonify({'error': 'Internal server error'}), response_status
 
 
 @app.route('/api/cluster/status', methods=['GET'])
@@ -371,19 +555,38 @@ def get_cluster_status():
 @socketio.on('connect')
 def handle_connect():
     """Handle WebSocket connection"""
-    logger.info("Client connected to WebSocket")
-    emit('connected', {'status': 'Connected to Storm Surge'})
+    with tracer.start_as_current_span("websocket_connect") as span:
+        span.set_attribute("websocket.event", "connect")
+        span.set_attribute("client.connected", True)
+        
+        logger.info("Client connected to WebSocket")
+        
+        # Record connection metrics
+        custom_metrics.record_connection_change(1)
+        
+        emit('connected', {'status': 'Connected to Storm Surge'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle WebSocket disconnection"""
-    logger.info("Client disconnected from WebSocket")
+    with tracer.start_as_current_span("websocket_disconnect") as span:
+        span.set_attribute("websocket.event", "disconnect")
+        span.set_attribute("client.connected", False)
+        
+        logger.info("Client disconnected from WebSocket")
+        
+        # Record connection metrics
+        custom_metrics.record_connection_change(-1)
 
 @socketio.on('subscribe')
 def handle_subscribe(data):
     """Handle subscription to specific events"""
-    logger.info(f"Client subscribed to: {data}")
-    emit('subscribed', {'subscriptions': data})
+    with tracer.start_as_current_span("websocket_subscribe") as span:
+        span.set_attribute("websocket.event", "subscribe")
+        span.set_attribute("subscription.data", str(data))
+        
+        logger.info(f"Client subscribed to: {data}")
+        emit('subscribed', {'subscriptions': data})
 
 
 if __name__ == '__main__':

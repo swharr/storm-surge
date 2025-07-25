@@ -1,0 +1,155 @@
+#!/usr/bin/env yaml
+# OpenTelemetry Collector Configuration for Storm Surge
+# Handles telemetry data collection, processing, and export to various backends
+
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - http://localhost:3000  # Frontend development
+            - https://storm-surge.local
+            - http://localhost:8000  # Middleware
+
+  # Prometheus receiver for scraping metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'storm-surge-middleware'
+          static_configs:
+            - targets: ['storm-surge-middleware:8000']
+          metrics_path: '/metrics'
+          scrape_interval: 30s
+
+        - job_name: 'storm-surge-frontend'
+          static_configs:
+            - targets: ['storm-surge-frontend:3000']
+          metrics_path: '/metrics'
+          scrape_interval: 30s
+
+  # Health check receiver
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      network:
+
+processors:
+  # Batch processor for better performance
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    check_interval: 5s
+
+  # Resource processor to add Storm Surge specific attributes
+  resource:
+    attributes:
+      - key: service.namespace
+        value: storm-surge
+        action: upsert
+      - key: deployment.environment
+        from_attribute: ENVIRONMENT
+        action: upsert
+      - key: cluster.name
+        from_attribute: CLUSTER_NAME
+        action: upsert
+
+  # Probabilistic sampling for traces (sample 10% in production)
+  probabilistic_sampler:
+    sampling_percentage: 10.0
+
+  # Attributes processor for enriching telemetry
+  attributes:
+    actions:
+      - key: storm_surge.version
+        value: "beta-v1.1.0"
+        action: upsert
+      - key: storm_surge.component
+        from_attribute: service.name
+        action: upsert
+
+exporters:
+  # Logging exporter for debugging
+  logging:
+    loglevel: info
+
+  # OTLP exporter for sending to observability backends
+  otlp/jaeger:
+    endpoint: http://jaeger-collector:14250
+    tls:
+      insecure: true
+
+  # Prometheus exporter for metrics
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: storm_surge
+    const_labels:
+      environment: ${ENVIRONMENT}
+      cluster: ${CLUSTER_NAME}
+
+  # File exporter for local development
+  file:
+    path: /tmp/otel-data.json
+
+  # OTLP exporter for cloud providers (configure as needed)
+  otlp/cloud:
+    endpoint: ${OTEL_CLOUD_ENDPOINT}
+    headers:
+      api-key: ${OTEL_CLOUD_API_KEY}
+    tls:
+      insecure: false
+
+extensions:
+  # Health check extension
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # PPprof extension for debugging
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  # zPages extension for debugging
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+  
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes, probabilistic_sampler, batch]
+      exporters: [logging, otlp/jaeger, file]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [logging, prometheus, file]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [logging, file]
+
+  # Telemetry settings for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888

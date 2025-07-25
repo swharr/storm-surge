@@ -1,0 +1,312 @@
+#!/usr/bin/env yaml
+# OpenTelemetry Collector Kubernetes Deployment for Storm Surge
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otelcol
+  namespace: storm-surge
+  labels:
+    app: otelcol
+    component: observability
+    version: v0.91.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: otelcol
+  template:
+    metadata:
+      labels:
+        app: otelcol
+        component: observability
+    spec:
+      serviceAccountName: otelcol
+      containers:
+      - name: otelcol
+        image: otel/opentelemetry-collector-contrib:0.91.0
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+          protocol: TCP
+        - containerPort: 4318
+          name: otlp-http
+          protocol: TCP
+        - containerPort: 8889
+          name: prometheus
+          protocol: TCP
+        - containerPort: 13133
+          name: health
+          protocol: TCP
+        - containerPort: 8888
+          name: metrics
+          protocol: TCP
+        - containerPort: 55679
+          name: zpages
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: CLUSTER_NAME
+          value: "storm-surge-cluster"
+        - name: OTEL_CLOUD_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: otel-secrets
+              key: cloud-endpoint
+              optional: true
+        - name: OTEL_CLOUD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: otel-secrets
+              key: cloud-api-key
+              optional: true
+        volumeMounts:
+        - name: config
+          mountPath: /etc/otelcol-contrib
+          readOnly: true
+        - name: data
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+          limits:
+            memory: 512Mi
+            cpu: 500m
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        args:
+        - "--config=/etc/otelcol-contrib/otelcol-config.yaml"
+      volumes:
+      - name: config
+        configMap:
+          name: otelcol-config
+      - name: data
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: otelcol
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otelcol
+  namespace: storm-surge
+  labels:
+    app: otelcol
+    component: observability
+spec:
+  type: ClusterIP
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
+  - name: prometheus
+    port: 8889
+    targetPort: 8889
+    protocol: TCP
+  - name: health
+    port: 13133
+    targetPort: 13133
+    protocol: TCP
+  - name: metrics
+    port: 8888
+    targetPort: 8888
+    protocol: TCP
+  - name: zpages
+    port: 55679
+    targetPort: 55679
+    protocol: TCP
+  selector:
+    app: otelcol
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol-config
+  namespace: storm-surge
+  labels:
+    app: otelcol
+    component: observability
+data:
+  otelcol-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+            cors:
+              allowed_origins:
+                - http://localhost:3000
+                - https://storm-surge.local
+                - http://localhost:8000
+
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'storm-surge-middleware'
+              static_configs:
+                - targets: ['storm-surge-middleware:8000']
+              metrics_path: '/metrics'
+              scrape_interval: 30s
+
+      hostmetrics:
+        collection_interval: 30s
+        scrapers:
+          cpu:
+          memory:
+          disk:
+          network:
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      memory_limiter:
+        limit_mib: 512
+        spike_limit_mib: 128
+        check_interval: 5s
+
+      resource:
+        attributes:
+          - key: service.namespace
+            value: storm-surge
+            action: upsert
+          - key: deployment.environment
+            from_attribute: ENVIRONMENT
+            action: upsert
+          - key: cluster.name
+            from_attribute: CLUSTER_NAME
+            action: upsert
+
+      probabilistic_sampler:
+        sampling_percentage: 10.0
+
+      attributes:
+        actions:
+          - key: storm_surge.version
+            value: "beta-v1.1.0"
+            action: upsert
+          - key: storm_surge.component
+            from_attribute: service.name
+            action: upsert
+
+    exporters:
+      logging:
+        loglevel: info
+
+      otlp/jaeger:
+        endpoint: http://jaeger-collector:14250
+        tls:
+          insecure: true
+
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: storm_surge
+        const_labels:
+          environment: production
+          cluster: storm-surge-cluster
+
+      file:
+        path: /tmp/otel-data.json
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    service:
+      extensions: [health_check, pprof, zpages]
+      
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, attributes, probabilistic_sampler, batch]
+          exporters: [logging, otlp/jaeger, file]
+
+        metrics:
+          receivers: [otlp, prometheus, hostmetrics]
+          processors: [memory_limiter, resource, attributes, batch]
+          exporters: [logging, prometheus, file]
+
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, attributes, batch]
+          exporters: [logging, file]
+
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otelcol
+  namespace: storm-surge
+  labels:
+    app: otelcol
+    component: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otelcol
+  labels:
+    app: otelcol
+    component: observability
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes/metrics", "nodes/stats"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otelcol
+  labels:
+    app: otelcol
+    component: observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otelcol
+subjects:
+- kind: ServiceAccount
+  name: otelcol
+  namespace: storm-surge

@@ -1,0 +1,343 @@
+#!/usr/bin/env yaml
+# Prometheus deployment for Storm Surge metrics collection
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        component: observability
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.48.1
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /etc/prometheus
+          readOnly: true
+        - name: data
+          mountPath: /prometheus
+        args:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus"
+        - "--web.console.libraries=/etc/prometheus/console_libraries"
+        - "--web.console.templates=/etc/prometheus/consoles"
+        - "--storage.tsdb.retention.time=7d"
+        - "--web.enable-lifecycle"
+        - "--web.enable-admin-api"
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 200m
+          limits:
+            memory: 1Gi
+            cpu: 1000m
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: prometheus-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    port: 9090
+    targetPort: 9090
+    nodePort: 30090
+    protocol: TCP
+  selector:
+    app: prometheus
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'storm-surge-cluster'
+        environment: 'production'
+
+    rule_files:
+      - "/etc/prometheus/storm-surge-rules.yml"
+
+    scrape_configs:
+      # Storm Surge Middleware
+      - job_name: 'storm-surge-middleware'
+        static_configs:
+          - targets: ['storm-surge-middleware:8000']
+        metrics_path: '/metrics'
+        scrape_interval: 30s
+        scrape_timeout: 10s
+
+      # OpenTelemetry Collector
+      - job_name: 'otelcol'
+        static_configs:
+          - targets: ['otelcol:8889']
+        scrape_interval: 30s
+
+      # OpenTelemetry Collector self-metrics
+      - job_name: 'otelcol-internal'
+        static_configs:
+          - targets: ['otelcol:8888']
+        scrape_interval: 30s
+
+      # Jaeger metrics
+      - job_name: 'jaeger'
+        static_configs:
+          - targets: ['jaeger-collector:14269']
+        scrape_interval: 30s
+
+      # Kubernetes API server
+      - job_name: 'kubernetes'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+
+      # Storm Surge specific pods
+      - job_name: 'storm-surge-pods'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - storm-surge
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+
+  storm-surge-rules.yml: |
+    groups:
+    - name: storm-surge.rules
+      rules:
+      # Feature Flag Rules
+      - alert: HighFeatureFlagErrorRate
+        expr: rate(storm_surge_flag_evaluations_total{success="false"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: feature-flags
+        annotations:
+          summary: "High feature flag evaluation error rate"
+          description: "Feature flag evaluation error rate is {{ $value }} errors per second for {{ $labels.flag_key }}"
+
+      # Webhook Rules
+      - alert: WebhookProcessingFailures
+        expr: rate(storm_surge_webhook_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: webhooks
+        annotations:
+          summary: "High webhook processing failure rate"
+          description: "Webhook processing failure rate is {{ $value }} failures per second for {{ $labels.provider }}"
+
+      # Cluster Scaling Rules
+      - alert: ClusterScalingFailures
+        expr: rate(storm_surge_cluster_scaling_errors_total[5m]) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+          component: cluster-scaling
+        annotations:
+          summary: "Cluster scaling failures detected"
+          description: "Cluster scaling failure rate is {{ $value }} failures per second for cluster {{ $labels.cluster_id }}"
+
+      - alert: ClusterScalingLatency
+        expr: histogram_quantile(0.95, rate(storm_surge_cluster_scaling_duration_ms_bucket[5m])) > 30000
+        for: 5m
+        labels:
+          severity: warning
+          component: cluster-scaling
+        annotations:
+          summary: "High cluster scaling latency"
+          description: "95th percentile cluster scaling latency is {{ $value }}ms for {{ $labels.action }}"
+
+      # Application Health Rules
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 > 500
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High memory usage detected"
+          description: "Application memory usage is {{ $value }}MB"
+
+      - alert: ApplicationDown
+        expr: up{job="storm-surge-middleware"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Storm Surge middleware is down"
+          description: "Storm Surge middleware has been down for more than 1 minute"
+
+      # Cost Optimization Rules
+      - alert: CostOptimizationDisabled
+        expr: increase(storm_surge_cost_optimization_events_total{action="cost_optimization_disabled"}[1h]) > increase(storm_surge_cost_optimization_events_total{action="cost_optimization_enabled"}[1h])
+        for: 30m
+        labels:
+          severity: info
+          component: cost-optimization
+        annotations:
+          summary: "Cost optimization frequently disabled"
+          description: "Cost optimization has been disabled more often than enabled in the last hour"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+    component: observability
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+    component: observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: storm-surge
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ui
+  namespace: storm-surge
+  labels:
+    app: prometheus
+    component: observability
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: prometheus.storm-surge.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090

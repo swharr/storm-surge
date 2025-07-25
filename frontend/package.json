@@ -27,7 +27,16 @@
     "react-hook-form": "^7.47.0",
     "@hookform/resolvers": "^3.3.0",
     "zod": "^3.22.0",
-    "socket.io-client": "^4.7.0"
+    "socket.io-client": "^4.7.0",
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-web": "^1.18.0",
+    "@opentelemetry/auto-instrumentations-web": "^0.35.0",
+    "@opentelemetry/exporter-otlp-http": "^0.45.0",
+    "@opentelemetry/instrumentation-fetch": "^0.45.0",
+    "@opentelemetry/instrumentation-xml-http-request": "^0.45.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.35.0",
+    "launchdarkly-react-client-sdk": "^3.3.2",
+    "statsig-react": "^3.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

@@ -1,8 +1,12 @@
+# Storm Surge Test Suite
+# Updated for ESLint v9 flat config, package upgrades, and TypeScript fixes
+# Includes validation for beta-v1.1.0 branch
+
 name: Storm Surge Test Suite
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, beta-v1.1.0 ]
   pull_request:
     branches: [ main ]
 
@@ -22,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'frontend/package.json'
 
@@ -49,7 +53,12 @@ jobs:
         run: |
           cd frontend
           npm install --no-save
+          # Verify ESLint flat config exists
+          test -f eslint.config.js || (echo "ESLint flat config missing!" && exit 1)
+          # Run TypeScript check
           npx tsc --noEmit --skipLibCheck
+          # Test ESLint with new config
+          npm run lint || echo "⚠️ ESLint warnings found (non-blocking)"
 
       - name: Run pre-commit hooks
         run: pre-commit run --all-files || true
@@ -65,7 +74,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'frontend/package.json'
 
@@ -73,12 +82,28 @@ jobs:
         run: |
           cd frontend
           npm ci
+          
+      - name: Verify package updates
+        run: |
+          cd frontend
+          # Check for key updated packages
+          npm list eslint | grep -E "eslint@9\.|eslint@[1-9][0-9]\." || (echo "ESLint 9.x not found!" && exit 1)
+          npm list vite | grep -E "vite@6\.|vite@[7-9]\.|vite@[1-9][0-9]\." || (echo "Vite 6.x+ not found!" && exit 1)
+          npm list typescript | grep -E "typescript@5\.[6-9]\.|typescript@[6-9]\." || (echo "TypeScript 5.6+ not found!" && exit 1)
+          echo "✅ Key package versions verified"
 
       - name: Run TypeScript check
         run: |
           cd frontend
           npx tsc --noEmit
 
+      - name: Verify ESLint configuration
+        run: |
+          cd frontend
+          # Check that the new flat config exists
+          test -f eslint.config.js || (echo "ESLint flat config not found!" && exit 1)
+          echo "✅ ESLint flat config found"
+          
       - name: Run ESLint
         run: |
           cd frontend
@@ -91,6 +116,13 @@ jobs:
 
       - name: Run frontend tests
         run: python3 tests/test_frontend.py
+        
+      - name: Verify TypeScript fixes
+        run: |
+          cd frontend
+          # Ensure no TypeScript compilation errors
+          npx tsc --noEmit --strict
+          echo "✅ TypeScript compilation successful with strict mode"
 
   # Minikube deployment test
   minikube-test:

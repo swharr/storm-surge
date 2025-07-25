@@ -1,0 +1,9 @@
+# Statsig-specific requirements  
+# Install with: pip install -r requirements.txt -r requirements-statsig.txt
+
+# Statsig Server SDK
+statsig==1.20.0
+
+# Additional dependencies for Statsig integration  
+requests>=2.28.0    # HTTP client library (already in base requirements)
+hashlib>=1.0.0      # Cryptographic hashing (built-in Python module)

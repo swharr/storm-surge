@@ -1,0 +1,9 @@
+# LaunchDarkly-specific requirements
+# Install with: pip install -r requirements.txt -r requirements-launchdarkly.txt
+
+# LaunchDarkly Server SDK
+launchdarkly-server-sdk==8.2.1
+
+# Additional dependencies for LaunchDarkly integration
+certifi>=2021.10.8  # SSL certificate verification
+urllib3>=1.26.0     # HTTP client library used by LaunchDarkly SDK

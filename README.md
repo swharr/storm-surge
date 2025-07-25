@@ -1,14 +1,26 @@
-# 🌊 OceanSurge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
+# 🌊 Storm Surge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + Feature Flags
 
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![LaunchDarkly](https://img.shields.io/badge/LaunchDarkly-Feature--Flags-blue?style=for-the-badge)
+![Statsig](https://img.shields.io/badge/Statsig-Feature--Flags-purple?style=for-the-badge)
 ![Flexera Spot](https://img.shields.io/badge/Flexera--Spot-Ocean-blue?style=for-the-badge)
 ![Spot.io](https://img.shields.io/badge/Spot.io-Ocean-blue?style=for-the-badge)
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
 ![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 
-A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
+A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and either **LaunchDarkly** or **Statsig** as your feature flag provider.
+
+### ⚡ Feature Flag Provider Support
+
+Storm Surge integrates with **either** LaunchDarkly **OR** Statsig for feature flag management:
+
+| Provider | Flag Type | Flag Name | Webhook URL |
+|----------|-----------|-----------|-------------|
+| **LaunchDarkly** | Boolean Flag | `enable-cost-optimizer` | `/webhook/launchdarkly` |
+| **Statsig** | Feature Gate | `enable_cost_optimizer` | `/webhook/statsig` |
+
+**🚨 Important**: Choose **ONE** provider during setup. Both providers cannot be used simultaneously in the same deployment.
 
 ### 🎯 Key Features
 
@@ -25,8 +37,8 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 
 ## 🚀 Highlights
 
-- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware to monitor and fire off infrastructure changes
-- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags in the LaunchDarkly Integration.
+- ⚙️ **Feature Flag Integration**: Real-time feature flag control with webhook middleware using either **LaunchDarkly** or **Statsig** to monitor and fire off infrastructure changes
+- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags from your chosen feature flag provider.
 - 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI (You need to have the API and CLI tools included)
 - 📈 **Cost Tracking**: Infrastructure impact monitoring via feature flag changes
 - 🔄 **Automated Scaling**: Dynamic right-sizing and node pool optimization
@@ -37,7 +49,9 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 
 ## 🧪 How It Works
 
-You use LaunchDarkly feature flags (like `enable-cost-optimizer`) to toggle infrastructure behavior, which is reflected in your app and metrics.
+You use feature flags from either **LaunchDarkly** or **Statsig** (like `enable-cost-optimizer` or `enable_cost_optimizer`) to toggle infrastructure behavior, which is reflected in your app and metrics.
+
+**Important**: Storm Surge supports either LaunchDarkly **OR** Statsig as your feature flag provider, but not both simultaneously. Choose the provider that best fits your organization's needs during setup.
 
 This repo ties application behavior directly to cost outcomes.
 
@@ -123,7 +137,7 @@ The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced securit
 ./scripts/prod_deploy_preview.sh --config-only
 ```
 
-The production script will collect your LaunchDarkly SDK key, Spot API token, and cluster configuration interactively.
+The production script will collect your chosen feature flag provider credentials (LaunchDarkly SDK key OR Statsig server key), Spot API token, and cluster configuration interactively.
 
 ---
 
@@ -247,7 +261,7 @@ Retry logic applies to:
 
 ## ⚙️ Feature Flag Provider Setup
 
-Storm Surge supports both **LaunchDarkly** and **Statsig** for feature flag management. Use the interactive configuration script to set up your preferred provider.
+Storm Surge supports **either** **LaunchDarkly** **OR** **Statsig** for feature flag management. You must choose one provider during setup - both cannot be used simultaneously. Use the interactive configuration script to set up your preferred provider.
 
 ### Quick Setup
 ```bash
@@ -280,13 +294,21 @@ python feature_flag_configure.py
 ### Environment Variables
 ```bash
 # Required for production deployment
-export FEATURE_FLAG_PROVIDER="launchdarkly"  # or "statsig"
-export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"  # if using LaunchDarkly
-export STATSIG_SERVER_KEY="secret-server-key-from-statsig"      # if using Statsig
+export FEATURE_FLAG_PROVIDER="launchdarkly"  # or "statsig" (choose ONE)
+
+# For LaunchDarkly (if FEATURE_FLAG_PROVIDER="launchdarkly")
+export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"
+
+# For Statsig (if FEATURE_FLAG_PROVIDER="statsig") 
+export STATSIG_SERVER_KEY="secret-server-key-from-statsig"
+
+# Required for all deployments
 export SPOT_API_TOKEN="your-spot-api-token"
 export SPOT_CLUSTER_ID="ocn-cluster-id"
 export WEBHOOK_SECRET="your-webhook-secret"
 ```
+
+**⚠️ Important**: Only set the environment variables for your chosen provider. Do not set both `LAUNCHDARKLY_SDK_KEY` and `STATSIG_SERVER_KEY` simultaneously.
 
 4. Toggle the flag → see automated cluster scaling in real time
 
@@ -370,7 +392,7 @@ ocean-surge/
 - [x] **Enhanced GKE Security**: Integrated security workloads deployment, comprehensive insecure port detection, and automatic security lockdown script execution
 - [x] **Offline Validation Support**: Standalone kustomize validation with graceful fallbacks for offline environments
 - [x] **Shell Script Quality**: ShellCheck compliant scripts with proper quoting, error handling, and input validation
-- [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
+- [ ] **Feature Flag Webhook Integration**: Real-time feature flag processing for LaunchDarkly and Statsig (In Progress)
 - [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
 - [x] **Production Middleware**: Flask app with proper security
 - [x] **Load Testing**: Built-in traffic generation and scaling tests
@@ -428,7 +450,7 @@ ocean-surge/
 
 ### Full Production Stack
 ```bash
-# Deploy with LaunchDarkly + Spot API integration
+# Deploy with feature flag provider + Spot API integration
 ./scripts/prod_deploy_preview.sh --provider=gke
 
 # Monitor middleware logs
@@ -440,7 +462,10 @@ kubectl get hpa -n oceansurge
 
 ### Testing the Integration
 ```bash
-# Create the cost optimizer flag in LaunchDarkly
+# Create the cost optimizer flag in your chosen provider:
+# - LaunchDarkly: Create boolean flag "enable-cost-optimizer" 
+# - Statsig: Create feature gate "enable_cost_optimizer"
+# 
 # Toggle flag ON → Cluster scales down for cost optimization
 # Toggle flag OFF → Cluster scales up for performance
 

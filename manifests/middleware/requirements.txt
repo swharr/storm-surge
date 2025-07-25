@@ -11,12 +11,9 @@ PyJWT==2.8.0
 # YAML parsing for configuration
 pyyaml==6.0.1
 
-# Feature flag provider SDKs (conditionally imported)
-# LaunchDarkly SDK (optional - only if using LaunchDarkly)
-# launchdarkly-server-sdk==8.2.1
-
-# Statsig SDK (optional - only if using Statsig)  
-# statsig==1.20.0
+# Feature flag provider SDKs
+# Install with: pip install -r requirements-[provider].txt
+# Or use setup script which will configure automatically
 
 # WebSocket support for real-time features
 flask-socketio==5.3.6
@@ -27,3 +24,14 @@ flask-cors==4.0.0
 
 # Password hashing
 bcrypt==4.0.1
+
+# OpenTelemetry instrumentation and exporters
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-instrumentation==0.42b0
+opentelemetry-instrumentation-flask==0.42b0
+opentelemetry-instrumentation-requests==0.42b0
+opentelemetry-instrumentation-socketio==0.42b0
+opentelemetry-exporter-otlp==1.21.0
+opentelemetry-exporter-prometheus==1.12.0rc1
+opentelemetry-instrumentation-logging==0.42b0
