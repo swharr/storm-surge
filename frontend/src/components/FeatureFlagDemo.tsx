@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { useFlag, useFeatureFlags, useTrackEvent, useFeatureFlagsReady } from '../providers/FeatureFlagProvider';
+import { useFlag, useFeatureFlags, useTrackEvent } from '../providers/FeatureFlagProvider';
 
 export const FeatureFlagDemo: React.FC = () => {
   const { provider, isReady } = useFeatureFlags();

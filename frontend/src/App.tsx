@@ -79,9 +79,9 @@ function App() {
   return (
     <FeatureFlagProvider user={{
       id: user?.id || 'unknown',
-      email: user?.email,
-      name: user?.name,
-      role: user?.role,
+      email: user?.email || undefined,
+      name: user?.name || undefined,
+      role: user?.role || undefined,
       custom: {
         organization: user && 'organization' in user ? (user as any).organization : 'storm-surge',
         environment: import.meta.env.VITE_ENVIRONMENT || 'development'

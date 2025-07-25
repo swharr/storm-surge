@@ -6,7 +6,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { LDProvider, useLDClient, LDContext } from 'launchdarkly-react-client-sdk';
-import { StatsigProvider, useGate, StatsigUser, Statsig } from 'statsig-react';
+import { StatsigProvider, StatsigUser, Statsig } from 'statsig-react';
 // import { trackCustomEvent } from '../telemetry';
 
 // Types
@@ -148,7 +148,7 @@ const LaunchDarklyWrapper: React.FC<{ user: User; children: ReactNode }> = ({ us
 // Statsig wrapper component
 const StatsigWrapper: React.FC<{ user: User; children: ReactNode }> = ({ user, children }) => {
   const [isReady, setIsReady] = useState(false);
-  const [flagCache, setFlagCache] = useState<Record<string, boolean>>({});
+  const [flagCache] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // Statsig initializes automatically with the provider
@@ -196,7 +196,7 @@ const StatsigWrapper: React.FC<{ user: User; children: ReactNode }> = ({ user, c
     }
     
     try {
-      Statsig.logEvent(eventName, {
+      Statsig.logEvent(eventName, null, {
         ...metadata,
         userId: user.id,
         timestamp: Date.now()
@@ -328,18 +328,6 @@ export const FeatureFlagProvider: React.FC<FeatureFlagProviderProps> = ({ user, 
 // Hook for specific feature flags
 export const useFlag = (flagKey: string, defaultValue: boolean = false): boolean => {
   const context = useContext(FeatureFlagContext);
-  
-  // Special handling for Statsig - use the hook directly when in Statsig context
-  if (context?.provider === 'statsig') {
-    try {
-      // This will only work if we're inside a StatsigProvider
-      const gate = useGate(flagKey);
-      return gate.value;
-    } catch (error) {
-      // Fallback to context method if hook fails
-      return context?.getFlag(flagKey, defaultValue) || defaultValue;
-    }
-  }
   
   // For LaunchDarkly or when context is available, use the context method
   if (context) {
