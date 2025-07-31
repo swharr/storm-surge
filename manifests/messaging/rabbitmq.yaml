@@ -1,0 +1,171 @@
+---
+# RabbitMQ ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: oceansurge
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus,rabbitmq_shovel,rabbitmq_shovel_management].
+  rabbitmq.conf: |
+    # RabbitMQ Configuration
+    loopback_users.guest = false
+    listeners.tcp.default = 5672
+    management.tcp.port = 15672
+    prometheus.tcp.port = 15692
+    
+    # Memory and disk settings
+    vm_memory_high_watermark.relative = 0.6
+    disk_free_limit.relative = 2.0
+    
+    # Clustering
+    cluster_formation.peer_discovery_backend = classic_config
+    
+    # Logging
+    log.console = true
+    log.console.level = info
+
+---
+# RabbitMQ PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: oceansurge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: gp2
+
+---
+# RabbitMQ Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: oceansurge
+  labels:
+    app: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "15692"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.12-management-alpine
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        - containerPort: 15692
+          name: prometheus
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "oceansurge"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: "RabbitMQ123"
+        - name: RABBITMQ_ERLANG_COOKIE
+          value: "oceansurge-cookie-123"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: rabbitmq-config
+          mountPath: /etc/rabbitmq
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
+        readinessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - ping
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - ping
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+      volumes:
+      - name: rabbitmq-config
+        configMap:
+          name: rabbitmq-config
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc
+
+---
+# RabbitMQ Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: oceansurge
+  labels:
+    app: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 5672
+    targetPort: 5672
+    name: amqp
+  - port: 15672
+    targetPort: 15672
+    name: management
+  - port: 15692
+    targetPort: 15692
+    name: prometheus
+  type: ClusterIP
+
+---
+# RabbitMQ Management Service (LoadBalancer for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-management
+  namespace: oceansurge
+  labels:
+    app: rabbitmq
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 80
+    targetPort: 15672
+    name: management
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 0.0.0.0/0

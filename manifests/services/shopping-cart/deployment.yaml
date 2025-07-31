@@ -1,0 +1,131 @@
+---
+# Shopping Cart API ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shopping-cart-api-config
+  namespace: oceansurge
+data:
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379" 
+  PRODUCT_CATALOG_URL: "http://product-catalog-api"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "development"
+
+---
+# Shopping Cart API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart-api
+  namespace: oceansurge
+  labels:
+    app: shopping-cart-api
+    tier: backend
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: shopping-cart-api
+  template:
+    metadata:
+      labels:
+        app: shopping-cart-api
+        tier: backend
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: shopping-cart-api
+        image: oceansurge/shopping-cart-api:dev
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: shopping-cart-api-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: shopping-cart-api-config
+              key: REDIS_PORT
+        - name: PRODUCT_CATALOG_URL
+          valueFrom:
+            configMapKeyRef:
+              name: shopping-cart-api-config
+              key: PRODUCT_CATALOG_URL
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: shopping-cart-api-config
+              key: LOG_LEVEL
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: shopping-cart-api-config
+              key: ENVIRONMENT
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 12
+
+---
+# Shopping Cart API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopping-cart-api
+  namespace: oceansurge
+  labels:
+    app: shopping-cart-api
+spec:
+  selector:
+    app: shopping-cart-api
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  type: ClusterIP

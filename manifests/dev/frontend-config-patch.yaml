@@ -1,0 +1,122 @@
+---
+# Frontend Config Patch for Dev Environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config-dev
+data:
+  default.conf: |
+    upstream product-catalog-api {
+        server product-catalog-api:80;
+    }
+    upstream shopping-cart-api {
+        server shopping-cart-api:80;
+    }
+    upstream user-auth-api {
+        server user-auth-api:80;
+    }
+
+    server {
+        listen 8080;
+        server_name localhost;
+
+        # Enable CORS for API calls
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-User-ID' always;
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        # API Routes to new microservices
+        
+        # Product Catalog API
+        location /api/products {
+            proxy_pass http://product-catalog-api/products;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location ~ ^/api/products/(.*)$ {
+            proxy_pass http://product-catalog-api/products/$1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Shopping Cart API
+        location /api/carts {
+            proxy_pass http://shopping-cart-api/carts;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-User-ID $http_x_user_id;
+        }
+
+        location ~ ^/api/carts/(.*)$ {
+            proxy_pass http://shopping-cart-api/carts/$1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-User-ID $http_x_user_id;
+        }
+
+        # User Authentication API
+        location /api/auth {
+            proxy_pass http://user-auth-api;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location ~ ^/api/auth/(.*)$ {
+            proxy_pass http://user-auth-api/$1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Legacy API routes (for backward compatibility)
+        location /api/cart/ {
+            return 301 /api/carts/;
+        }
+
+        location = /api/cart {
+            return 301 /api/carts;
+        }
+
+        # Metrics and monitoring endpoints
+        location /metrics {
+            access_log off;
+            return 404;
+        }
+
+        # Handle OPTIONS requests for CORS
+        location ~ ^/api/ {
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' '*';
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+                add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-User-ID';
+                add_header 'Access-Control-Max-Age' 86400;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+        }
+    }
