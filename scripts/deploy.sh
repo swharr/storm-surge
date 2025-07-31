@@ -10,12 +10,13 @@ if [ -f .env ]; then
 fi
 
 show_usage() {
-  echo "Usage: $0 [--provider=gke|eks|aks|all] [--region=REGION] [--zone=ZONE] [--nodes=COUNT] [--cluster-name=NAME] [--yes]"
+  echo "Usage: $0 [--provider=gke|eks|aks|all] [--region=REGION] [--zone=ZONE] [--nodes=COUNT] [--cluster-name=NAME] [--aws-profile=PROFILE] [--yes]"
   echo "  --provider: Cloud provider (gke, eks, aks, or all)"
   echo "  --region: Cloud region (e.g., us-central1, us-east-1, eastus)"
   echo "  --zone: Availability zone (must match region)"
   echo "  --nodes: Number of nodes (1-10, default: 4)"
   echo "  --cluster-name: Custom cluster name (default: storm-surge-PROVIDER)"
+  echo "  --aws-profile: AWS profile to use (for EKS deployments)"
   echo "  --yes: Skip interactive prompts (use defaults)"
   exit 1
 }
@@ -26,6 +27,7 @@ REGION=""
 ZONE=""
 NODES=""
 CLUSTER_NAME=""
+AWS_PROFILE=""
 NON_INTERACTIVE=false
 
 for arg in "$@"; do
@@ -48,6 +50,10 @@ for arg in "$@"; do
       ;;
     --cluster-name=*)
       CLUSTER_NAME="${arg#*=}"
+      shift
+      ;;
+    --aws-profile=*)
+      AWS_PROFILE="${arg#*=}"
       shift
       ;;
     --yes)
@@ -79,7 +85,7 @@ get_provider_config() {
       echo 'regions:us-central1:Iowa:a,b,c,f|us-east1:South Carolina:b,c,d|us-west1:Oregon:a,b,c|us-west2:California:a,b,c|europe-west1:Belgium:b,c,d|asia-east1:Taiwan:a,b,c|cli_tool:gcloud'
       ;;
     "eks")
-      echo 'regions:us-east-1:N. Virginia:a,b,c,d,e,f|us-east-2:Ohio:a,b,c|us-west-1:N. California:a,c|us-west-2:Oregon:a,b,c,d|eu-west-1:Ireland:a,b,c|ap-southeast-1:Singapore:a,b,c|cli_tool:aws'
+      echo 'regions:us-east-1:N. Virginia:a,b,c,d,e,f|us-east-2:Ohio:a,b,c|us-west-1:N. California:a,b,c|us-west-2:Oregon:a,b,c|eu-west-1:Ireland:a,b,c|ap-southeast-1:Singapore:a,b,c|cli_tool:aws'
       ;;
     "aks")
       echo 'regions:eastus:East US:1,2,3|westus2:West US 2:1,2,3|centralus:Central US:1,2,3|westeurope:West Europe:1,2,3|southeastasia:Southeast Asia:1,2,3|cli_tool:az'
@@ -201,7 +207,7 @@ get_region() {
   fi
 
   local regions
-  mapfile -t regions < <(parse_regions "$provider")
+  regions=($(parse_regions "$provider"))
   local i=1
 
   echo "📍 Available $provider regions:"
@@ -236,48 +242,108 @@ get_zone() {
   local provider=$1
   local region=$2
   local zones
-  mapfile -t zones < <(parse_zones "$provider" "$region")
+  zones=($(parse_zones "$provider" "$region"))
 
   if [ "$NON_INTERACTIVE" = "true" ]; then
-    ZONE="${zones[0]}"
-    if [ "$provider" = "gke" ]; then
-      ZONE="${region}-${zones[0]}"
-    elif [ "$provider" = "eks" ]; then
-      ZONE="${region}${zones[0]}"
+    if [ "$provider" = "eks" ]; then
+      # For EKS, use at least 2 zones by default
+      local default_zones=()
+      for i in 0 1; do
+        if [ $i -lt ${#zones[@]} ]; then
+          default_zones+=("${region}${zones[$i]}")
+        fi
+      done
+      ZONE="${default_zones[*]}"
+      echo "🤖 Non-interactive mode: Using default zones '$ZONE'"
+    else
+      ZONE="${zones[0]}"
+      if [ "$provider" = "gke" ]; then
+        ZONE="${region}-${zones[0]}"
+      fi
+      echo "🤖 Non-interactive mode: Using default zone '$ZONE'"
     fi
-    echo "🤖 Non-interactive mode: Using default zone '$ZONE'"
     return
   fi
 
-  while true; do
-    echo "🗺️  Available zones in $region:"
-    echo "  ${zones[*]}"
-    echo
-
-    case $provider in
-      "gke")
+  case $provider in
+    "gke")
+      while true; do
+        echo "🗺️  Available zones in $region:"
+        echo "  ${zones[*]}"
+        echo
         read -r -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
         ZONE="${region}-${zone_suffix}"
-        ;;
-      "eks")
-        read -r -p "Enter zone suffix (e.g., 'a' for ${region}a): " zone_suffix
-        ZONE="${region}${zone_suffix}"
-        ;;
-      "aks")
+        
+        # Validate zone exists in the zones array
+        if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
+          break
+        else
+          echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
+          echo
+        fi
+      done
+      ;;
+    "eks")
+      echo "🗺️  Available zones in $region:"
+      echo "  ${zones[*]}"
+      echo
+      echo "⚠️  EKS requires at least 2 availability zones for high availability"
+      echo
+      
+      local selected_zones=()
+      while true; do
+        read -r -p "Enter zones separated by spaces (e.g., 'a b c' for ${region}a ${region}b ${region}c): " zone_input
+        
+        # Convert input to array
+        local input_zones=($zone_input)
+        
+        # Check if at least 2 zones were provided
+        if [ ${#input_zones[@]} -lt 2 ]; then
+          echo "❌ Please select at least 2 availability zones for EKS"
+          echo
+          continue
+        fi
+        
+        # Validate all zones exist
+        local all_valid=true
+        selected_zones=()
+        for z in "${input_zones[@]}"; do
+          if printf '%s\n' "${zones[@]}" | grep -q "^$z$"; then
+            selected_zones+=("${region}${z}")
+          else
+            echo "❌ Invalid zone '$z' for region '$region'"
+            all_valid=false
+            break
+          fi
+        done
+        
+        if [ "$all_valid" = "true" ]; then
+          ZONE="${selected_zones[*]}"
+          break
+        else
+          echo "Please try again."
+          echo
+        fi
+      done
+      ;;
+    "aks")
+      while true; do
+        echo "🗺️  Available zones in $region:"
+        echo "  ${zones[*]}"
+        echo
         read -r -p "Enter zone number (1-3): " zone_suffix
         ZONE="$zone_suffix"
-        ;;
-    esac
-
-    # Validate zone exists in the zones array
-    local zone_suffix_to_check="$zone_suffix"
-    if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix_to_check$"; then
-      break
-    else
-      echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
-      echo
-    fi
-  done
+        
+        # Validate zone exists in the zones array
+        if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
+          break
+        else
+          echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
+          echo
+        fi
+      done
+      ;;
+  esac
 }
 
 # Interactive node count selection
@@ -345,6 +411,76 @@ get_cluster_name() {
   echo "✅ Cluster name set to: $CLUSTER_NAME"
 }
 
+# Get AWS profile for EKS deployments
+get_aws_profile() {
+  # Check if AWS CLI is available
+  if ! command -v aws &> /dev/null; then
+    echo "⚠️  AWS CLI not installed. Skipping profile selection."
+    return
+  fi
+
+  # First check if we can already authenticate with current settings
+  if [ -z "$AWS_PROFILE" ]; then
+    if aws sts get-caller-identity &>/dev/null 2>&1; then
+      echo "✅ AWS credentials are already configured"
+      return
+    fi
+  else
+    # Check if the provided profile works
+    if AWS_PROFILE="$AWS_PROFILE" aws sts get-caller-identity &>/dev/null 2>&1; then
+      echo "✅ Using AWS profile: $AWS_PROFILE"
+      return
+    else
+      echo "❌ AWS profile '$AWS_PROFILE' is not valid or has expired credentials"
+      AWS_PROFILE=""
+    fi
+  fi
+
+  # No valid credentials found, check for available profiles
+  local profiles
+  profiles=($(aws configure list-profiles 2>/dev/null || echo ""))
+
+  if [ ${#profiles[@]} -eq 0 ]; then
+    echo "❌ No AWS profiles found. Please run 'aws configure' to set up credentials."
+    exit 1
+  fi
+
+  if [ "$NON_INTERACTIVE" = "true" ]; then
+    echo "❌ Non-interactive mode: No valid AWS credentials available"
+    echo "   Please specify --aws-profile=PROFILE or configure default credentials"
+    exit 1
+  fi
+
+  echo "🔑 Select AWS profile for EKS deployment:"
+  local i=1
+  for profile in "${profiles[@]}"; do
+    echo "  $i) $profile"
+    ((i++))
+  done
+  echo
+
+  while true; do
+    read -r -p "Select profile (1-${#profiles[@]}): " choice
+
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#profiles[@]}" ]; then
+      AWS_PROFILE="${profiles[$((choice-1))]}"
+      
+      # Verify the selected profile works
+      if AWS_PROFILE="$AWS_PROFILE" aws sts get-caller-identity &>/dev/null 2>&1; then
+        echo "✅ Using AWS profile: $AWS_PROFILE"
+        export AWS_PROFILE
+        break
+      else
+        echo "❌ Profile '$AWS_PROFILE' has invalid or expired credentials"
+        echo "   Please select another profile or fix the credentials"
+        AWS_PROFILE=""
+      fi
+    else
+      echo "❌ Invalid choice. Please try again."
+    fi
+  done
+}
+
 # Validate arguments
 validate_arguments() {
   local errors=()
@@ -367,7 +503,7 @@ validate_arguments() {
 
   if [ -n "$REGION" ] && [ -n "$PROVIDER" ] && [ "$PROVIDER" != "all" ]; then
     local valid_regions
-    mapfile -t valid_regions < <(parse_regions "$PROVIDER")
+    valid_regions=($(parse_regions "$PROVIDER"))
     if ! printf '%s\n' "${valid_regions[@]}" | grep -q "^$REGION$"; then
       errors+=("Invalid region '$REGION' for provider '$PROVIDER'")
     fi
@@ -529,7 +665,11 @@ run_provider() {
 
   echo "🚀 Running deployment script for $p..."
   echo "   Region: $REGION"
-  echo "   Zone: $ZONE"
+  if [ "$p" = "eks" ]; then
+    echo "   Zones: $ZONE"
+  else
+    echo "   Zone: $ZONE"
+  fi
   echo "   Nodes: $NODES"
   echo
 
@@ -539,6 +679,11 @@ run_provider() {
   export STORM_NODES="$NODES"
   STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
   export STORM_CLUSTER_NAME
+  
+  # Export AWS profile if set
+  if [ -n "$AWS_PROFILE" ]; then
+    export AWS_PROFILE
+  fi
 
   if ! bash "$script"; then
     echo "❌ Deployment failed for provider '$p'"
@@ -573,6 +718,11 @@ if [ "$PROVIDER" = "all" ]; then
       get_cluster_name $p
     fi
 
+    # Get AWS profile for EKS
+    if [ "$p" = "eks" ]; then
+      get_aws_profile
+    fi
+
     # Check if cluster exists and handle accordingly
     if check_cluster_exists "$p" "$REGION" "$ZONE"; then
       handle_existing_cluster "$p"
@@ -604,6 +754,11 @@ else
     get_cluster_name "$PROVIDER"
   fi
 
+  # Get AWS profile for EKS
+  if [ "$PROVIDER" = "eks" ]; then
+    get_aws_profile
+  fi
+
   # Check if cluster exists and handle accordingly
   if check_cluster_exists "$PROVIDER" "$REGION" "$ZONE"; then
     handle_existing_cluster "$PROVIDER"
@@ -613,7 +768,11 @@ else
   echo "🎯 Deployment Configuration:"
   echo "   Provider: $PROVIDER"
   echo "   Region: $REGION"
-  echo "   Zone: $ZONE"
+  if [ "$PROVIDER" = "eks" ]; then
+    echo "   Zones: $ZONE"
+  else
+    echo "   Zone: $ZONE"
+  fi
   echo "   Nodes: $NODES"
   echo "   Cluster Name: $(get_cluster_name_for_provider "$PROVIDER")"
   echo

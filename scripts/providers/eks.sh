@@ -37,7 +37,7 @@ retry_command() {
 
 echo "🛠️  Provisioning EKS Cluster..."
 echo "   📍 Region: $REGION"
-echo "   🗺️  Zone: $ZONE"
+echo "   🗺️  Zones: $ZONE"
 echo "   🖥️  Nodes: $NODES"
 echo "   🏷️  Cluster: $CLUSTER_NAME"
 echo
@@ -57,16 +57,30 @@ fi
 # Validate AWS authentication
 if ! aws sts get-caller-identity &>/dev/null; then
     echo "❌ Not authenticated with AWS" >&2
-    echo "   Run: aws configure"
+    if [ -n "$AWS_PROFILE" ]; then
+        echo "   Profile '$AWS_PROFILE' is not valid or has expired credentials"
+    else
+        echo "   Run: aws configure"
+    fi
     exit 1
 fi
 
-# Validate zone is in the correct region
-if [[ "$ZONE" != "$REGION"* ]]; then
-    echo "❌ Zone '$ZONE' does not match region '$REGION'" >&2
-    echo "   Zone must start with region name (e.g., us-west-2a)"
-    exit 1
+# Display AWS identity for confirmation
+if [ -n "$AWS_PROFILE" ]; then
+    echo "🔐 Using AWS Profile: $AWS_PROFILE"
 fi
+AWS_IDENTITY=$(aws sts get-caller-identity --query 'Arn' --output text)
+echo "🔑 AWS Identity: $AWS_IDENTITY"
+
+# Validate zones are in the correct region
+# ZONE can contain multiple zones separated by spaces for EKS
+for z in $ZONE; do
+    if [[ "$z" != "$REGION"* ]]; then
+        echo "❌ Zone '$z' does not match region '$REGION'" >&2
+        echo "   Zone must start with region name (e.g., us-west-2a)"
+        exit 1
+    fi
+done
 
 if [ "$STORM_SKIP_CLUSTER_CREATION" = "true" ]; then
   echo "⚡ Skipping cluster creation, using existing cluster..."
@@ -74,10 +88,14 @@ if [ "$STORM_SKIP_CLUSTER_CREATION" = "true" ]; then
   aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
 else
   echo "🔧 Creating EKS cluster with $NODES nodes..."
+  # Convert space-separated zones to comma-separated for eksctl
+  ZONES_COMMA=$(echo "$ZONE" | tr ' ' ',')
+  echo "   🗺️  Using availability zones: $ZONES_COMMA"
+  
   eksctl create cluster \
     --name "$CLUSTER_NAME" \
     --region "$REGION" \
-    --zones "$ZONE" \
+    --zones "$ZONES_COMMA" \
     --nodes "$NODES" \
     --node-type t3.medium \
     --node-volume-size 20 \

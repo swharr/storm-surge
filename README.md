@@ -58,6 +58,9 @@ cd ocean-surge
 
 # With custom cluster naming
 ./scripts/deploy.sh --provider=gke --cluster-name=my-custom-cluster --region=us-central1 --zone=us-central1-a
+
+# AWS with specific profile (EKS requires multiple zones)
+./scripts/deploy.sh --provider=eks --aws-profile=my-profile --region=us-east-1 --zone="us-east-1a us-east-1b"
 ```
 
 ### Enhanced Deployment Logic
@@ -75,6 +78,16 @@ The main deployment script (`scripts/deploy.sh`) includes comprehensive improvem
 - **Custom Cluster Naming**: Support for custom cluster names with alphanumeric validation and automatic fallback to defaults
 - **Environment Variable Loading**: Automatic `.env` file loading for configuration
 - **CLI Tool Validation**: Checks for required CLI tools (gcloud, aws, az) before deployment
+- **AWS Profile Support**: Interactive profile selection when no default AWS credentials are configured
+  - Specify profile with `--aws-profile=PROFILE` parameter
+  - Automatic detection and listing of available AWS profiles
+  - Profile validation before deployment
+  - Enhanced error messages for authentication failures
+- **Multi-AZ Support for EKS**: EKS deployments require minimum 2 availability zones
+  - Interactive mode prompts for space-separated zone selection
+  - Non-interactive mode automatically selects first 2 available zones
+  - Zone validation ensures all zones belong to the selected region
+  - Command-line usage: `--zone="us-east-1a us-east-1b us-east-1c"`
 
 ### GKE Security Enhancements
 The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced security features:
@@ -96,11 +109,11 @@ The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced securit
 - `europe-west1` (Belgium): zones b, c, d
 - `asia-east1` (Taiwan): zones a, b, c
 
-**EKS (AWS)**
+**EKS (AWS)** *(Requires minimum 2 availability zones for high availability)*
 - `us-east-1` (N. Virginia): zones a, b, c, d, e, f
 - `us-east-2` (Ohio): zones a, b, c
-- `us-west-1` (N. California): zones a, c
-- `us-west-2` (Oregon): zones a, b, c, d
+- `us-west-1` (N. California): zones a, b, c
+- `us-west-2` (Oregon): zones a, b, c
 - `eu-west-1` (Ireland): zones a, b, c
 - `ap-southeast-1` (Singapore): zones a, b, c
 
@@ -124,6 +137,32 @@ The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced securit
 ```
 
 The production script will collect your LaunchDarkly SDK key, Spot API token, and cluster configuration interactively.
+
+### AWS Profile Configuration
+
+For EKS deployments, the script supports AWS profile management:
+
+```bash
+# Use a specific AWS profile
+./scripts/deploy.sh --provider=eks --aws-profile=production
+
+# Interactive profile selection (when no default credentials)
+./scripts/deploy.sh --provider=eks
+# Will prompt: "Select AWS profile for EKS deployment:"
+
+# List available profiles
+aws configure list-profiles
+
+# Configure a new profile
+aws configure --profile myprofile
+```
+
+**AWS Profile Features:**
+- Automatic detection of missing or expired credentials
+- Interactive profile selection with validation
+- Support for multiple AWS accounts
+- Profile validation before deployment begins
+- Clear error messages for authentication issues
 
 ---
 

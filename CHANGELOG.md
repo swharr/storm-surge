@@ -1,5 +1,40 @@
 # 🌀 Storm Surge – Changelog
 
+## [Unreleased] - 2025-07-31
+
+### 🔐 AWS Profile Support & Region Updates
+
+- **AWS Profile Support for EKS Deployments**
+  - Added `--aws-profile` parameter to deploy.sh for specifying AWS profiles
+  - Interactive AWS profile selection when no default credentials are configured
+  - Automatic profile validation before deployment
+  - Profile detection and listing from AWS CLI configuration
+  - Enhanced error messages showing which profile failed authentication
+
+- **AWS Region Configuration Updates**
+  - Fixed us-west-1 availability zones (added missing zone 'b': now a,b,c)
+  - Fixed us-west-2 availability zones (removed non-existent zone 'd': now a,b,c)
+  - All US regions properly configured:
+    - us-east-1 (N. Virginia): zones a,b,c,d,e,f
+    - us-east-2 (Ohio): zones a,b,c
+    - us-west-1 (N. California): zones a,b,c
+    - us-west-2 (Oregon): zones a,b,c
+
+- **Enhanced EKS Deployment Script**
+  - Shows AWS identity (ARN) during deployment for confirmation
+  - Better error handling for expired or invalid AWS credentials
+  - Profile-aware authentication checks
+
+### 🌍 Multi-AZ Support for EKS
+
+- **High Availability EKS Deployments**
+  - EKS deployments now require a minimum of 2 availability zones for high availability
+  - Interactive zone selection prompts users to select multiple zones (space-separated)
+  - Non-interactive mode automatically selects first 2 available zones
+  - Zone validation ensures all selected zones belong to the chosen region
+  - Updated eksctl commands to properly handle multiple zones (comma-separated)
+  - Enhanced UI to display "Zones" (plural) for EKS deployments vs "Zone" for other providers
+
 ## [beta-v1.1.0] - 2025-07-24
 
 ### 🔐 Authentication & User Management System - Complete Implementation
