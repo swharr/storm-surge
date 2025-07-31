@@ -48,6 +48,7 @@ data:
     FEATURE_FLAG_PROVIDER = os.getenv('FEATURE_FLAG_PROVIDER', 'launchdarkly')
     LOGGING_PROVIDER = os.getenv('LOGGING_PROVIDER', 'auto')
     SPOT_API_TOKEN = os.getenv('SPOT_API_TOKEN', '')
+    LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY', '')
     COST_IMPACT_THRESHOLD = float(os.getenv('COST_IMPACT_THRESHOLD', '0.05'))
 
     # Spot API configuration

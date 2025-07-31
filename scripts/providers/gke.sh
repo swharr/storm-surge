@@ -90,6 +90,26 @@ else
 
   echo "🔑 Getting cluster credentials..."
   gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="$ZONE"
+  
+  # Create firewall rules for LoadBalancer internet access
+  echo "🔥 Creating firewall rules for LoadBalancer internet access..."
+  gcloud compute firewall-rules create "${CLUSTER_NAME}-allow-loadbalancer-http" \
+    --allow tcp:80 \
+    --source-ranges 0.0.0.0/0 \
+    --description "Allow HTTP traffic to LoadBalancer services" \
+    --target-tags "gke-${CLUSTER_NAME}" 2>/dev/null || echo "   HTTP firewall rule already exists"
+  
+  gcloud compute firewall-rules create "${CLUSTER_NAME}-allow-loadbalancer-https" \
+    --allow tcp:443 \
+    --source-ranges 0.0.0.0/0 \
+    --description "Allow HTTPS traffic to LoadBalancer services" \
+    --target-tags "gke-${CLUSTER_NAME}" 2>/dev/null || echo "   HTTPS firewall rule already exists"
+  
+  gcloud compute firewall-rules create "${CLUSTER_NAME}-allow-loadbalancer-8080" \
+    --allow tcp:8080 \
+    --source-ranges 0.0.0.0/0 \
+    --description "Allow port 8080 traffic to LoadBalancer services" \
+    --target-tags "gke-${CLUSTER_NAME}" 2>/dev/null || echo "   Port 8080 firewall rule already exists"
 
   echo "🔒 Applying additional security hardening..."
   # Disable insecure ports on kubelet

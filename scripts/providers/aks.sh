@@ -88,6 +88,53 @@ else
 
   echo "🔑 Getting cluster credentials..."
   az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME"
+  
+  # Create Network Security Group rules for LoadBalancer internet access
+  echo "🔒 Creating Network Security Group rules for LoadBalancer internet access..."
+  NODE_RESOURCE_GROUP=$(az aks show --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)
+  
+  # Get the NSG name for the cluster
+  NSG_NAME=$(az network nsg list --resource-group "$NODE_RESOURCE_GROUP" --query "[0].name" -o tsv)
+  
+  if [ -n "$NSG_NAME" ]; then
+    # Create rules for HTTP, HTTPS, and port 8080
+    az network nsg rule create \
+      --resource-group "$NODE_RESOURCE_GROUP" \
+      --nsg-name "$NSG_NAME" \
+      --name "AllowLoadBalancerHTTP" \
+      --protocol tcp \
+      --priority 1000 \
+      --destination-port-range 80 \
+      --source-address-prefixes '*' \
+      --access allow \
+      --direction inbound 2>/dev/null || echo "   HTTP NSG rule already exists"
+    
+    az network nsg rule create \
+      --resource-group "$NODE_RESOURCE_GROUP" \
+      --nsg-name "$NSG_NAME" \
+      --name "AllowLoadBalancerHTTPS" \
+      --protocol tcp \
+      --priority 1001 \
+      --destination-port-range 443 \
+      --source-address-prefixes '*' \
+      --access allow \
+      --direction inbound 2>/dev/null || echo "   HTTPS NSG rule already exists"
+    
+    az network nsg rule create \
+      --resource-group "$NODE_RESOURCE_GROUP" \
+      --nsg-name "$NSG_NAME" \
+      --name "AllowLoadBalancer8080" \
+      --protocol tcp \
+      --priority 1002 \
+      --destination-port-range 8080 \
+      --source-address-prefixes '*' \
+      --access allow \
+      --direction inbound 2>/dev/null || echo "   Port 8080 NSG rule already exists"
+    
+    echo "✅ Network Security Group rules created for LoadBalancer access"
+  else
+    echo "⚠️  Could not find Network Security Group, rules creation skipped"
+  fi
 fi
 
 echo "🚀 Deploying OceanSurge application..."

@@ -103,6 +103,57 @@ else
 
   echo "🔑 Updating kubeconfig..."
   aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
+  
+  # Create security group for LoadBalancer internet access
+  echo "🔐 Creating LoadBalancer security group..."
+  VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=eksctl-${CLUSTER_NAME}-cluster/VPC" --query 'Vpcs[0].VpcId' --output text --region "$REGION")
+  
+  if [ "$VPC_ID" != "None" ] && [ -n "$VPC_ID" ]; then
+    # Create security group for LoadBalancer
+    LB_SG_ID=$(aws ec2 create-security-group \
+      --group-name "${CLUSTER_NAME}-loadbalancer-sg" \
+      --description "Security group for LoadBalancer internet access" \
+      --vpc-id "$VPC_ID" \
+      --region "$REGION" \
+      --query 'GroupId' \
+      --output text)
+    
+    # Add ingress rules for HTTP and HTTPS
+    aws ec2 authorize-security-group-ingress \
+      --group-id "$LB_SG_ID" \
+      --protocol tcp \
+      --port 80 \
+      --cidr 0.0.0.0/0 \
+      --region "$REGION"
+    
+    aws ec2 authorize-security-group-ingress \
+      --group-id "$LB_SG_ID" \
+      --protocol tcp \
+      --port 443 \
+      --cidr 0.0.0.0/0 \
+      --region "$REGION"
+    
+    # Add ingress rule for middleware port 8080
+    aws ec2 authorize-security-group-ingress \
+      --group-id "$LB_SG_ID" \
+      --protocol tcp \
+      --port 8080 \
+      --cidr 0.0.0.0/0 \
+      --region "$REGION"
+    
+    # Tag the security group
+    aws ec2 create-tags \
+      --resources "$LB_SG_ID" \
+      --tags Key=Name,Value="${CLUSTER_NAME}-loadbalancer-sg" \
+             Key=Cluster,Value="$CLUSTER_NAME" \
+      --region "$REGION"
+    
+    echo "✅ LoadBalancer security group created: $LB_SG_ID"
+    echo "   📝 Annotate your LoadBalancer services with:"
+    echo "      service.beta.kubernetes.io/aws-load-balancer-security-groups: $LB_SG_ID"
+  else
+    echo "⚠️  Could not find VPC for cluster, security group creation skipped"
+  fi
 fi
 
 echo "🚀 Deploying OceanSurge application..."
@@ -112,9 +163,13 @@ mkdir -p logs
 # Deploy the application with retry logic
 echo "📦 Applying Kubernetes manifests..."
 retry_command "Kubernetes manifests deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    bash -c "kubectl apply -k ../../manifests/base/ 2>&1 | tee -a logs/eks-deploy.log"
+    bash -c "kubectl apply -k ../manifests/base/ 2>&1 | tee -a logs/eks-deploy.log"
 
 echo "🚀 Deploying middleware layer..."
+# Pass through non-interactive flag to middleware deployment
+if [ "$STORM_SKIP_CLUSTER_CREATION" = "true" ]; then
+    export STORM_NON_INTERACTIVE=true
+fi
 retry_command "Middleware deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
     ./deploy-middleware.sh
 
