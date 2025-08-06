@@ -459,7 +459,7 @@ data:
                 </div>
 
                 <div class="load-test-section">
-                    <h3 class="load-test-title">🚀 Infrastructure Load Testing</h3>
+                    <h3 class="load-test-title">Infrastructure Load Testing</h3>
                     <p>Test our Kubernetes auto-scaling capabilities with realistic e-commerce traffic patterns</p>
 
                     <div class="load-buttons">
@@ -584,14 +584,14 @@ data:
                     'light': {
                         interval: 300,
                         concurrent: 3,
-                        name: 'Light Traffic 🌤️',
+                        name: 'Light Traffic',
                         description: 'Normal browsing patterns',
                         duration: 120
                     },
                     'moderate': {
                         interval: 150,
                         concurrent: 7,
-                        name: 'Moderate Load 🌧️',
+                        name: 'Moderate Load',
                         description: 'Busy shopping periods',
                         duration: 300
                     },
@@ -605,7 +605,7 @@ data:
                     'black-friday': {
                         interval: 25,
                         concurrent: 30,
-                        name: 'Black Friday 🔥',
+                        name: 'Black Friday Sale',
                         description: 'Maximum load scenario',
                         duration: 900
                     }
@@ -695,7 +695,7 @@ data:
         <style>body{font-family:Arial;margin:40px;background:#f4f4f4;}</style>
     </head>
     <body>
-        <h1>🛍️ Product Catalog Service</h1>
+        <h1>Product Catalog Service</h1>
         <p>Status: <span style="color:green">Active</span></p>
         <p>Version: beta-v1.1.0</p>
         <div>Available Products: 1,247</div>
@@ -717,7 +717,7 @@ data:
         <style>body{font-family:Arial;margin:40px;background:#f4f4f4;}</style>
     </head>
     <body>
-        <h1>🛒 Shopping Cart Service</h1>
+        <h1>Shopping Cart Service</h1>
         <p>Status: <span style="color:green">Active</span></p>
         <p>Version: beta-v1.1.0</p>
         <div>Active Carts: 127</div>

@@ -2,7 +2,7 @@
 
 Comprehensive testing framework for validating Storm Surge deployments before production.
 
-## 🧪 Test Components
+## Test Components
 
 ### 1. Local Quick Tests (`test-local.sh`)
 Fast validation for development workflow:
@@ -56,7 +56,7 @@ Automated testing on push/PR:
 - Documentation validation
 - Release readiness checks
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 ```bash
@@ -86,7 +86,7 @@ brew install trivy
    pre-commit run --all-files
    ```
 
-## 📊 Test Reports
+## Test Reports
 
 Test results are saved in `test-logs/`:
 - `test-report.md` - Summary report
@@ -95,7 +95,7 @@ Test results are saved in `test-logs/`:
 - `middleware-deploy.log` - Middleware deployment logs
 - `*-health.log` - Health check results
 
-## 🔧 Test Configuration
+## Test Configuration
 
 ### Minikube Settings
 ```bash
@@ -114,9 +114,9 @@ export TIMEOUT=600
 export LOG_DIR="custom-logs"
 ```
 
-## 🎯 Test Coverage
+## Test Coverage
 
-### ✅ Validated Components
+### Validated Components
 - [x] Kubernetes manifests (syntax & deployment)
 - [x] Deployment scripts (all cloud providers)
 - [x] Security contexts (non-root, resource limits)
@@ -126,7 +126,7 @@ export LOG_DIR="custom-logs"
 - [x] Parameter validation
 - [x] Secret management
 
-### 🔄 Continuous Integration
+### Continuous Integration
 - [x] Pre-commit hooks
 - [x] GitHub Actions workflow
 - [x] Security scanning
@@ -134,7 +134,7 @@ export LOG_DIR="custom-logs"
 - [x] Multi-cloud validation
 - [x] Release readiness checks
 
-## 🛠️ Development Workflow
+## Development Workflow
 
 ### Before Committing
 ```bash
@@ -166,7 +166,7 @@ git commit -m "your message"
    # Edit tests/hooks/validate-security.sh
    ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -210,7 +210,7 @@ minikube profile storm-surge-test
 minikube dashboard
 ```
 
-## 📈 Performance Benchmarks
+## Performance Benchmarks
 
 ### Test Suite Timing
 - Quick tests: ~30 seconds
@@ -223,19 +223,19 @@ minikube dashboard
 - Test pods: ~200m CPU, ~1GB RAM total
 - Disk usage: ~2GB for container images
 
-## 🎉 Success Criteria
+## Success Criteria
 
 All tests must pass for production deployment:
-- ✅ All scripts have valid syntax
-- ✅ Parameter validation working
-- ✅ Kubernetes manifests deploy successfully
-- ✅ All pods reach ready state
-- ✅ Health endpoints respond
-- ✅ Security contexts configured properly
-- ✅ No hardcoded secrets detected
-- ✅ Resource limits defined
+- All scripts have valid syntax
+- Parameter validation working
+- Kubernetes manifests deploy successfully
+- All pods reach ready state
+- Health endpoints respond
+- Security contexts configured properly
+- No hardcoded secrets detected
+- Resource limits defined
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Minikube Documentation](https://minikube.sigs.k8s.io/docs/)
 - [Pre-commit Documentation](https://pre-commit.com/)

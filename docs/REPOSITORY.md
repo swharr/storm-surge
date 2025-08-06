@@ -1,4 +1,4 @@
-# 📁 OceanSurge Repository Guide
+# OceanSurge Repository Guide
 
 ## Repository Information
 

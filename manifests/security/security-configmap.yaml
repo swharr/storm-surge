@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-security-config
+  namespace: oceansurge
+  labels:
+    app: api-security
+    component: configuration
+data:
+  # API Key Configuration
+  ADMIN_API_KEY: "REPLACE_WITH_ADMIN_API_KEY"
+  SERVICE_API_KEY: "REPLACE_WITH_SERVICE_API_KEY" 
+  READONLY_API_KEY: "REPLACE_WITH_READONLY_API_KEY"
+  
+  # Rate Limiting Configuration
+  RATE_LIMIT_PUBLIC_MAX: "1000"
+  RATE_LIMIT_PUBLIC_WINDOW: "3600"
+  RATE_LIMIT_AUTH_MAX: "5000"
+  RATE_LIMIT_AUTH_WINDOW: "3600"
+  RATE_LIMIT_ADMIN_MAX: "10000"
+  RATE_LIMIT_ADMIN_WINDOW: "3600"
+  
+  # Security Headers Configuration
+  SECURITY_HEADERS_ENABLED: "true"
+  CSP_POLICY: "default-src 'self'"
+  HSTS_MAX_AGE: "31536000"
+  
+  # CORS Configuration
+  CORS_ALLOWED_ORIGINS: "https://yourdomain.com,https://trailforge.com"
+  CORS_ALLOW_CREDENTIALS: "true"
+  
+  # Webhook Security
+  WEBHOOK_SIGNATURE_VERIFICATION: "true"
+  
+  # Logging Configuration
+  SECURITY_LOG_LEVEL: "INFO"
+  AUDIT_LOGGING_ENABLED: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-security-secrets
+  namespace: oceansurge
+  labels:
+    app: api-security
+    component: secrets
+type: Opaque
+stringData:
+  # API Keys (replace with actual values)
+  admin-api-key: "admin_key_$(openssl rand -hex 32)"
+  service-api-key: "service_key_$(openssl rand -hex 32)"
+  readonly-api-key: "readonly_key_$(openssl rand -hex 32)"
+  
+  # Webhook Secret
+  webhook-secret: "webhook_secret_$(openssl rand -hex 32)"
+  
+  # JWT Secret (for future OAuth implementation)
+  jwt-secret: "jwt_secret_$(openssl rand -hex 32)"
+
+---
+# Security Policy ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-security-policies
+  namespace: oceansurge
+data:
+  security-policy.yaml: |
+    # API Security Policies
+    authentication:
+      required: true
+      methods:
+        - api_key
+        - bearer_token
+      
+    rate_limiting:
+      enabled: true
+      default_limits:
+        requests_per_hour: 1000
+        burst_size: 100
+      
+    endpoints:
+      public:
+        - /health
+        - /metrics
+        - /docs
+        - /openapi.json
+      
+      readonly_required:
+        - GET /products
+        - GET /products/*
+        - GET /carts/*/summary
+      
+      write_required:
+        - POST /products
+        - PUT /products/*
+        - POST /carts
+        - POST /carts/*/items
+        - PUT /carts/*/items/*
+      
+      admin_required:
+        - DELETE /products/*
+        - DELETE /carts/*
+        - GET /stats
+        - GET /admin/*
+    
+    security_headers:
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "DENY"
+      X-XSS-Protection: "1; mode=block"
+      Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+      Content-Security-Policy: "default-src 'self'"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+    
+    cors:
+      allowed_origins:
+        - "https://yourdomain.com"
+        - "https://trailforge.com"
+      allowed_methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed_headers:
+        - "Content-Type"
+        - "Authorization"
+        - "X-API-Key"
+      allow_credentials: true
+    
+    webhook_security:
+      signature_verification: true
+      allowed_ips:
+        - "10.0.0.0/8"    # Internal cluster
+        - "172.16.0.0/12" # Private networks
+        - "192.168.0.0/16"
+    
+    audit_logging:
+      enabled: true
+      log_requests: true
+      log_responses: false
+      log_headers: false  # Don't log headers (may contain secrets)
+      sensitive_fields:
+        - "password"
+        - "api_key"
+        - "authorization"
+        - "secret"

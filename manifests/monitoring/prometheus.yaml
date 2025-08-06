@@ -254,8 +254,7 @@ spec:
           defaultMode: 420
           name: prometheus-config
       - name: prometheus-storage-volume
-        persistentVolumeClaim:
-          claimName: prometheus-pvc
+        emptyDir: {}
       - name: prometheus-rules
         configMap:
           name: prometheus-config

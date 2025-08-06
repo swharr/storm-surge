@@ -1,0 +1,297 @@
+# Phase 1: Critical Infrastructure Security Fixes
+# Deploy this IMMEDIATELY to fix critical vulnerabilities
+
+---
+# 1. Secure Redis with Authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-auth
+  namespace: oceansurge
+type: Opaque
+stringData:
+  password: "REDIS_PASSWORD_REPLACE_WITH_GENERATED"  # Generate with: openssl rand -base64 32
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config-secure
+  namespace: oceansurge
+data:
+  redis.conf: |
+    # SECURITY: Require authentication
+    requirepass ${REDIS_PASSWORD}
+    
+    # Disable dangerous commands that could compromise system
+    rename-command FLUSHDB "DISABLE_FLUSHDB_CMD"
+    rename-command FLUSHALL "DISABLE_FLUSHALL_CMD" 
+    rename-command KEYS "DISABLE_KEYS_CMD"
+    rename-command CONFIG "DISABLE_CONFIG_CMD"
+    rename-command SHUTDOWN "DISABLE_SHUTDOWN_CMD"
+    rename-command DEBUG "DISABLE_DEBUG_CMD"
+    rename-command EVAL "DISABLE_EVAL_CMD"
+    
+    # Network security
+    bind 127.0.0.1 ::1  # Only allow local connections
+    protected-mode yes
+    port 6379
+    
+    # Resource limits
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    timeout 300
+    tcp-keepalive 60
+    
+    # Persistence settings
+    save 900 1
+    save 300 10
+    save 60 10000
+    appendonly yes
+    appendfsync everysec
+    
+    # Logging
+    loglevel notice
+    logfile ""
+
+---
+# 2. Secure JWT Configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jwt-secrets
+  namespace: oceansurge
+type: Opaque
+stringData:
+  # Use RS256 key pair for better security
+  private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    # REPLACE_WITH_GENERATED_RSA_PRIVATE_KEY
+    # Generate with: openssl genrsa -out jwt-private.pem 2048
+    -----END RSA PRIVATE KEY-----
+  public-key: |
+    -----BEGIN PUBLIC KEY-----
+    # REPLACE_WITH_GENERATED_RSA_PUBLIC_KEY  
+    # Generate with: openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+    -----END PUBLIC KEY-----
+  # Fallback HMAC secret (512-bit)
+  hmac-secret: "JWT_HMAC_SECRET_REPLACE_WITH_GENERATED"  # Generate with: openssl rand -base64 64
+
+---
+# 3. Secure PostgreSQL Configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-auth
+  namespace: oceansurge
+type: Opaque
+stringData:
+  # Strong passwords for all database users
+  postgres-password: "POSTGRES_ADMIN_PASSWORD_REPLACE"        # openssl rand -base64 32
+  oceansurge-password: "OCEANSURGE_USER_PASSWORD_REPLACE"     # openssl rand -base64 32
+  readonly-password: "READONLY_USER_PASSWORD_REPLACE"         # openssl rand -base64 32
+
+---
+# 4. Secure Grafana Configuration  
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-auth
+  namespace: oceansurge
+type: Opaque
+stringData:
+  admin-password: "GRAFANA_ADMIN_PASSWORD_REPLACE"  # openssl rand -base64 32
+  secret-key: "GRAFANA_SECRET_KEY_REPLACE"          # openssl rand -base64 32
+
+---
+# 5. API Security Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-security-secrets
+  namespace: oceansurge
+type: Opaque
+stringData:
+  # API Keys for different access levels
+  admin-api-key: "API_ADMIN_KEY_REPLACE"      # openssl rand -hex 32
+  service-api-key: "API_SERVICE_KEY_REPLACE"  # openssl rand -hex 32
+  readonly-api-key: "API_READONLY_KEY_REPLACE" # openssl rand -hex 32
+  
+  # Webhook security
+  webhook-secret: "WEBHOOK_SECRET_REPLACE"    # openssl rand -hex 32
+  
+  # Encryption keys
+  encryption-key: "ENCRYPTION_KEY_REPLACE"    # openssl rand -base64 32
+
+---
+# 6. Secure Redis Deployment with Authentication
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-secure
+  namespace: oceansurge
+  labels:
+    app: redis
+    version: secure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      version: secure
+  template:
+    metadata:
+      labels:
+        app: redis
+        version: secure
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # Redis user
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-auth
+              key: password
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/redis
+        - name: data
+          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - --no-auth-warning
+            - -a
+            - $(REDIS_PASSWORD)
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - --no-auth-warning  
+            - -a
+            - $(REDIS_PASSWORD)
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: redis-config-secure
+      - name: data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+      - name: tmp
+        emptyDir: {}
+
+---
+# 7. Network Policy - Database Isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-isolation
+  namespace: oceansurge
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Only allow API services to connect to databases
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: api
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# 8. Network Policy - API Service Isolation  
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-service-isolation
+  namespace: oceansurge
+spec:
+  podSelector:
+    matchLabels:
+      tier: api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow frontend and middleware to connect to APIs
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    - podSelector:
+        matchLabels:
+          app: middleware
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow API services to connect to databases
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: database
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP  
+      port: 6379
+  # Allow external API calls (Spot, LaunchDarkly)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53

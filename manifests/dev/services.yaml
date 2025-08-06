@@ -1,0 +1,35 @@
+---
+# Product Catalog API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog-api
+  namespace: oceansurge
+  labels:
+    app: product-catalog-api
+spec:
+  selector:
+    app: product-catalog-api
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+
+---
+# Shopping Cart API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopping-cart-api
+  namespace: oceansurge
+  labels:
+    app: shopping-cart-api
+spec:
+  selector:
+    app: shopping-cart-api
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  type: ClusterIP

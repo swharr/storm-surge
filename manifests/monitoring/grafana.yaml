@@ -20,7 +20,7 @@ data:
     provisioning = /etc/grafana/provisioning
     [security]
     admin_user = admin
-    admin_password = admin123
+    admin_password = $__file{/etc/grafana/secrets/admin_password}
     [server]
     http_port = 3000
 
@@ -283,8 +283,7 @@ spec:
         configMap:
           name: grafana-oceansurge-dashboard
       - name: grafana-storage
-        persistentVolumeClaim:
-          claimName: grafana-pvc
+        emptyDir: {}
 
 ---
 # Grafana Service

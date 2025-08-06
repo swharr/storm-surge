@@ -1,0 +1,592 @@
+# Azure Infrastructure for Storm Surge
+# Production-ready AKS cluster with Application Gateway, SSL, and Managed Identity
+
+---
+# 1. AKS Cluster Configuration (Terraform)
+resource "azurerm_kubernetes_cluster" "storm_surge" {
+  name                = "storm-surge-prod"
+  location            = azurerm_resource_group.storm_surge.location
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  dns_prefix          = "storm-surge"
+  
+  kubernetes_version = "1.28"
+  
+  # Default node pool
+  default_node_pool {
+    name                = "system"
+    node_count          = 3
+    vm_size             = "Standard_D4s_v3"
+    type                = "VirtualMachineScaleSets"
+    availability_zones  = ["1", "2", "3"]
+    enable_auto_scaling = true
+    min_count          = 3
+    max_count          = 10
+    max_pods           = 110
+    
+    # OS disk
+    os_disk_size_gb = 100
+    os_disk_type    = "Premium_LRS"
+    
+    # Node labels
+    node_labels = {
+      "nodepool-type" = "system"
+      "environment"   = "production"
+      "nodepoolos"    = "linux"
+      "app"          = "system"
+    }
+    
+    # Node taints
+    node_taints = [
+      "CriticalAddonsOnly=true:NoSchedule"
+    ]
+    
+    vnet_subnet_id = azurerm_subnet.storm_surge_nodes.id
+  }
+  
+  # System-assigned managed identity
+  identity {
+    type = "SystemAssigned"
+  }
+  
+  # Network configuration
+  network_profile {
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    dns_service_ip   = "10.2.0.10"
+    docker_bridge_cidr = "172.17.0.1/16"
+    service_cidr     = "10.2.0.0/24"
+    load_balancer_sku = "standard"
+    
+    load_balancer_profile {
+      outbound_ip_address_ids = [azurerm_public_ip.storm_surge_outbound.id]
+    }
+  }
+  
+  # Azure Active Directory integration
+  azure_active_directory_role_based_access_control {
+    managed                = true
+    admin_group_object_ids = [var.admin_group_object_id]
+    azure_rbac_enabled     = true
+  }
+  
+  # Add-ons
+  oms_agent {
+    enabled                     = true
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.storm_surge.id
+  }
+  
+  azure_policy_enabled = true
+  
+  http_application_routing_enabled = false  # Use Application Gateway instead
+  
+  # Auto-scaler profile
+  auto_scaler_profile {
+    balance_similar_node_groups      = false
+    expander                        = "random"
+    max_graceful_termination_sec    = "600"
+    max_node_provisioning_time      = "15m"
+    max_unready_nodes              = 3
+    max_unready_percentage         = 45
+    new_pod_scale_up_delay         = "10s"
+    scale_down_delay_after_add     = "10m"
+    scale_down_delay_after_delete  = "10s"
+    scale_down_delay_after_failure = "3m"
+    scan_interval                  = "10s"
+    scale_down_unneeded            = "10m"
+    scale_down_unready             = "20m"
+    scale_down_utilization_threshold = "0.5"
+  }
+  
+  # Maintenance window
+  maintenance_window {
+    allowed {
+      day   = "Saturday"
+      hours = [22, 23]
+    }
+    allowed {
+      day   = "Sunday"
+      hours = [0, 1, 2]
+    }
+  }
+  
+  tags = {
+    Environment = "production"
+    Application = "storm-surge"
+  }
+}
+
+# 2. Additional Node Pool for Workloads
+resource "azurerm_kubernetes_cluster_node_pool" "storm_surge_workload" {
+  name                  = "workload"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.storm_surge.id
+  vm_size              = "Standard_D8s_v3"
+  
+  node_count          = 3
+  enable_auto_scaling = true
+  min_count          = 3
+  max_count          = 50
+  
+  availability_zones = ["1", "2", "3"]
+  max_pods          = 110
+  
+  # OS configuration
+  os_disk_size_gb = 100
+  os_disk_type    = "Premium_LRS"
+  os_type         = "Linux"
+  
+  # Spot instances for cost optimization
+  priority        = "Spot"
+  eviction_policy = "Delete"
+  spot_max_price  = 0.5  # USD per hour
+  
+  # Node labels and taints
+  node_labels = {
+    "nodepool-type" = "workload"
+    "environment"   = "production"
+    "workload"      = "api"
+  }
+  
+  node_taints = [
+    "workload=api:NoSchedule"
+  ]
+  
+  vnet_subnet_id = azurerm_subnet.storm_surge_nodes.id
+  
+  tags = {
+    Environment = "production"
+    NodePool    = "workload"
+  }
+}
+
+---
+# 3. Virtual Network Configuration
+resource "azurerm_resource_group" "storm_surge" {
+  name     = "storm-surge-prod-rg"
+  location = "East US"
+  
+  tags = {
+    Environment = "production"
+    Application = "storm-surge"
+  }
+}
+
+resource "azurerm_virtual_network" "storm_surge" {
+  name                = "storm-surge-vnet"
+  address_space       = ["10.1.0.0/16"]
+  location            = azurerm_resource_group.storm_surge.location
+  resource_group_name = azurerm_resource_group.storm_surge.name
+}
+
+# Subnet for AKS nodes
+resource "azurerm_subnet" "storm_surge_nodes" {
+  name                 = "storm-surge-nodes-subnet"
+  resource_group_name  = azurerm_resource_group.storm_surge.name
+  virtual_network_name = azurerm_virtual_network.storm_surge.name
+  address_prefixes     = ["10.1.0.0/20"]
+}
+
+# Subnet for Application Gateway
+resource "azurerm_subnet" "storm_surge_appgw" {
+  name                 = "storm-surge-appgw-subnet"
+  resource_group_name  = azurerm_resource_group.storm_surge.name
+  virtual_network_name = azurerm_virtual_network.storm_surge.name
+  address_prefixes     = ["10.1.16.0/24"]
+}
+
+---
+# 4. Application Gateway with WAF
+resource "azurerm_public_ip" "storm_surge_appgw" {
+  name                = "storm-surge-appgw-pip"
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  location            = azurerm_resource_group.storm_surge.location
+  allocation_method   = "Static"
+  sku                = "Standard"
+  
+  tags = {
+    Environment = "production"
+  }
+}
+
+resource "azurerm_application_gateway" "storm_surge" {
+  name                = "storm-surge-appgw"
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  location            = azurerm_resource_group.storm_surge.location
+  
+  sku {
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
+    capacity = 2
+  }
+  
+  # Auto-scaling
+  autoscale_configuration {
+    min_capacity = 2
+    max_capacity = 10
+  }
+  
+  gateway_ip_configuration {
+    name      = "appGatewayIpConfig"
+    subnet_id = azurerm_subnet.storm_surge_appgw.id
+  }
+  
+  frontend_port {
+    name = "httpsPort"
+    port = 443
+  }
+  
+  frontend_port {
+    name = "httpPort"
+    port = 80
+  }
+  
+  frontend_ip_configuration {
+    name                 = "appGwPublicFrontendIp"
+    public_ip_address_id = azurerm_public_ip.storm_surge_appgw.id
+  }
+  
+  backend_address_pool {
+    name = "storm-surge-backend"
+  }
+  
+  backend_http_settings {
+    name                  = "appGwBackendHttpSettings"
+    cookie_based_affinity = "Disabled"
+    port                  = 80
+    protocol              = "Http"
+    request_timeout       = 30
+    
+    probe_name = "health-probe"
+  }
+  
+  # Health probe
+  probe {
+    name                = "health-probe"
+    protocol            = "Http"
+    path                = "/health"
+    host                = "api.stormsurge.example.com"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+    
+    match {
+      status_code = ["200-399"]
+    }
+  }
+  
+  http_listener {
+    name                           = "httpListener"
+    frontend_ip_configuration_name = "appGwPublicFrontendIp"
+    frontend_port_name             = "httpPort"
+    protocol                       = "Http"
+  }
+  
+  http_listener {
+    name                           = "httpsListener"
+    frontend_ip_configuration_name = "appGwPublicFrontendIp"
+    frontend_port_name             = "httpsPort"
+    protocol                       = "Https"
+    ssl_certificate_name           = "storm-surge-cert"
+  }
+  
+  # Redirect HTTP to HTTPS
+  redirect_configuration {
+    name                 = "httpToHttpsRedirect"
+    redirect_type        = "Permanent"
+    target_listener_name = "httpsListener"
+    include_path         = true
+    include_query_string = true
+  }
+  
+  request_routing_rule {
+    name               = "httpRule"
+    rule_type          = "Basic"
+    http_listener_name = "httpListener"
+    redirect_configuration_name = "httpToHttpsRedirect"
+    priority          = 100
+  }
+  
+  request_routing_rule {
+    name                       = "httpsRule"
+    rule_type                  = "Basic"
+    http_listener_name         = "httpsListener"
+    backend_address_pool_name  = "storm-surge-backend"
+    backend_http_settings_name = "appGwBackendHttpSettings"
+    priority                  = 200
+  }
+  
+  # SSL Certificate (managed by Key Vault)
+  ssl_certificate {
+    name                = "storm-surge-cert"
+    key_vault_secret_id = azurerm_key_vault_certificate.storm_surge_cert.secret_id
+  }
+  
+  # WAF Configuration
+  waf_configuration {
+    enabled          = true
+    firewall_mode    = "Prevention"
+    rule_set_type    = "OWASP"
+    rule_set_version = "3.2"
+    
+    disabled_rule_group {
+      rule_group_name = "REQUEST-920-PROTOCOL-ENFORCEMENT"
+      rules           = [920300, 920440]
+    }
+  }
+  
+  # Identity for Key Vault access
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.appgw_identity.id]
+  }
+  
+  tags = {
+    Environment = "production"
+  }
+}
+
+---
+# 5. SSL Certificate Management
+resource "azurerm_key_vault" "storm_surge" {
+  name                = "storm-surge-kv-${random_string.suffix.result}"
+  location            = azurerm_resource_group.storm_surge.location
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  
+  sku_name = "premium"
+  
+  # Soft delete and purge protection
+  soft_delete_retention_days  = 7
+  purge_protection_enabled   = true
+  
+  # Network ACLs
+  network_acls {
+    default_action = "Deny"
+    bypass         = "AzureServices"
+    
+    ip_rules = [
+      "YOUR_OFFICE_IP/32"
+    ]
+    
+    virtual_network_subnet_ids = [
+      azurerm_subnet.storm_surge_appgw.id
+    ]
+  }
+  
+  tags = {
+    Environment = "production"
+  }
+}
+
+# Certificate for SSL
+resource "azurerm_key_vault_certificate" "storm_surge_cert" {
+  name         = "storm-surge-ssl-cert"
+  key_vault_id = azurerm_key_vault.storm_surge.id
+  
+  certificate_policy {
+    issuer_parameters {
+      name = "Self"
+    }
+    
+    key_properties {
+      exportable = true
+      key_size   = 2048
+      key_type   = "RSA"
+      reuse_key  = true
+    }
+    
+    lifetime_action {
+      action {
+        action_type = "AutoRenew"
+      }
+      
+      trigger {
+        days_before_expiry = 30
+      }
+    }
+    
+    secret_properties {
+      content_type = "application/x-pkcs12"
+    }
+    
+    x509_certificate_properties {
+      key_usage = [
+        "cRLSign",
+        "dataEncipherment",
+        "digitalSignature",
+        "keyAgreement",
+        "keyCertSign",
+        "keyEncipherment",
+      ]
+      
+      subject            = "CN=api.stormsurge.example.com"
+      validity_in_months = 12
+      
+      subject_alternative_names {
+        dns_names = ["api.stormsurge.example.com", "*.stormsurge.example.com"]
+      }
+    }
+  }
+}
+
+---
+# 6. Managed Identity Configuration
+resource "azurerm_user_assigned_identity" "appgw_identity" {
+  name                = "appgw-identity"
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  location            = azurerm_resource_group.storm_surge.location
+}
+
+# Key Vault access for Application Gateway
+resource "azurerm_key_vault_access_policy" "appgw_policy" {
+  key_vault_id = azurerm_key_vault.storm_surge.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_user_assigned_identity.appgw_identity.principal_id
+  
+  secret_permissions = [
+    "Get",
+  ]
+  
+  certificate_permissions = [
+    "Get",
+  ]
+}
+
+# AKS managed identity
+resource "azurerm_user_assigned_identity" "aks_identity" {
+  name                = "aks-identity"
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  location            = azurerm_resource_group.storm_surge.location
+}
+
+# Role assignments for AKS
+resource "azurerm_role_assignment" "aks_network_contributor" {
+  scope                = azurerm_resource_group.storm_surge.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+---
+# 7. Log Analytics Workspace
+resource "azurerm_log_analytics_workspace" "storm_surge" {
+  name                = "storm-surge-logs"
+  location            = azurerm_resource_group.storm_surge.location
+  resource_group_name = azurerm_resource_group.storm_surge.name
+  sku                = "PerGB2018"
+  retention_in_days   = 30
+  
+  tags = {
+    Environment = "production"
+  }
+}
+
+# Container Insights solution
+resource "azurerm_log_analytics_solution" "container_insights" {
+  solution_name         = "ContainerInsights"
+  location              = azurerm_resource_group.storm_surge.location
+  resource_group_name   = azurerm_resource_group.storm_surge.name
+  workspace_resource_id = azurerm_log_analytics_workspace.storm_surge.id
+  workspace_name        = azurerm_log_analytics_workspace.storm_surge.name
+  
+  plan {
+    publisher = "Microsoft"
+    product   = "OMSGallery/ContainerInsights"
+  }
+}
+
+---
+# 8. Kubernetes Resources
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: storm-surge-api
+  namespace: storm-surge-prod
+  annotations:
+    azure.workload.identity/client-id: "CLIENT_ID_OF_MANAGED_IDENTITY"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storm-surge-ingress
+  namespace: storm-surge-prod
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    appgw.ingress.kubernetes.io/connection-draining: "true"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "60"
+    appgw.ingress.kubernetes.io/cookie-based-affinity: "false"
+    appgw.ingress.kubernetes.io/request-timeout: "30"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    
+spec:
+  tls:
+  - hosts:
+    - api.stormsurge.example.com
+    secretName: storm-surge-tls-secret
+  rules:
+  - host: api.stormsurge.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: storm-surge-api
+            port:
+              number: 80
+
+---
+# 9. Azure Monitor Integration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: container-azm-ms-agentconfig
+  namespace: kube-system
+data:
+  schema-version: v1
+  config-version: ver1
+  log-data-collection-settings: |-
+    [log_collection_settings]
+       [log_collection_settings.stdout]
+          enabled = true
+          exclude_namespaces = ["kube-system"]
+       [log_collection_settings.stderr]
+          enabled = true
+          exclude_namespaces = ["kube-system"]
+       [log_collection_settings.env_var]
+          enabled = true
+       [log_collection_settings.enrich_container_logs]
+          enabled = false
+       [log_collection_settings.collect_all_kube_events]
+          enabled = true
+  prometheus-data-collection-settings: |-
+    [prometheus_data_collection_settings.cluster]
+        interval = "1m"
+        fieldpass = ["apiserver_request_total", "kubelet_certificate_manager_client_expiration_renew_errors", "kubelet_runtime_operations_errors_total"]
+        
+    [prometheus_data_collection_settings.node]
+        interval = "1m"
+        fieldpass = ["node_cpu_usage_seconds_total", "node_memory_MemAvailable_bytes", "node_disk_io_time_weighted_seconds_total"]
+        
+  metric_collection_settings: |-
+    [metric_collection_settings.collect_kube_system_pv_metrics]
+        enabled = true
+        
+    [metric_collection_settings.collect_kube_system_pv_metrics]
+        enabled = true
+
+---
+# 10. Backup Configuration using Velero
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: storm-surge-backup
+  namespace: velero
+spec:
+  provider: azure
+  objectStorage:
+    bucket: storm-surge-backups
+    prefix: aks
+  config:
+    resourceGroup: storm-surge-prod-rg
+    storageAccount: stormsurgebackups

@@ -1,0 +1,398 @@
+# CPU-Intensive Load Generator Services for Storm Surge
+# These services actually consume CPU when hit by requests
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cpu-intensive-cart
+  namespace: oceansurge
+data:
+  app.py: |
+    #!/usr/bin/env python3
+    """
+    CPU-Intensive Shopping Cart Service
+    Generates actual CPU load for HPA scaling tests
+    """
+    
+    import os
+    import time
+    import random
+    import hashlib
+    import json
+    from flask import Flask, request, jsonify
+    import threading
+    
+    app = Flask(__name__)
+    
+    # Global counter for load simulation
+    request_counter = 0
+    
+    def cpu_intensive_task(duration_ms=100):
+        """Generate CPU load for specified duration"""
+        start_time = time.time()
+        end_time = start_time + (duration_ms / 1000.0)
+        
+        # CPU-intensive operations
+        result = 0
+        while time.time() < end_time:
+            # Mathematical operations
+            for i in range(1000):
+                result += i ** 2
+                result = result % 1000000
+                
+            # String hashing operations  
+            data = f"load_test_{random.randint(1, 10000)}"
+            hash_result = hashlib.sha256(data.encode()).hexdigest()
+            result += len(hash_result)
+            
+        return result
+    
+    @app.route('/', methods=['GET'])
+    def shopping_cart():
+        global request_counter
+        request_counter += 1
+        
+        # Generate CPU load (200ms of intensive work)
+        cpu_result = cpu_intensive_task(200)
+        
+        # Simulate cart processing
+        cart_items = [
+            {"id": 1, "name": "⚡ Lightning Scaling", "quantity": float('inf'), "price": 999.99},
+            {"id": 2, "name": "🌊 Spot Instance Surfboard", "quantity": 1, "price": 299.99},
+            {"id": 3, "name": "🌪️ Chaos Engineering Kit", "quantity": 1, "price": 199.99}
+        ]
+        
+        # More CPU work - calculate complex totals
+        total_value = 0
+        for item in cart_items:
+            if item["quantity"] != float('inf'):
+                total_value += item["price"] * item["quantity"]
+        
+        return jsonify({
+            "service": "shopping-cart-cpu-intensive",
+            "status": "High-intensity processing ⚡",
+            "request_id": request_counter,
+            "cpu_work_result": cpu_result,
+            "cart_items": cart_items,
+            "total_value": total_value,
+            "processing_time_ms": 200
+        })
+    
+    @app.route('/health', methods=['GET'])
+    def health():
+        return jsonify({"status": "healthy", "service": "cpu-intensive-cart"})
+    
+    @app.route('/load/<int:intensity>', methods=['GET'])
+    def generate_load(intensity):
+        """Generate variable CPU load based on intensity (1-10)"""
+        duration = min(intensity * 50, 500)  # Max 500ms
+        cpu_result = cpu_intensive_task(duration)
+        
+        return jsonify({
+            "service": "shopping-cart-load-generator",
+            "intensity": intensity,
+            "duration_ms": duration,
+            "cpu_result": cpu_result,
+            "message": f"Generated {duration}ms of CPU load"
+        })
+    
+    if __name__ == '__main__':
+        print("🛒 Starting CPU-Intensive Shopping Cart Service")
+        app.run(host='0.0.0.0', port=8080, debug=False)
+        
+  requirements.txt: |
+    Flask==3.0.3
+
+---
+apiVersion: v1
+kind: ConfigMap  
+metadata:
+  name: cpu-intensive-products
+  namespace: oceansurge
+data:
+  app.py: |
+    #!/usr/bin/env python3
+    """
+    CPU-Intensive Product Catalog Service
+    Generates moderate CPU load for scaling tests
+    """
+    
+    import os
+    import time
+    import random
+    import json
+    from flask import Flask, request, jsonify
+    
+    app = Flask(__name__)
+    
+    def search_products(query="", limit=100):
+        """CPU-intensive product search simulation"""
+        products = []
+        
+        # Generate fake product data with CPU work
+        for i in range(limit):
+            # CPU-intensive string operations
+            product_name = f"Product_{i}_{random.randint(1000, 9999)}"
+            description = f"Description for {product_name} " * 10
+            
+            # Simulate complex pricing calculations
+            base_price = random.uniform(10.0, 1000.0)
+            discount = random.uniform(0.05, 0.25)
+            final_price = base_price * (1 - discount)
+            
+            # More CPU work - category matching
+            categories = ["⚡ Lightning", "🌊 Tsunami", "🌪️ Hurricane", "🔥 Fire", "❄️ Ice"]
+            selected_category = categories[i % len(categories)]
+            
+            products.append({
+                "id": i,
+                "name": f"{selected_category} {product_name}",
+                "description": description,
+                "price": round(final_price, 2),
+                "category": selected_category,
+                "in_stock": random.choice([True, False])
+            })
+            
+            # Add small delay to increase CPU time
+            time.sleep(0.001)  # 1ms per product
+        
+        return products
+    
+    @app.route('/', methods=['GET'])
+    def product_catalog():
+        # Get query parameters
+        limit = min(int(request.args.get('limit', 50)), 200)
+        query = request.args.get('q', '')
+        
+        # Generate CPU load through product search
+        products = search_products(query, limit)
+        
+        return jsonify({
+            "service": "product-catalog-cpu-intensive", 
+            "status": "Weathering the storm ⛈️",
+            "query": query,
+            "total_products": len(products),
+            "products": products[:10],  # Return first 10 for display
+            "processing_time_estimate_ms": limit * 1
+        })
+    
+    @app.route('/search/<query>', methods=['GET'])
+    def search(query):
+        """Intensive search endpoint"""
+        limit = min(int(request.args.get('limit', 100)), 500)
+        products = search_products(query, limit)
+        
+        return jsonify({
+            "service": "product-search",
+            "query": query,
+            "results": len(products),
+            "products": products
+        })
+    
+    @app.route('/health', methods=['GET'])
+    def health():
+        return jsonify({"status": "healthy", "service": "cpu-intensive-products"})
+    
+    if __name__ == '__main__':
+        print("📦 Starting CPU-Intensive Product Catalog Service")
+        app.run(host='0.0.0.0', port=8080, debug=False)
+        
+  requirements.txt: |
+    Flask==3.0.3
+
+---
+# CPU-Intensive Shopping Cart Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart-cpu
+  namespace: oceansurge
+  labels:
+    app: shopping-cart-cpu
+    tier: backend
+    storm-surge.io/component: cart-intensive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shopping-cart-cpu
+  template:
+    metadata:
+      labels:
+        app: shopping-cart-cpu
+        tier: backend
+    spec:
+      containers:
+      - name: cart-service
+        image: python:3.11-slim
+        command: ['/bin/bash', '-c']
+        args:
+        - |
+          cd /app
+          pip install -q -r requirements.txt
+          python app.py
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 1000m      # Allow high CPU usage
+            memory: 512Mi
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+      volumes:
+      - name: app-code
+        configMap:
+          name: cpu-intensive-cart
+          defaultMode: 0755
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopping-cart-cpu-service
+  namespace: oceansurge
+spec:
+  selector:
+    app: shopping-cart-cpu
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+# CPU-Intensive Product Catalog Deployment  
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-cpu
+  namespace: oceansurge
+  labels:
+    app: product-catalog-cpu
+    tier: backend
+    storm-surge.io/component: catalog-intensive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-catalog-cpu
+  template:
+    metadata:
+      labels:
+        app: product-catalog-cpu
+        tier: backend
+    spec:
+      containers:
+      - name: catalog-service
+        image: python:3.11-slim
+        command: ['/bin/bash', '-c']
+        args:
+        - |
+          cd /app
+          pip install -q -r requirements.txt
+          python app.py
+        ports:  
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m       # Moderate CPU limits
+            memory: 256Mi
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+      volumes:
+      - name: app-code
+        configMap:
+          name: cpu-intensive-products
+          defaultMode: 0755
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog-cpu-service
+  namespace: oceansurge
+spec:
+  selector:
+    app: product-catalog-cpu
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+# HPA for CPU-Intensive Shopping Cart
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shopping-cart-cpu-hpa
+  namespace: oceansurge
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: shopping-cart-cpu
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+        
+---
+# HPA for CPU-Intensive Product Catalog
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-catalog-cpu-hpa
+  namespace: oceansurge
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-catalog-cpu
+  minReplicas: 1
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80

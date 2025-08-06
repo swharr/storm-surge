@@ -1,4 +1,4 @@
-# 💰 Storm Surge FinOps Guide
+# Storm Surge FinOps Guide
 
 Storm Surge integrates LaunchDarkly feature flags with Spot Ocean for dynamic cost optimization.
 

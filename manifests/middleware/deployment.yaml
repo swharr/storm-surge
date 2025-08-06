@@ -149,7 +149,7 @@ spec:
       volumes:
       - name: app-code
         configMap:
-          name: middleware-code
+          name: middleware-code-fixed
           defaultMode: 0755
       - name: shared-deps
         emptyDir: {}

@@ -1,0 +1,391 @@
+---
+# Product Catalog Code ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-catalog-code
+  namespace: oceansurge
+data:
+  main.py: |
+    #!/usr/bin/env python3
+    """
+    Simplified Product Catalog API Service
+    """
+    import asyncio
+    import os
+    import json
+    from typing import List, Optional
+    from contextlib import asynccontextmanager
+
+    try:
+        import asyncpg
+        import redis.asyncio as redis
+        from fastapi import FastAPI, HTTPException, Query
+        from pydantic import BaseModel, Field
+        import uvicorn
+    except ImportError as e:
+        print(f"Missing dependencies: {e}")
+        print("Installing required packages...")
+        import subprocess
+        import sys
+        subprocess.run([sys.executable, "-m", "pip", "install", 
+                       "fastapi", "uvicorn[standard]", "asyncpg", "redis", "pydantic"])
+        import asyncpg
+        import redis.asyncio as redis
+        from fastapi import FastAPI, HTTPException, Query
+        from pydantic import BaseModel, Field
+        import uvicorn
+
+    # Database and Redis connections
+    db_pool = None
+    redis_client = None
+
+    # Pydantic models
+    class Product(BaseModel):
+        id: Optional[int] = None
+        name: str = Field(..., min_length=1, max_length=255)
+        description: str = Field(..., max_length=1000)
+        price: float = Field(..., gt=0)
+        category: str = Field(..., max_length=100)
+        sku: str = Field(..., max_length=50)
+        stock_quantity: int = Field(..., ge=0)
+        manufacturer: str = Field(..., max_length=100)
+        year_compatibility: Optional[str] = None
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Manage application lifecycle"""
+        print("Starting Product Catalog API")
+        await init_database()
+        await init_redis()
+        await create_tables()
+        await seed_data()
+        yield
+        print("Shutting down Product Catalog API")
+        if db_pool:
+            await db_pool.close()
+        if redis_client:
+            await redis_client.close()
+
+    app = FastAPI(
+        title="Product Catalog API",
+        description="Automotive parts catalog microservice",
+        version="1.0.0",
+        lifespan=lifespan
+    )
+
+    async def init_database():
+        """Initialize PostgreSQL connection pool"""
+        global db_pool
+        try:
+            db_pool = await asyncpg.create_pool(
+                host=os.getenv('POSTGRES_HOST', 'postgresql'),
+                port=int(os.getenv('POSTGRES_PORT', 5432)),
+                user=os.getenv('POSTGRES_USER', 'oceansurge'),
+                password=os.getenv('POSTGRES_PASSWORD', ''),
+                database=os.getenv('POSTGRES_DB', 'oceansurge'),
+                min_size=2,
+                max_size=10
+            )
+            print("Database connection pool created")
+        except Exception as e:
+            print(f"Failed to connect to database: {e}")
+            raise
+
+    async def init_redis():
+        """Initialize Redis connection"""
+        global redis_client
+        try:
+            redis_client = redis.from_url(
+                f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', 6379)}/0"
+            )
+            await redis_client.ping()
+            print("Redis connection established")
+        except Exception as e:
+            print(f"Failed to connect to Redis: {e}")
+            raise
+
+    async def create_tables():
+        """Create database tables if they don't exist"""
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS products (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            price DECIMAL(10,2) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            sku VARCHAR(50) UNIQUE NOT NULL,
+            stock_quantity INTEGER DEFAULT 0,
+            manufacturer VARCHAR(100),
+            year_compatibility VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+        CREATE INDEX IF NOT EXISTS idx_products_manufacturer ON products(manufacturer);
+        CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+        """
+        
+        async with db_pool.acquire() as conn:
+            await conn.execute(create_table_sql)
+            print("Database tables created/verified")
+
+    async def seed_data():
+        """Seed initial data"""
+        check_sql = "SELECT COUNT(*) FROM products"
+        async with db_pool.acquire() as conn:
+            count = await conn.fetchval(check_sql)
+            if count == 0:
+                sample_products = [
+                    ("Brake Pads - Ceramic", "High-performance ceramic brake pads", 89.99, "Brakes", "BP-CER-001", 25, "Brembo", "2018-2023"),
+                    ("Oil Filter", "Premium oil filter for engine protection", 12.99, "Engine", "OF-PREM-002", 100, "Fram", "2015-2023"),
+                    ("Spark Plugs (Set of 4)", "Iridium spark plugs for better performance", 34.99, "Engine", "SP-IRD-003", 50, "NGK", "2010-2023"),
+                    ("Air Filter", "High-flow air filter", 24.99, "Engine", "AF-HF-004", 75, "K&N", "2012-2023"),
+                    ("Shock Absorbers", "Heavy-duty shock absorbers", 129.99, "Suspension", "SA-HD-005", 15, "Monroe", "2016-2023"),
+                    ("Tire - All Season", "All-season tire 225/60R16", 89.99, "Tires", "T-AS-225-006", 40, "Michelin", "2010-2023"),
+                    ("Battery", "12V automotive battery", 119.99, "Electrical", "BAT-12V-007", 20, "Interstate", "2008-2023"),
+                    ("Headlight Bulb", "LED headlight bulb H11", 45.99, "Electrical", "HB-LED-008", 60, "Philips", "2015-2023")
+                ]
+                
+                insert_sql = """
+                INSERT INTO products (name, description, price, category, sku, stock_quantity, manufacturer, year_compatibility)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                """
+                
+                for product in sample_products:
+                    await conn.execute(insert_sql, *product)
+                
+                print(f"Seeded {len(sample_products)} sample products")
+
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint"""
+        try:
+            # Check database
+            async with db_pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            
+            # Check Redis
+            await redis_client.ping()
+            
+            return {"status": "healthy", "service": "product-catalog"}
+        except Exception as e:
+            print(f"Health check failed: {e}")
+            raise HTTPException(status_code=503, detail="Service unhealthy")
+
+    # Product endpoints
+    @app.get("/products", response_model=List[Product])
+    async def get_products(
+        category: Optional[str] = Query(None),
+        manufacturer: Optional[str] = Query(None),
+        limit: int = Query(20, le=100),
+        offset: int = Query(0, ge=0)
+    ):
+        """Get products with optional filtering"""
+        # Try cache first
+        cache_key = f"products:{category}:{manufacturer}:{limit}:{offset}"
+        cached = await redis_client.get(cache_key)
+        
+        if cached:
+            print("Returning cached products")
+            return json.loads(cached)
+        
+        # Build query
+        where_clauses = []
+        params = []
+        param_count = 0
+        
+        if category:
+            param_count += 1
+            where_clauses.append(f"category = ${param_count}")
+            params.append(category)
+        
+        if manufacturer:
+            param_count += 1
+            where_clauses.append(f"manufacturer = ${param_count}")
+            params.append(manufacturer)
+        
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        param_count += 1
+        limit_param = f"${param_count}"
+        params.append(limit)
+        
+        param_count += 1
+        offset_param = f"${param_count}"
+        params.append(offset)
+        
+        sql = f"""
+        SELECT id, name, description, price, category, sku, stock_quantity, manufacturer, year_compatibility
+        FROM products {where_sql}
+        ORDER BY name
+        LIMIT {limit_param} OFFSET {offset_param}
+        """
+        
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch(sql, *params)
+            
+        products = [dict(row) for row in rows]
+        
+        # Cache for 5 minutes
+        await redis_client.setex(cache_key, 300, json.dumps(products, default=str))
+        
+        print(f"Retrieved {len(products)} products")
+        return products
+
+    @app.get("/products/{product_id}", response_model=Product)
+    async def get_product(product_id: int):
+        """Get a specific product"""
+        cache_key = f"product:{product_id}"
+        cached = await redis_client.get(cache_key)
+        
+        if cached:
+            return json.loads(cached)
+        
+        sql = """
+        SELECT id, name, description, price, category, sku, stock_quantity, manufacturer, year_compatibility
+        FROM products WHERE id = $1
+        """
+        
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow(sql, product_id)
+            
+        if not row:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product = dict(row)
+        await redis_client.setex(cache_key, 300, json.dumps(product, default=str))
+        
+        return product
+
+    if __name__ == "__main__":
+        uvicorn.run(app, host="0.0.0.0", port=8080)
+
+  requirements.txt: |
+    fastapi==0.104.1
+    uvicorn[standard]==0.24.0
+    asyncpg==0.29.0
+    redis==5.0.1
+    pydantic==2.5.0
+
+---
+# Product Catalog API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-api
+  namespace: oceansurge
+  labels:
+    app: product-catalog-api
+    tier: backend
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-catalog-api
+  template:
+    metadata:
+      labels:
+        app: product-catalog-api
+        tier: backend
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: install-deps
+        image: python:3.11-slim
+        command: ['sh', '-c']
+        args:
+        - |
+          pip install --target /deps -r /code/requirements.txt
+        volumeMounts:
+        - name: product-catalog-code
+          mountPath: /code
+        - name: deps
+          mountPath: /deps
+      containers:
+      - name: product-catalog-api
+        image: python:3.11-slim
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: POSTGRES_HOST
+          value: "postgresql"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "oceansurge"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_PASSWORD
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: PYTHONPATH
+          value: "/deps"
+        command: ['python', '/app/main.py']
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: product-catalog-code
+          mountPath: /app
+        - name: deps
+          mountPath: /deps
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 12
+      volumes:
+      - name: product-catalog-code
+        configMap:
+          name: product-catalog-code
+      - name: deps
+        emptyDir: {}

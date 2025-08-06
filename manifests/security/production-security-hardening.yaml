@@ -1,0 +1,515 @@
+# Production Security Hardening for Storm Surge
+# Realistic security controls that demonstrate Kubernetes best practices
+
+---
+# 1. Namespace with Security Labels
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storm-surge-prod
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    environment: production
+    security-scan: enabled
+
+---
+# 2. Network Policies - Realistic Segmentation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: storm-surge-prod
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-api
+  namespace: storm-surge-prod
+spec:
+  podSelector:
+    matchLabels:
+      tier: api
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-to-database
+  namespace: storm-surge-prod
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: api
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+
+---
+# 3. Service Account with Limited Permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: storm-surge-api
+  namespace: storm-surge-prod
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: storm-surge-api-role
+  namespace: storm-surge-prod
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+  resourceNames: ["app-config"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+  resourceNames: ["database-credentials", "api-keys"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: storm-surge-api-binding
+  namespace: storm-surge-prod
+subjects:
+- kind: ServiceAccount
+  name: storm-surge-api
+  namespace: storm-surge-prod
+roleRef:
+  kind: Role
+  name: storm-surge-api-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# 4. Secure PostgreSQL with Strong Authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-credentials
+  namespace: storm-surge-prod
+type: Opaque
+stringData:
+  # Generate with: openssl rand -base64 32
+  postgres-password: "CHANGEME_$(openssl rand -base64 32)"
+  app-password: "CHANGEME_$(openssl rand -base64 32)"
+  replication-password: "CHANGEME_$(openssl rand -base64 32)"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  namespace: storm-surge-prod
+data:
+  postgresql.conf: |
+    # Security settings
+    ssl = on
+    ssl_cert_file = '/var/lib/postgresql/server.crt'
+    ssl_key_file = '/var/lib/postgresql/server.key'
+    password_encryption = scram-sha-256
+    
+    # Connection limits
+    max_connections = 100
+    superuser_reserved_connections = 3
+    
+    # Authentication timeout
+    authentication_timeout = 1min
+    
+    # Statement timeout
+    statement_timeout = 30s
+    idle_in_transaction_session_timeout = 5min
+    
+    # Logging
+    log_connections = on
+    log_disconnections = on
+    log_statement = 'mod'
+    log_min_duration_statement = 1000
+    
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    local   all             all                                     reject
+    hostssl all             all             0.0.0.0/0               scram-sha-256
+    host    all             all             127.0.0.1/32            reject
+    host    all             all             ::1/128                 reject
+
+---
+# 5. Redis with Authentication and ACLs
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+  namespace: storm-surge-prod
+type: Opaque
+stringData:
+  password: "CHANGEME_$(openssl rand -base64 32)"
+  
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: storm-surge-prod
+data:
+  redis.conf: |
+    # Security
+    requirepass ${REDIS_PASSWORD}
+    
+    # Disable dangerous commands
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    rename-command KEYS ""
+    rename-command CONFIG ""
+    rename-command SHUTDOWN ""
+    
+    # Network security
+    bind 0.0.0.0
+    protected-mode yes
+    tcp-backlog 511
+    timeout 300
+    tcp-keepalive 300
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    # Memory limits
+    maxmemory 1gb
+    maxmemory-policy allkeys-lru
+    
+    # Slow log
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+
+---
+# 6. Secure Product Catalog Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog
+  namespace: storm-surge-prod
+  labels:
+    app: product-catalog
+    tier: api
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: product-catalog
+  template:
+    metadata:
+      labels:
+        app: product-catalog
+        tier: api
+    spec:
+      serviceAccountName: storm-surge-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: product-catalog
+        image: storm-surge/product-catalog:v1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8080"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DATABASE_HOST
+          value: "postgresql"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "stormsurge"
+        - name: DATABASE_USER
+          value: "app_user"
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-credentials
+              key: app-password
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+        - name: API_RATE_LIMIT
+          value: "100"
+        - name: API_RATE_WINDOW
+          value: "3600"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+            ephemeral-storage: "1Gi"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+            ephemeral-storage: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            httpHeaders:
+            - name: User-Agent
+              value: "Kubernetes-Health-Check"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+---
+# 7. Ingress with Security Annotations
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storm-surge-ingress
+  namespace: storm-surge-prod
+  annotations:
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    nginx.ingress.kubernetes.io/limit-whitelist: "10.0.0.0/8"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+    
+    # SSL configuration
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: "true"
+    
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://stormsurge.example.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type,X-Requested-With"
+    
+    # ModSecurity WAF
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+    
+    # Body size limits
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.stormsurge.example.com
+    secretName: storm-surge-tls
+  rules:
+  - host: api.stormsurge.example.com
+    http:
+      paths:
+      - path: /api/products
+        pathType: Prefix
+        backend:
+          service:
+            name: product-catalog
+            port:
+              number: 8080
+      - path: /api/cart
+        pathType: Prefix
+        backend:
+          service:
+            name: shopping-cart
+            port:
+              number: 8080
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: user-auth
+            port:
+              number: 8080
+
+---
+# 8. PodDisruptionBudget for High Availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: storm-surge-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      tier: api
+
+---
+# 9. HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-catalog-hpa
+  namespace: storm-surge-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-catalog
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 4
+        periodSeconds: 60
+
+---
+# 10. Security Monitoring with Falco
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: storm-surge-prod
+data:
+  custom_rules.yaml: |
+    - rule: Unauthorized Database Connection
+      desc: Detect direct database connections from non-API pods
+      condition: >
+        (evt.type = connect and evt.dir=< and
+         fd.sport in (5432, 6379) and
+         not container.label.tier = "api")
+      output: >
+        Unauthorized database connection attempt
+        (user=%user.name container=%container.name image=%container.image.repository fd=%fd.name)
+      priority: WARNING
+      
+    - rule: Suspicious Command Execution
+      desc: Detect suspicious commands in containers
+      condition: >
+        spawned_process and container and
+        (proc.name in (nc, ncat, netcat, socat, tcpdump, wireshark) or
+         proc.cmdline contains "curl.*sh" or
+         proc.cmdline contains "wget.*sh")
+      output: >
+        Suspicious command execution in container
+        (user=%user.name container=%container.name command=%proc.cmdline)
+      priority: WARNING
+      
+    - rule: Container Escape Attempt
+      desc: Detect potential container escape attempts
+      condition: >
+        spawned_process and container and
+        (proc.name in (nsenter, setns) or
+         proc.cmdline contains "/proc/*/ns" or
+         proc.cmdline contains "mount.*proc")
+      output: >
+        Potential container escape attempt detected
+        (user=%user.name container=%container.name command=%proc.cmdline)
+      priority: CRITICAL

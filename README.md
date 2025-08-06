@@ -1,67 +1,105 @@
-# 🌊 OceanSurge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
+# Storm Surge - Multi-Cloud Kubernetes Platform
 
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
-![LaunchDarkly](https://img.shields.io/badge/LaunchDarkly-Feature--Flags-blue?style=for-the-badge)
-![Flexera Spot](https://img.shields.io/badge/Flexera--Spot-Ocean-blue?style=for-the-badge)
-![Spot.io](https://img.shields.io/badge/Spot.io-Ocean-blue?style=for-the-badge)
+![Security](https://img.shields.io/badge/Security-Production--Ready-green?style=for-the-badge)
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
 ![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 
-A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
+Production-ready microservices platform demonstrating enterprise-grade Kubernetes deployment patterns across AWS EKS, Google GKE, and Azure AKS with comprehensive security controls and infrastructure automation.
 
-### 🎯 Key Features
+## Quick Start
 
-- **Intelligent Region/Zone Selection**: Interactive deployment with validation for all cloud providers
-- **Robust Retry Logic**: Automatic retry mechanisms for deployment operations with configurable timeouts
-- **Embedded Local Testing**: Built-in validation suite with security checks and offline-capable manifest validation
-- **Enhanced Security**: Comprehensive security controls, RBAC validation, and insecure port hardening
-- **Security Workloads**: Integrated security validation tests and defensive security measures (GKE-specific)
-- **Cluster Management**: Smart cluster detection with options to reuse or recreate existing clusters
-- **Custom Cluster Naming**: Support for user-defined cluster names with validation and fallback defaults
-- **Shell Script Robustness**: ShellCheck compliant scripts with proper error handling and input validation
-
----
-
-## 🚀 Highlights
-
-- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware to monitor and fire off infrastructure changes
-- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags in the LaunchDarkly Integration.
-- 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI (You need to have the API and CLI tools included)
-- 📈 **Cost Tracking**: Infrastructure impact monitoring via feature flag changes
-- 🔄 **Automated Scaling**: Dynamic right-sizing and node pool optimization
-- 🌐 **Production Ready**: Complete middleware with ingress, secrets, and monitoring
-- 💥 **Load Testing**: Built-in chaos testing and performance validation to simulate activity and show responsiveness
-
----
-
-## 🧪 How It Works
-
-You use LaunchDarkly feature flags (like `enable-cost-optimizer`) to toggle infrastructure behavior, which is reflected in your app and metrics.
-
-This repo ties application behavior directly to cost outcomes.
-
----
-
-## 🧰 Quickstart
-
-### Basic Deployment
+### Automated Deployment
 ```bash
-git clone https://github.com/swharr/ocean-surge.git
-cd ocean-surge
-
-# Interactive deployment with region/zone selection
-./scripts/deploy.sh --provider=gke   # or eks | aks | all
-
-# Or specify parameters directly
-./scripts/deploy.sh --provider=gke --region=us-central1 --zone=us-central1-a --nodes=4
-
-# With custom cluster naming
-./scripts/deploy.sh --provider=gke --cluster-name=my-custom-cluster --region=us-central1 --zone=us-central1-a
-
-# AWS with specific profile (EKS requires multiple zones)
-./scripts/deploy.sh --provider=eks --aws-profile=my-profile --region=us-east-1 --zone="us-east-1a us-east-1b"
+./setup.sh
 ```
+
+The interactive deployment script provides:
+- **Custom FQDN Configuration**: Configure your domain (e.g., `k8stest.company.com`)
+- **Cloud Provider Selection**: Deploy to AWS EKS, Google GKE, or Azure AKS
+- **Infrastructure as Code**: Automatically configure all deployment manifests
+- **Secret Management**: Generate secure JWT tokens, passwords, and certificates
+- **Complete Stack Deployment**: Infrastructure, load balancers, and SSL certificates
+- **Security Hardening**: Apply production-grade security configurations
+
+### Prerequisites
+- `kubectl` - Kubernetes command-line interface
+- `helm` - Kubernetes package manager  
+- Cloud CLI tools (`aws`/`gcloud`/`az`)
+- `openssl` - Cryptographic operations
+- `jq` - JSON processing utility
+- `terraform` (recommended for infrastructure provisioning)
+
+## Architecture
+
+### Multi-Cloud Support
+- **AWS EKS**: Application Load Balancer + WAF + ACM certificates
+- **Google GKE**: Global Load Balancer + Cloud Armor + Managed SSL
+- **Azure AKS**: Application Gateway + WAF v2 + Key Vault certificates
+
+### Application Components
+- **Product Catalog API**: FastAPI with JWT authentication
+- **Shopping Cart Service**: Stateful service with Redis
+- **Order Processing**: Event-driven microservice
+- **Frontend**: React-based TrailForge off-road parts storefront
+- **Databases**: PostgreSQL + Redis with connection pooling
+
+### Security Architecture
+- **Authentication**: JWT with RS256 cryptographic signing
+- **Authorization**: Role-based access control (RBAC)
+- **Input Validation**: SQL injection and XSS prevention
+- **Web Application Firewall**: DDoS mitigation and rate limiting  
+- **Secrets Management**: Cloud-native secret stores integration
+- **Audit Logging**: Comprehensive security event monitoring
+- **Network Security**: Pod security contexts and network policies
+
+## Supported Domain Configuration
+
+The setup script supports any valid FQDN format:
+- `k8stest.company.com`
+- `api.stormsurge.com` 
+- `my-app.example.org`
+- `platform.your-company.io`
+
+All infrastructure files will be automatically updated with your chosen domain.
+
+## Manual Deployment
+
+If you prefer manual deployment:
+
+1. **Configure Domain**:
+   ```bash
+   # Update all files with your FQDN
+   find manifests/ -name "*.yaml" -exec sed -i 's/api\.stormsurge\.example\.com/your-domain.com/g' {} \;
+   ```
+
+2. **Generate Secrets**:
+   ```bash
+   # Create secure passwords
+   kubectl create secret generic app-secrets \
+     --from-literal=JWT_SECRET=$(openssl rand -base64 32) \
+     --from-literal=ADMIN_PASSWORD=$(openssl rand -base64 16)
+   ```
+
+3. **Deploy Infrastructure**:
+   ```bash
+   # For AWS EKS
+   eksctl create cluster -f manifests/cloud-infrastructure/aws-infrastructure.yaml
+   
+   # For Google GKE  
+   cd manifests/cloud-infrastructure && terraform apply -var="project_id=YOUR_PROJECT"
+   
+   # For Azure AKS
+   az group create --name storm-surge-rg --location eastus
+   cd manifests/cloud-infrastructure && terraform apply
+   ```
+
+4. **Deploy Application**:
+   ```bash
+   kubectl apply -f manifests/security/production-security-hardening.yaml
+   kubectl apply -f manifests/dev/services.yaml
+   ```
 
 ### Enhanced Deployment Logic
 The main deployment script (`scripts/deploy.sh`) includes comprehensive improvements:
@@ -166,7 +204,7 @@ aws configure --profile myprofile
 
 ---
 
-## 🧪 Local Testing & Validation
+## Local Testing & Validation
 
 ### Quick Local Tests
 ```bash
@@ -227,9 +265,9 @@ python3 finops/tests/test_integration.py
 
 ### Test Coverage
 
-#### 🧪 **Comprehensive Test Suite (104/112 tests passing - 92.9% success rate)**
+#### Comprehensive Test Suite (104/112 tests passing - 92.9% success rate)
 
-**FinOps Controller Tests** (43/43 tests - 100% ✅)
+**FinOps Controller Tests** (43/43 tests - 100% passing)
 - Controller initialization and method validation
 - Environment variable handling and configuration
 - LaunchDarkly integration readiness testing
@@ -237,28 +275,28 @@ python3 finops/tests/test_integration.py
 - Business hours and timezone handling
 - Error handling and failure recovery
 
-**Middleware Tests** (21/24 tests - 87.5% ✅)
+**Middleware Tests** (21/24 tests - 87.5% passing)
 - Flask application endpoint testing (health, cluster status)
 - LaunchDarkly webhook handling and validation
 - Spot Ocean API integration and scaling operations
 - Security validation (HMAC signatures, input validation)
 - Error handling scenarios and edge cases
 
-**Security Tests** (15/19 tests - 78.9% ✅)
+**Security Tests** (15/19 tests - 78.9% passing)
 - Kubernetes security configurations (security contexts, resource limits)
 - Container image security (no :latest tags, trusted registries)
 - Secrets management (no hardcoded secrets, proper Secret resources)
 - Script security (permissions, credentials, shebangs)
 - Dockerfile security practices and compliance checks
 
-**Script Validation Tests** (25/26 tests - 96.2% ✅)
+**Script Validation Tests** (25/26 tests - 96.2% passing)
 - Script syntax validation and structure
 - Deployment script functionality and parameter validation
 - Cloud provider script authentication and region validation
 - Utility script testing and security aspects
 - Documentation and help functionality
 
-#### 🔧 **Legacy Test Coverage**
+#### Legacy Test Coverage
 - **Script Syntax**: Validates all bash scripts for syntax errors
 - **Parameter Validation**: Tests deployment script argument handling
 - **Zone/Region Validation**: Ensures proper region-zone combinations
@@ -284,7 +322,7 @@ Retry logic applies to:
 - Health check validations
 - API calls to cloud providers
 
-## ⚙️ Feature Flag Provider Setup
+## Feature Flag Provider Setup
 
 Storm Surge supports both **LaunchDarkly** and **Statsig** for feature flag management. Use the interactive configuration script to set up your preferred provider.
 
@@ -331,7 +369,7 @@ export WEBHOOK_SECRET="your-webhook-secret"
 
 ---
 
-## ☁️ Cloud Provider Support
+## Cloud Provider Support
 
 | Provider | Script                              | Requirements          | Security Features |
 |----------|-------------------------------------|------------------------|-------------------|
@@ -341,7 +379,7 @@ export WEBHOOK_SECRET="your-webhook-secret"
 
 ---
 
-## 🗃️ Project Structure
+## Project Structure
 
 ```
 ocean-surge/
@@ -395,7 +433,7 @@ ocean-surge/
 
 ---
 
-## 🎯 Current Status
+## Current Status
 
 - [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
 - [x] **Robust Error Handling**: Comprehensive retry logic and validation
@@ -415,7 +453,7 @@ ocean-surge/
 - [x] **Load Testing**: Built-in traffic generation and scaling tests
 - [x] **Monitoring**: Health checks, logging, and status endpoints
 
-### 🔒 Security Features
+### Security Features
 
 - **Non-root containers**: All deployments run with `runAsNonRoot: true`
 - **Resource limits**: Comprehensive CPU/memory limits on all workloads
@@ -431,7 +469,7 @@ ocean-surge/
 
 > **Note**: The security workloads in `manifests/sec_fixes/` are specifically designed for GKE deployments to address Google Cloud-specific security configurations. **AKS and EKS users do not need these security fixes** as Azure and AWS managed Kubernetes services have different security models and built-in protections.
 
-## 🧠 Roadmap
+## Roadmap
 
 - [ ] OpenFeature + flagd support
 - [ ] Backstage IDP Scaffolding
@@ -449,19 +487,19 @@ ocean-surge/
 
 ---
 
-## 📞 Support Channels
+## Support Channels
 
-- 📖 [Flexera Docs](https://docs.spot.io)
-- 💬 [Spot Slack](https://community.flexera.com)
-- 🐛 GitHub Issues
+- [Flexera Docs](https://docs.spot.io)
+- [Spot Slack](https://community.flexera.com)
+- GitHub Issues
 
 ---
 
-## 🔧 Usage Examples
+## Usage Examples
 
-### Basic Demo Deployment
+### Basic Platform Deployment
 ```bash
-# Deploy just the demo application
+# Deploy the platform application
 ./scripts/deploy.sh --provider=gke
 ```
 
@@ -539,7 +577,7 @@ export STORM_CLUSTER_NAME="my-test-cluster"
 
 ---
 
-**Version**: beta-v1.1.0
-**Updated**: 2025-07-24 - Beta release with complete authentication system, user management, role-based access control, and comprehensive frontend integration
-**Status**: BETA RELEASE - Ready for Testing and Evaluation -
-Made with ❤️ for the FinOps Practicioner and Developer Community
+**Version**: dev-v1.2.0-internal
+**Updated**: 2025-08-06 - Internal development release with multi-cloud infrastructure, production security hardening, and professional documentation
+**Status**: DEVELOPMENT RELEASE - Internal Testing and Validation
+Professional multi-cloud Kubernetes platform for enterprise engineering teams

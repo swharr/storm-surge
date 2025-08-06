@@ -1,0 +1,41 @@
+# Secrets and sensitive files
+**/secret.yaml
+**/secrets.yaml
+**/*-secret.yaml
+**/*-secrets.yaml
+
+# Exclude real credential files but keep templates
+!**/secret-template.yaml
+!**/secrets-template.yaml
+
+# Environment files with credentials
+.env
+.env.local
+.env.*.local
+
+# Backup files that might contain secrets
+*.bak
+*.backup
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs that might contain sensitive data
+*.log
+logs/
+
+# Terraform state files (often contain secrets)
+*.tfstate
+*.tfstate.*
+
+# Helm values with secrets
+values-secret.yaml
+values-prod.yaml

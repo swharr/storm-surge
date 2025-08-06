@@ -1,0 +1,421 @@
+# AWS Infrastructure for Storm Surge
+# Production-ready EKS cluster with ALB, SSL, and IAM roles
+
+---
+# 1. EKS Cluster Configuration (eksctl)
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: storm-surge-prod
+  region: us-east-1
+  version: "1.28"
+  tags:
+    Environment: production
+    Application: storm-surge
+    ManagedBy: eksctl
+
+# VPC Configuration
+vpc:
+  cidr: 10.0.0.0/16
+  enableDNSHostnames: true
+  enableDNSSupport: true
+  
+  # Availability zones for high availability
+  availabilityZones:
+    - us-east-1a
+    - us-east-1b
+    - us-east-1c
+  
+  # NAT Gateway for private subnets
+  nat:
+    gateway: HighlyAvailable  # One NAT Gateway per AZ
+
+# IAM OIDC Provider for IRSA
+iam:
+  withOIDC: true
+  
+  # Service accounts with IAM roles
+  serviceAccounts:
+  - metadata:
+      name: storm-surge-api
+      namespace: storm-surge-prod
+    attachPolicyARNs:
+    - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+    - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+    roleName: storm-surge-api-role
+    wellKnownPolicies:
+      ebsCSIController: false
+      externalDNS: false
+      certManager: true
+      albIngress: true
+    
+  - metadata:
+      name: external-dns
+      namespace: kube-system
+    wellKnownPolicies:
+      externalDNS: true
+      
+  - metadata:
+      name: ebs-csi-controller-sa
+      namespace: kube-system
+    wellKnownPolicies:
+      ebsCSIController: true
+
+# Managed node groups
+managedNodeGroups:
+  - name: storm-surge-workers
+    instanceType: t3.large
+    minSize: 3
+    maxSize: 10
+    desiredCapacity: 3
+    volumeSize: 100
+    volumeType: gp3
+    volumeEncrypted: true
+    
+    # Use Spot instances for cost optimization
+    spot: true
+    instanceTypes:
+      - t3.large
+      - t3a.large
+      - t2.large
+    
+    # Labels and taints
+    labels:
+      role: worker
+      workload: api
+    
+    # Security groups
+    securityGroups:
+      attachIDs:
+        - sg-xxxxxxxxx  # Pre-existing security group
+    
+    # IAM instance profile
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      withAddonPolicies:
+        imageBuilder: true
+        cloudWatch: true
+        albIngress: true
+        ebs: true
+        efs: true
+    
+    # SSH access (for debugging - remove in production)
+    ssh:
+      allow: false
+    
+    # Tags
+    tags:
+      Environment: production
+      Application: storm-surge
+      NodeGroup: workers
+
+# Add-ons
+addons:
+- name: vpc-cni
+  version: latest
+  attachPolicyARNs:
+    - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+- name: kube-proxy
+  version: latest
+- name: coredns
+  version: latest
+- name: aws-ebs-csi-driver
+  version: latest
+
+# CloudWatch logging
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+    logRetentionInDays: 30
+
+---
+# 2. AWS Load Balancer Controller Installation
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/AmazonEKSLoadBalancerControllerRole
+
+---
+# 3. ALB Ingress with SSL
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storm-surge-alb
+  namespace: storm-surge-prod
+  annotations:
+    # ALB Configuration
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    
+    # SSL Configuration
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERTIFICATE_ID
+    
+    # Alternative: Use ACM to auto-discover certificate
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/*
+    
+    # Security headers
+    alb.ingress.kubernetes.io/security-groups: sg-xxxxxxxxx
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"
+    
+    # Health check
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/success-codes: '200'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    
+    # WAF
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:ACCOUNT_ID:regional/webacl/storm-surge-waf/xxxxx
+    
+    # Target group attributes
+    alb.ingress.kubernetes.io/target-group-attributes: |
+      deregistration_delay.timeout_seconds=30,
+      stickiness.enabled=true,
+      stickiness.lb_cookie.duration_seconds=86400
+    
+    # Tags
+    alb.ingress.kubernetes.io/tags: Environment=production,Application=storm-surge
+    
+spec:
+  rules:
+  - host: api.stormsurge.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: storm-surge-api
+            port:
+              number: 80
+
+---
+# 4. Certificate Manager for Auto SSL
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: storm-surge-tls
+  namespace: storm-surge-prod
+spec:
+  secretName: storm-surge-tls-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - api.stormsurge.example.com
+  - "*.stormsurge.example.com"
+
+---
+# 5. Route53 DNS Configuration
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: storm-surge-dns
+  namespace: storm-surge-prod
+spec:
+  endpoints:
+  - dnsName: api.stormsurge.example.com
+    recordTTL: 300
+    recordType: CNAME
+    targets:
+    - storm-surge-alb-xxxxxxxxx.us-east-1.elb.amazonaws.com
+
+---
+# 6. IAM Policies (Terraform)
+data "aws_iam_policy_document" "storm_surge_api_policy" {
+  statement {
+    sid = "S3Access"
+    actions = [
+      "s3:GetObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      "arn:aws:s3:::storm-surge-assets/*",
+      "arn:aws:s3:::storm-surge-assets"
+    ]
+  }
+  
+  statement {
+    sid = "SecretsManagerAccess"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret"
+    ]
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:storm-surge/*"
+    ]
+  }
+  
+  statement {
+    sid = "CloudWatchLogs"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogStreams"
+    ]
+    resources = [
+      "arn:aws:logs:us-east-1:ACCOUNT_ID:log-group:/aws/eks/storm-surge/*"
+    ]
+  }
+  
+  statement {
+    sid = "CloudWatchMetrics"
+    actions = [
+      "cloudwatch:PutMetricData"
+    ]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["StormSurge"]
+    }
+  }
+}
+
+---
+# 7. WAF Rules for DDoS Protection
+resource "aws_wafv2_web_acl" "storm_surge_waf" {
+  name  = "storm-surge-waf"
+  scope = "REGIONAL"
+  
+  default_action {
+    allow {}
+  }
+  
+  # Rate limiting rule
+  rule {
+    name     = "RateLimitRule"
+    priority = 1
+    
+    statement {
+      rate_based_statement {
+        limit              = 2000
+        aggregate_key_type = "IP"
+      }
+    }
+    
+    action {
+      block {}
+    }
+    
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitRule"
+      sampled_requests_enabled   = true
+    }
+  }
+  
+  # Geo blocking rule
+  rule {
+    name     = "GeoBlockingRule"
+    priority = 2
+    
+    statement {
+      geo_match_statement {
+        country_codes = ["CN", "RU", "KP"]  # Example countries to block
+      }
+    }
+    
+    action {
+      block {}
+    }
+    
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "GeoBlockingRule"
+      sampled_requests_enabled   = true
+    }
+  }
+  
+  # SQL injection rule
+  rule {
+    name     = "SQLiRule"
+    priority = 3
+    
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesSQLiRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    
+    override_action {
+      none {}
+    }
+    
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "SQLiRule"
+      sampled_requests_enabled   = true
+    }
+  }
+}
+
+---
+# 8. Backup Configuration
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: storm-surge-backup
+  namespace: velero
+spec:
+  provider: aws
+  objectStorage:
+    bucket: storm-surge-backups
+    prefix: eks
+  config:
+    region: us-east-1
+    profile: default
+
+---
+# 9. Auto-scaling Configuration
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: storm-surge-hpa
+  namespace: storm-surge-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: storm-surge-api
+  minReplicas: 3
+  maxReplicas: 100
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "1000"

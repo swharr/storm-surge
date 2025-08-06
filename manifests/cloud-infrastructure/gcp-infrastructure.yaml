@@ -1,0 +1,506 @@
+# GCP Infrastructure for Storm Surge
+# Production-ready GKE cluster with Cloud Load Balancer, SSL, and IAM
+
+---
+# 1. GKE Cluster Configuration (Terraform)
+resource "google_container_cluster" "storm_surge" {
+  name     = "storm-surge-prod"
+  location = "us-central1"  # Regional cluster for HA
+  
+  # Use release channel for automatic upgrades
+  release_channel {
+    channel = "REGULAR"
+  }
+  
+  # VPC-native cluster
+  networking_mode = "VPC_NATIVE"
+  network         = google_compute_network.storm_surge_vpc.name
+  subnetwork      = google_compute_subnetwork.storm_surge_subnet.name
+  
+  # IP allocation
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "pods"
+    services_secondary_range_name = "services"
+  }
+  
+  # Private cluster
+  private_cluster_config {
+    enable_private_nodes    = true
+    enable_private_endpoint = false
+    master_ipv4_cidr_block = "172.16.0.0/28"
+  }
+  
+  # Master authorized networks
+  master_authorized_networks_config {
+    cidr_blocks {
+      cidr_block   = "10.0.0.0/8"
+      display_name = "internal"
+    }
+    cidr_blocks {
+      cidr_block   = "YOUR_OFFICE_IP/32"
+      display_name = "office"
+    }
+  }
+  
+  # Workload Identity
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+  
+  # Add-ons
+  addons_config {
+    http_load_balancing {
+      disabled = false
+    }
+    network_policy_config {
+      disabled = false
+    }
+    gce_persistent_disk_csi_driver_config {
+      enabled = true
+    }
+    dns_cache_config {
+      enabled = true
+    }
+  }
+  
+  # Security
+  binary_authorization {
+    enabled = true
+  }
+  
+  # Database encryption
+  database_encryption {
+    state    = "ENCRYPTED"
+    key_name = google_kms_crypto_key.cluster_key.id
+  }
+  
+  # Logging and monitoring
+  logging_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS", "APISERVER", "CONTROLLER_MANAGER", "SCHEDULER"]
+  }
+  
+  monitoring_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+    managed_prometheus {
+      enabled = true
+    }
+  }
+  
+  # Maintenance window
+  maintenance_policy {
+    recurring_window {
+      start_time = "2023-01-01T09:00:00Z"
+      end_time   = "2023-01-01T17:00:00Z"
+      recurrence = "FREQ=WEEKLY;BYDAY=SA"
+    }
+  }
+  
+  # Node configuration
+  remove_default_node_pool = true
+  initial_node_count       = 1
+}
+
+# 2. Node Pool Configuration
+resource "google_container_node_pool" "storm_surge_nodes" {
+  name       = "storm-surge-pool"
+  location   = google_container_cluster.storm_surge.location
+  cluster    = google_container_cluster.storm_surge.name
+  
+  # Autoscaling
+  autoscaling {
+    min_node_count = 3
+    max_node_count = 100
+  }
+  
+  # Node configuration
+  node_config {
+    preemptible  = false  # Use standard instances for production
+    machine_type = "n2-standard-4"
+    
+    # Google recommends custom service accounts
+    service_account = google_service_account.storm_surge_nodes.email
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+    
+    # Security
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_integrity_monitoring = true
+    }
+    
+    # Workload Identity
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+    
+    # Labels
+    labels = {
+      environment = "production"
+      application = "storm-surge"
+    }
+    
+    # Taints
+    taint {
+      key    = "workload"
+      value  = "api"
+      effect = "NO_SCHEDULE"
+    }
+    
+    # Metadata
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+  }
+  
+  # Management
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+  
+  # Upgrade settings
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 0
+  }
+}
+
+---
+# 3. VPC Configuration
+resource "google_compute_network" "storm_surge_vpc" {
+  name                    = "storm-surge-vpc"
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "storm_surge_subnet" {
+  name          = "storm-surge-subnet"
+  ip_cidr_range = "10.0.0.0/20"
+  region        = "us-central1"
+  network       = google_compute_network.storm_surge_vpc.id
+  
+  secondary_ip_range {
+    range_name    = "pods"
+    ip_cidr_range = "10.4.0.0/14"
+  }
+  
+  secondary_ip_range {
+    range_name    = "services"
+    ip_cidr_range = "10.0.16.0/20"
+  }
+  
+  private_ip_google_access = true
+}
+
+---
+# 4. Cloud Armor (DDoS Protection)
+resource "google_compute_security_policy" "storm_surge_policy" {
+  name = "storm-surge-security-policy"
+  
+  # Default rule
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+  
+  # Rate limiting
+  rule {
+    action   = "rate_based_ban"
+    priority = "1000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action = "deny(429)"
+      enforce_on_key = "IP"
+      rate_limit_threshold {
+        count        = 100
+        interval_sec = 60
+      }
+      ban_duration_sec = 600
+    }
+  }
+  
+  # Block specific countries
+  rule {
+    action   = "deny(403)"
+    priority = "2000"
+    match {
+      expr {
+        expression = "origin.region_code == 'CN' || origin.region_code == 'RU'"
+      }
+    }
+  }
+  
+  # OWASP Top 10 rules
+  rule {
+    action   = "deny(403)"
+    priority = "3000"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('sqli-stable')"
+      }
+    }
+  }
+}
+
+---
+# 5. SSL Certificate (Google Managed)
+resource "google_compute_managed_ssl_certificate" "storm_surge_cert" {
+  name = "storm-surge-ssl-cert"
+  
+  managed {
+    domains = ["api.stormsurge.example.com", "*.stormsurge.example.com"]
+  }
+}
+
+---
+# 6. Global Load Balancer with CDN
+resource "google_compute_global_address" "storm_surge_ip" {
+  name = "storm-surge-global-ip"
+}
+
+resource "google_compute_backend_service" "storm_surge_backend" {
+  name                  = "storm-surge-backend"
+  protocol              = "HTTP"
+  port_name             = "http"
+  timeout_sec           = 30
+  enable_cdn            = true
+  
+  cdn_policy {
+    cache_mode = "CACHE_ALL_STATIC"
+    default_ttl = 3600
+    max_ttl     = 86400
+    
+    cache_key_policy {
+      include_host         = true
+      include_protocol     = true
+      include_query_string = false
+    }
+  }
+  
+  health_checks = [google_compute_health_check.storm_surge_health.id]
+  
+  backend {
+    group = google_compute_instance_group.storm_surge_ig.id
+  }
+  
+  security_policy = google_compute_security_policy.storm_surge_policy.id
+  
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+}
+
+resource "google_compute_url_map" "storm_surge_urlmap" {
+  name            = "storm-surge-urlmap"
+  default_service = google_compute_backend_service.storm_surge_backend.id
+  
+  host_rule {
+    hosts        = ["api.stormsurge.example.com"]
+    path_matcher = "allpaths"
+  }
+  
+  path_matcher {
+    name            = "allpaths"
+    default_service = google_compute_backend_service.storm_surge_backend.id
+    
+    path_rule {
+      paths   = ["/api/*"]
+      service = google_compute_backend_service.storm_surge_backend.id
+    }
+  }
+}
+
+resource "google_compute_target_https_proxy" "storm_surge_https_proxy" {
+  name             = "storm-surge-https-proxy"
+  url_map          = google_compute_url_map.storm_surge_urlmap.id
+  ssl_certificates = [google_compute_managed_ssl_certificate.storm_surge_cert.id]
+}
+
+resource "google_compute_global_forwarding_rule" "storm_surge_forwarding_rule" {
+  name       = "storm-surge-forwarding-rule"
+  target     = google_compute_target_https_proxy.storm_surge_https_proxy.id
+  port_range = "443"
+  ip_address = google_compute_global_address.storm_surge_ip.address
+}
+
+---
+# 7. IAM Service Accounts and Bindings
+resource "google_service_account" "storm_surge_api" {
+  account_id   = "storm-surge-api"
+  display_name = "Storm Surge API Service Account"
+}
+
+# Workload Identity binding
+resource "google_service_account_iam_member" "storm_surge_workload_identity" {
+  service_account_id = google_service_account.storm_surge_api.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[storm-surge-prod/storm-surge-api]"
+}
+
+# API permissions
+resource "google_project_iam_member" "storm_surge_permissions" {
+  for_each = toset([
+    "roles/storage.objectViewer",
+    "roles/secretmanager.secretAccessor",
+    "roles/cloudtrace.agent",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter",
+  ])
+  
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.storm_surge_api.email}"
+}
+
+# Node service account
+resource "google_service_account" "storm_surge_nodes" {
+  account_id   = "storm-surge-nodes"
+  display_name = "Storm Surge GKE Nodes"
+}
+
+resource "google_project_iam_member" "storm_surge_node_permissions" {
+  for_each = toset([
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+    "roles/monitoring.viewer",
+    "roles/stackdriver.resourceMetadata.writer",
+  ])
+  
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.storm_surge_nodes.email}"
+}
+
+---
+# 8. Kubernetes Resources
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: storm-surge-api
+  namespace: storm-surge-prod
+  annotations:
+    iam.gke.io/gcp-service-account: storm-surge-api@PROJECT_ID.iam.gserviceaccount.com
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storm-surge-ingress
+  namespace: storm-surge-prod
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "storm-surge-global-ip"
+    networking.gke.io/managed-certificates: "storm-surge-certificate"
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "false"
+    
+    # Backend configuration
+    cloud.google.com/backend-config: "storm-surge-backend-config"
+    
+spec:
+  rules:
+  - host: api.stormsurge.example.com
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: storm-surge-api
+            port:
+              number: 80
+
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: storm-surge-backend-config
+  namespace: storm-surge-prod
+spec:
+  # Health check
+  healthCheck:
+    checkIntervalSec: 15
+    port: 8080
+    type: HTTP
+    requestPath: /health
+    
+  # CDN configuration
+  cdn:
+    enabled: true
+    cachePolicy:
+      includeHost: true
+      includeProtocol: true
+      includeQueryString: false
+    negativeCaching: true
+    negativeCachingPolicy:
+      code: 404
+      ttl: 120
+      
+  # Security policy
+  securityPolicy:
+    name: "storm-surge-security-policy"
+    
+  # Connection draining
+  connectionDraining:
+    drainingTimeoutSec: 60
+    
+  # Session affinity
+  sessionAffinity:
+    affinityType: "CLIENT_IP"
+    affinityCookieTtlSec: 86400
+    
+  # Timeout
+  timeoutSec: 30
+  
+  # Logging
+  logging:
+    enable: true
+    sampleRate: 1.0
+
+---
+# 9. Secret Manager Integration
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: gcpsm-secret-store
+  namespace: storm-surge-prod
+spec:
+  provider:
+    gcpsm:
+      projectID: "PROJECT_ID"
+      auth:
+        workloadIdentity:
+          clusterLocation: us-central1
+          clusterName: storm-surge-prod
+          serviceAccountRef:
+            name: storm-surge-api
+
+---
+# 10. Monitoring Configuration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: storm-surge-metrics
+  namespace: storm-surge-prod
+  labels:
+    app: storm-surge
+spec:
+  selector:
+    matchLabels:
+      app: storm-surge-api
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

@@ -13,10 +13,19 @@ from contextlib import asynccontextmanager
 import asyncpg
 import redis.asyncio as redis
 import structlog
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
+
+# Import security middleware
+import sys
+sys.path.append('/app/security')
+from api_security import (
+    require_auth, require_rate_limit, add_security_headers,
+    is_public_endpoint, APISecurityConfig
+)
 
 # Configure structured logging
 structlog.configure(
@@ -102,6 +111,21 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Configure CORS properly
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://yourdomain.com"],  # Replace with actual domain
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
+# Add security headers middleware
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    response = await call_next(request)
+    return add_security_headers(response)
+
 async def init_database():
     """Initialize PostgreSQL connection pool"""
     global db_pool
@@ -110,7 +134,7 @@ async def init_database():
             host=os.getenv('POSTGRES_HOST', 'postgresql'),
             port=int(os.getenv('POSTGRES_PORT', 5432)),
             user=os.getenv('POSTGRES_USER', 'oceansurge'),
-            password=os.getenv('POSTGRES_PASSWORD', 'Postgres123'),
+            password=os.getenv('POSTGRES_PASSWORD', ''),
             database=os.getenv('POSTGRES_DB', 'oceansurge'),
             min_size=2,
             max_size=10
@@ -217,7 +241,10 @@ async def metrics():
 
 # Product endpoints
 @app.get("/products", response_model=List[Product])
+@require_auth(allowed_roles=['admin', 'service', 'readonly'])
+@require_rate_limit(max_requests=1000, window_seconds=3600)
 async def get_products(
+    request: Request,
     category: Optional[str] = Query(None),
     manufacturer: Optional[str] = Query(None),
     limit: int = Query(20, le=100),
@@ -234,7 +261,8 @@ async def get_products(
         
         if cached:
             logger.info("Returning cached products")
-            return eval(cached)  # In production, use proper JSON serialization
+            import json
+            return json.loads(cached)  # Safe JSON deserialization
         
         # Build query
         where_clauses = []
@@ -275,13 +303,16 @@ async def get_products(
         products = [dict(row) for row in rows]
         
         # Cache for 5 minutes
-        await redis_client.setex(cache_key, 300, str(products))
+        import json
+        await redis_client.setex(cache_key, 300, json.dumps(products))
         
         logger.info(f"Retrieved {len(products)} products")
         return products
 
 @app.get("/products/{product_id}", response_model=Product)
-async def get_product(product_id: int, db: asyncpg.Pool = Depends(get_db)):
+@require_auth(allowed_roles=['admin', 'service', 'readonly'])
+@require_rate_limit(max_requests=1000, window_seconds=3600)
+async def get_product(request: Request, product_id: int, db: asyncpg.Pool = Depends(get_db)):
     """Get a specific product"""
     REQUEST_COUNT.labels(method="GET", endpoint="product").inc()
     
@@ -290,7 +321,8 @@ async def get_product(product_id: int, db: asyncpg.Pool = Depends(get_db)):
         cached = await redis_client.get(cache_key)
         
         if cached:
-            return eval(cached)
+            import json
+            return json.loads(cached)  # Safe JSON deserialization
         
         sql = """
         SELECT id, name, description, price, category, sku, stock_quantity, manufacturer, year_compatibility
@@ -305,12 +337,15 @@ async def get_product(product_id: int, db: asyncpg.Pool = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Product not found")
         
         product = dict(row)
-        await redis_client.setex(cache_key, 300, str(product))
+        import json
+        await redis_client.setex(cache_key, 300, json.dumps(product))
         
         return product
 
 @app.post("/products", response_model=Product, status_code=201)
-async def create_product(product: ProductCreate, db: asyncpg.Pool = Depends(get_db)):
+@require_auth(allowed_roles=['admin', 'service'])
+@require_rate_limit(max_requests=100, window_seconds=3600)
+async def create_product(request: Request, product: ProductCreate, db: asyncpg.Pool = Depends(get_db)):
     """Create a new product"""
     REQUEST_COUNT.labels(method="POST", endpoint="products").inc()
     
@@ -341,17 +376,25 @@ async def create_product(product: ProductCreate, db: asyncpg.Pool = Depends(get_
             raise HTTPException(status_code=400, detail="SKU already exists")
 
 @app.put("/products/{product_id}", response_model=Product)
-async def update_product(product_id: int, product: ProductUpdate, db: asyncpg.Pool = Depends(get_db)):
+@require_auth(allowed_roles=['admin', 'service'])
+@require_rate_limit(max_requests=100, window_seconds=3600)
+async def update_product(request: Request, product_id: int, product: ProductUpdate, db: asyncpg.Pool = Depends(get_db)):
     """Update a product"""
     REQUEST_COUNT.labels(method="PUT", endpoint="product").inc()
     
     with REQUEST_DURATION.time():
-        # Build update query dynamically
+        # Build update query dynamically with field validation
         updates = []
         params = []
         param_count = 0
         
+        # Whitelist of allowed fields to prevent SQL injection
+        allowed_fields = {'name', 'description', 'price', 'category', 'sku', 
+                         'stock_quantity', 'manufacturer', 'year_compatibility'}
+        
         for field, value in product.dict(exclude_unset=True).items():
+            if field not in allowed_fields:
+                raise HTTPException(status_code=400, detail=f"Invalid field: {field}")
             param_count += 1
             updates.append(f"{field} = ${param_count}")
             params.append(value)
@@ -383,7 +426,9 @@ async def update_product(product_id: int, product: ProductUpdate, db: asyncpg.Po
         return dict(row)
 
 @app.delete("/products/{product_id}")
-async def delete_product(product_id: int, db: asyncpg.Pool = Depends(get_db)):
+@require_auth(allowed_roles=['admin'])
+@require_rate_limit(max_requests=50, window_seconds=3600)
+async def delete_product(request: Request, product_id: int, db: asyncpg.Pool = Depends(get_db)):
     """Delete a product"""
     REQUEST_COUNT.labels(method="DELETE", endpoint="product").inc()
     

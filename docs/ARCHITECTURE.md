@@ -1,6 +1,6 @@
-# 🌩️ Storm Surge Architecture
+# Storm Surge Architecture
 
-Storm Surge is designed to test Kubernetes elasticity with realistic workloads.
+Storm Surge is a production-ready platform for testing Kubernetes elasticity and demonstrating enterprise-grade cloud-native deployment patterns.
 
 ## Components
 

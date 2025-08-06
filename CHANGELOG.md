@@ -1,8 +1,57 @@
-# 🌀 Storm Surge – Changelog
+# Storm Surge - Changelog
+
+## [dev-v1.2.0-internal] - 2025-08-06
+
+### Major Infrastructure and Security Update
+
+**Multi-Cloud Infrastructure**
+- Added comprehensive cloud-specific infrastructure configurations
+- AWS EKS: Application Load Balancer, WAF, ACM certificates, IRSA
+- Google GKE: Global Load Balancer, Cloud Armor, Managed SSL, Workload Identity
+- Azure AKS: Application Gateway, WAF v2, Key Vault certificates, Managed Identity
+- Terraform-based infrastructure as code for all cloud providers
+
+**Production Security Hardening**
+- Removed all hardcoded credentials and replaced with secure placeholders
+- Implemented proper secrets management with runtime credential injection
+- Added comprehensive security documentation (CREDENTIALS_SECURITY.md)
+- Removed inappropriate security files (retaliation/deception tactics)
+- Enhanced authentication with JWT RS256 signing and proper validation
+- Added rate limiting, input validation, and SQL injection prevention
+
+**Professional Documentation**
+- Removed all unnecessary emojis and casual language
+- Rewrote all content for professional engineering environments
+- Added comprehensive deployment guide with troubleshooting
+- Created interactive setup script with FQDN configuration support
+- Updated all documentation to enterprise-grade standards
+
+**Custom Domain Support**
+- Interactive setup script prompts for custom FQDN configuration
+- Automatic updating of all infrastructure files with chosen domain
+- SSL certificate provisioning for custom domains across all cloud providers
+- DNS configuration templates for each cloud provider
+
+**Developer Experience**
+- One-command setup with `./setup.sh` for complete deployment
+- Automatic secret generation with cryptographically secure random values
+- Backup system for configuration files during setup
+- Comprehensive validation and error handling
+
+### Technical Improvements
+- Updated version to dev-v1.2.0-internal across all components
+- Enhanced container security contexts and network policies
+- Improved monitoring and alerting configurations
+- Added production-ready logging and observability stack
+
+### Breaking Changes
+- Removed casual/demo language in favor of professional terminology
+- Replaced all default passwords with secure placeholders requiring runtime configuration
+- Removed potentially concerning security demonstration files
 
 ## [Unreleased] - 2025-07-31
 
-### 🔐 AWS Profile Support & Region Updates
+### AWS Profile Support & Region Updates
 
 - **AWS Profile Support for EKS Deployments**
   - Added `--aws-profile` parameter to deploy.sh for specifying AWS profiles
@@ -25,7 +74,7 @@
   - Better error handling for expired or invalid AWS credentials
   - Profile-aware authentication checks
 
-### 🌍 Multi-AZ Support for EKS
+### Multi-AZ Support for EKS
 
 - **High Availability EKS Deployments**
   - EKS deployments now require a minimum of 2 availability zones for high availability
@@ -37,7 +86,7 @@
 
 ## [beta-v1.1.0] - 2025-07-24
 
-### 🔐 Authentication & User Management System - Complete Implementation
+### Authentication & User Management System - Complete Implementation
 
 - **Complete Authentication System**
   - JWT-based authentication with secure token generation and validation
@@ -92,7 +141,7 @@
   - `DELETE /api/users/{id}` - Delete user (admin only)
   - `POST /api/users/{id}/reset-password` - Admin password reset
 
-### 🎨 User Interface Enhancements
+### User Interface Enhancements
 
 - **New User Management Page**
   - Comprehensive admin interface for user management
@@ -114,7 +163,7 @@
   - Protected routes requiring authentication
   - Graceful handling of expired sessions
 
-### 🛠️ Technical Improvements
+### Technical Improvements
 
 - **Dependencies Added**
   - `bcrypt==4.0.1` for secure password hashing
@@ -129,7 +178,7 @@
 
 ## [Unreleased]
 
-### 🔧 Repository & CI/CD Improvements - July 18, 2025
+### Repository & CI/CD Improvements - July 18, 2025
 
 - **Repository URL Updates**
   - Updated all references from `https://github.com/Shon-Harris_flexera/OceanSurge` to `https://github.com/swharr/storm-surge`
@@ -150,7 +199,7 @@
   - **Azure CLI**: Uses `az upgrade --yes` for existing installations
   - More efficient CI runs with proper tool management instead of reinstalling from scratch
 
-### 🧹 Code Quality & Shell Script Improvements - July 18, 2025
+### Code Quality & Shell Script Improvements - July 18, 2025
 
 - **Pre-commit Configuration Updates**
   - Updated `.pre-commit-config.yaml` to resolve deprecation warnings
@@ -219,7 +268,7 @@
   - **Read Command Safety**: Added `-r` flag to 15+ read commands to prevent backslash escaping
   - All critical ShellCheck warnings resolved across entire codebase
 
-### 🧪 Test Coverage & Quality Improvements
+### Test Coverage & Quality Improvements
 - **Comprehensive Test Suite Expansion**
   - Added 24 comprehensive middleware tests covering Flask endpoints, webhook handling, and Spot API integration
   - Implemented 19 security tests for Kubernetes configurations, secrets management, and container security
@@ -227,7 +276,7 @@
   - Fixed missing dependencies in FinOps controller tests (43 tests now passing)
   - Added virtual environment setup for proper test isolation
 
-### 🔧 FinOps Controller Fixes
+### FinOps Controller Fixes
 - **Missing Manifest Resolution**
   - Created missing `manifests/finops/finops-controller.yaml` file
   - Fixed broken kustomization references in FinOps deployment
@@ -235,7 +284,7 @@
   - Integrated ConfigMaps for Python code and configuration
   - Established proper secret management for LaunchDarkly and Spot API credentials
 
-### 🛡️ Security & Validation Enhancements
+### Security & Validation Enhancements
 - **Enhanced Security Testing**
   - Implemented comprehensive security validation for Kubernetes manifests
   - Added container image security checks (no :latest tags, trusted registries)
@@ -243,7 +292,7 @@
   - Added Dockerfile security practice validation
   - Implemented compliance checks for Pod Security Standards and CIS benchmarks
 
-### 🔧 Script Improvements
+### Script Improvements
 - **Cleanup Script Array Matching Fix**
   - Fixed problematic regex-based array matching in `scripts/cleanup/cluster-sweep.sh`
   - Replaced `if [[ ! " ${PROTECTED_NAMESPACES[@]} " =~ " $ns " ]]` with proper loop-based matching
@@ -254,10 +303,10 @@
   - Added missing shebang (`#!/bin/bash`) to `scripts/lockitdown.sh`
   - Added `set -e` error handling to `scripts/load-test.sh` and `scripts/lockitdown.sh`
   - Verified all 10 scripts in `/scripts` directory have proper configuration:
-    - ✅ All scripts have shebangs
-    - ✅ All scripts have error handling (`set -e`)
-    - ✅ All scripts are executable
-    - ✅ All scripts have valid syntax
+    - All scripts have shebangs
+    - All scripts have error handling (`set -e`)
+    - All scripts are executable
+    - All scripts have valid syntax
 
 - **Python File Permissions Audit**
   - Fixed chmod attributes for middleware and test scripts with shebangs
@@ -283,7 +332,7 @@
   - Fixed potential command injection in echo statements: `echo "Unknown argument: \"$arg\"`
   - Enhanced bash script security by eliminating dangerous variable expansion patterns
 
-### 📊 Test Results Summary
+### Test Results Summary
 - **FinOps Tests**: 43/43 tests passing (100% success rate)
 - **Middleware Tests**: 21/24 tests passing (87.5% success rate)
 - **Security Tests**: 15/19 tests passing (78.9% success rate)
@@ -292,7 +341,7 @@
 
 ## v0.1.4-alpha-poc – July 11, 2025
 
-### 🛠️ Script Logic & Deployment Improvements
+### Script Logic & Deployment Improvements
 - **Enhanced Deploy Script Logic**
   - Improved region restrictions with comprehensive validation
   - Added robust retry logic for deployment operations with configurable timeouts
@@ -300,25 +349,25 @@
   - Better error handling and recovery mechanisms throughout deployment process
   - Enhanced cloud region restrictions and security validation
 
-### 🔒 Security & Validation Enhancements
+### Security & Validation Enhancements
 - **Advanced Security Controls**
   - Cloud region restrictions enforced across all providers
   - Enhanced error handling with detailed validation feedback
   - Improved security checks throughout deployment pipeline
   - Better validation of deployment parameters and configurations
 
-### 📖 Documentation Updates
+### Documentation Updates
 - **README and Documentation Improvements**
   - Updated feature status and clarity improvements
   - Enhanced documentation for deployment processes
   - Better organization of project information and usage examples
 
-### 🔧 Infrastructure & Workflow
+### Infrastructure & Workflow
 - **GitHub Release Workflow**
   - Added automated GitHub Release workflow for version tagging
   - Improved CI/CD pipeline with proper version management
 
-### 🚀 Major Features
+### Major Features
 - **Enhanced Interactive Deployment Script**
   - Interactive provider selection (GKE, EKS, AKS, all)
   - Cloud-specific region and zone selection with validation
@@ -327,7 +376,7 @@
   - Support for both command-line and interactive modes
   - Complete deployment including base app + middleware + finops
 
-### 🧪 Testing & Quality Assurance
+### Testing & Quality Assurance
 - **Comprehensive Test Suite**
   - Local quick tests (`test-local.sh`) for rapid validation
   - Full minikube test suite (`tests/test-suite.sh`) with detailed reporting
@@ -344,7 +393,7 @@
   - Security context verification
   - Hardcoded secrets detection
 
-### 🛡️ Security Improvements
+### Security Improvements
 - **Container Security Hardening**
   - Migrated from `nginx:alpine` to `nginxinc/nginx-unprivileged:alpine`
   - All containers now run as non-root users
@@ -352,7 +401,7 @@
   - Container ports changed from 80 to 8080 for unprivileged access
   - Resource limits and requests defined for all deployments
 
-### 🔧 Infrastructure Enhancements
+### Infrastructure Enhancements
 - **Provider Script Improvements**
   - GKE, EKS, and AKS scripts now use environment variables
   - Enhanced error handling and validation
@@ -360,14 +409,14 @@
   - Authentication validation for all cloud providers
   - Better resource configuration and autoscaling settings
 
-### 📚 Documentation & Developer Experience
+### Documentation & Developer Experience
 - **Testing Documentation**
   - Comprehensive testing guide (`tests/README.md`)
   - Local development workflow documentation
   - Troubleshooting guide for common issues
   - Performance benchmarks and success criteria
 
-### 🐛 Bug Fixes
+### Bug Fixes
 - Fixed nginx permission issues in unprivileged containers
 - Resolved middleware dependency installation problems
 - Corrected health check endpoints in frontend deployment
@@ -376,32 +425,32 @@
 ## v0.1.1-Alpha-POC – July 2025
 
 
-## 📦 Storm Surge v0.1.1-Alpha-POC
+## Storm Surge v0.1.1-Alpha-POC
 
 _Released: July 2025_
 This release introduces the first working implementation of the FinOps Controller, early-stage testing harnesses, and updated documentation for extensibility and scaling experiments.
 
-### 🚀 Highlights
+### Highlights
 
-- ✅ **Initial FinOps Controller prototype**
+- **Initial FinOps Controller prototype**
   - `finops/finops_controller.py` includes a scheduled job framework using `schedule`, with stubbed methods for after-hours autoscaling disablement.
   - Placeholder logging and control structure for integrating LaunchDarkly feature flags and Spot Ocean APIs.
   - Prepares ground for real-time cost-aware infrastructure decisions.
 
-- 🧪 **New test harnesses added**
+- **New test harnesses added**
   - `finops/tests/test_basic.py`: Sanity test coverage
   - `finops/tests/test_finops_controller.py`: Unit test skeletons for controller logic
   - `finops/tests/test_integration.py`: Placeholder for full integration tests (coming in v0.1.2)
 
-- 📜 **Documentation Enhancements**
+- **Documentation Enhancements**
   - `docs/FINOPS.md`: Now includes environment setup, usage guide, and savings expectations across environments.
   - `docs/ARCHITECTURE.md`: Updated to reflect the FinOps Controller as an official component of the system.
   - `docs/REPOSITORY.md`: Clarified dual naming convention (OceanSurge repo, Storm Surge product), and added deploy + access examples.
 
-- 🛠️ **New deployment and chaos tooling**
+- **New deployment and chaos tooling**
   - Added `scripts/deploy-finops.sh` to automate FinOps Controller deployment.
   - Introduced `chaos-testing/lightning-strike.sh` for simulating random disruptions (experimental).
 
-- 🧹 **Structural & Naming Fixes**
+- **Structural & Naming Fixes**
   - Repo renaming script `fix-repo-naming.sh` included to enforce standard naming conventions across the project.
   - Git utility script `git-storm-surge-create.sh` added for rapid project creation and tagging.

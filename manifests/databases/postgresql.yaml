@@ -27,16 +27,17 @@ data:
   POSTGRES_EFFECTIVE_CACHE_SIZE: "512MB"
 
 ---
-# PostgreSQL Secret
+# PostgreSQL Secret - TEMPLATE ONLY
+# Generate actual secret with: kubectl create secret generic postgresql-secret --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 32)"
 apiVersion: v1
 kind: Secret
 metadata:
   name: postgresql-secret
   namespace: oceansurge
 type: Opaque
-data:
-  POSTGRES_USER: b2NlYW5zdXJnZQ==  # oceansurge
-  POSTGRES_PASSWORD: UG9zdGdyZXMxMjM=  # Postgres123
+stringData:
+  POSTGRES_USER: "oceansurge"
+  POSTGRES_PASSWORD: "REPLACE_WITH_SECURE_PASSWORD"
 
 ---
 # PostgreSQL Deployment
@@ -115,8 +116,7 @@ spec:
           periodSeconds: 10
       volumes:
       - name: postgresql-storage
-        persistentVolumeClaim:
-          claimName: postgresql-pvc
+        emptyDir: {}
 
 ---
 # PostgreSQL Service

@@ -118,7 +118,7 @@ async def init_database():
             host=os.getenv('POSTGRES_HOST', 'postgresql'),
             port=int(os.getenv('POSTGRES_PORT', 5432)),
             user=os.getenv('POSTGRES_USER', 'oceansurge'),
-            password=os.getenv('POSTGRES_PASSWORD', 'Postgres123'),
+            password=os.getenv('POSTGRES_PASSWORD', ''),
             database=os.getenv('POSTGRES_DB', 'oceansurge'),
             min_size=2,
             max_size=10

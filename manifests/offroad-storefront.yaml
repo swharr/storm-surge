@@ -1,0 +1,602 @@
+# Off-Road Parts & Supplies Storefront
+# Themed e-commerce demo with CPU-intensive backend
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offroad-storefront-html
+  namespace: oceansurge
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TrailForge Off-Road | Premium Parts & Supplies</title>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+                color: #ecf0f1;
+                line-height: 1.6;
+            }
+            
+            .header {
+                background: rgba(44, 62, 80, 0.95);
+                backdrop-filter: blur(10px);
+                padding: 1rem 0;
+                border-bottom: 3px solid #e74c3c;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            
+            .nav-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 2rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #e74c3c;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .nav-menu {
+                display: flex;
+                list-style: none;
+                gap: 2rem;
+            }
+            
+            .nav-menu a {
+                color: #ecf0f1;
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s;
+            }
+            
+            .nav-menu a:hover {
+                color: #e74c3c;
+            }
+            
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+            
+            .hero {
+                text-align: center;
+                padding: 4rem 2rem;
+                background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400"><rect fill="%23555" width="1000" height="400"/><text x="500" y="200" font-size="48" text-anchor="middle" fill="%23999">OFF-ROAD TERRAIN</text></svg>');
+                background-size: cover;
+                background-position: center;
+                border-radius: 15px;
+                margin-bottom: 3rem;
+            }
+            
+            .hero h1 {
+                font-size: 3.5rem;
+                margin-bottom: 1rem;
+                color: #ecf0f1;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+                color: #bdc3c7;
+                margin-bottom: 2rem;
+            }
+            
+            .cta-button {
+                background: linear-gradient(45deg, #e74c3c, #c0392b);
+                color: white;
+                padding: 1rem 2rem;
+                border: none;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+                text-decoration: none;
+                display: inline-block;
+            }
+            
+            .cta-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            }
+            
+            .categories {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 2rem;
+                margin: 3rem 0;
+            }
+            
+            .category-card {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 15px;
+                padding: 2rem;
+                text-align: center;
+                transition: all 0.3s;
+                border: 2px solid transparent;
+            }
+            
+            .category-card:hover {
+                transform: translateY(-5px);
+                border-color: #e74c3c;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            
+            .category-icon {
+                font-size: 3rem;
+                color: #e74c3c;
+                margin-bottom: 1rem;
+            }
+            
+            .category-card h3 {
+                margin-bottom: 1rem;
+                color: #ecf0f1;
+            }
+            
+            .category-card p {
+                color: #bdc3c7;
+                margin-bottom: 1.5rem;
+            }
+            
+            .shop-button {
+                background: rgba(231, 76, 60, 0.2);
+                color: #e74c3c;
+                border: 2px solid #e74c3c;
+                padding: 0.75rem 1.5rem;
+                border-radius: 25px;
+                cursor: pointer;
+                transition: all 0.3s;
+                font-weight: bold;
+            }
+            
+            .shop-button:hover {
+                background: #e74c3c;
+                color: white;
+            }
+            
+            .performance-section {
+                background: rgba(0,0,0,0.3);
+                border-radius: 15px;
+                padding: 2rem;
+                margin: 3rem 0;
+                text-align: center;
+            }
+            
+            .performance-section h2 {
+                color: #e74c3c;
+                margin-bottom: 2rem;
+            }
+            
+            .load-testing {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin: 2rem 0;
+            }
+            
+            .load-button {
+                background: linear-gradient(45deg, #34495e, #2c3e50);
+                color: #ecf0f1;
+                border: 2px solid #95a5a6;
+                padding: 1rem;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s;
+                font-weight: bold;
+            }
+            
+            .load-button:hover {
+                border-color: #e74c3c;
+                transform: translateY(-2px);
+            }
+            
+            .load-button.active {
+                background: linear-gradient(45deg, #e74c3c, #c0392b);
+                border-color: #e74c3c;
+            }
+            
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin: 2rem 0;
+            }
+            
+            .metric-card {
+                background: rgba(255,255,255,0.1);
+                padding: 1.5rem;
+                border-radius: 10px;
+                text-align: center;
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #e74c3c;
+            }
+            
+            .metric-label {
+                color: #bdc3c7;
+                font-size: 0.9rem;
+            }
+            
+            .status-display {
+                background: rgba(46, 204, 113, 0.2);
+                border: 2px solid #2ecc71;
+                color: #2ecc71;
+                padding: 1rem;
+                border-radius: 10px;
+                margin: 1rem 0;
+                display: none;
+            }
+            
+            .response-area {
+                background: rgba(0,0,0,0.3);
+                border-radius: 10px;
+                padding: 1rem;
+                margin: 1rem 0;
+                min-height: 100px;
+                font-family: monospace;
+                color: #95a5a6;
+            }
+            
+            .footer {
+                background: rgba(44, 62, 80, 0.95);
+                padding: 2rem 0;
+                margin-top: 4rem;
+                text-align: center;
+                border-top: 3px solid #e74c3c;
+            }
+            
+            @media (max-width: 768px) {
+                .hero h1 {
+                    font-size: 2.5rem;
+                }
+                
+                .nav-menu {
+                    display: none;
+                }
+                
+                .categories {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header class="header">
+            <div class="nav-container">
+                <div class="logo">
+                    <i class="fas fa-mountain"></i>
+                    TrailForge
+                </div>
+                <nav>
+                    <ul class="nav-menu">
+                        <li><a href="#categories">Categories</a></li>
+                        <li><a href="#performance">Performance Test</a></li>
+                        <li><a href="/health">System Health</a></li>
+                        <li><a href="#about">About</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="hero">
+                <h1>TrailForge Off-Road</h1>
+                <p>Premium parts and supplies for the ultimate off-road experience</p>
+                <a href="#categories" class="cta-button">
+                    <i class="fas fa-tools"></i> Shop Now
+                </a>
+            </section>
+
+            <section id="categories" class="categories">
+                <div class="category-card">
+                    <div class="category-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Performance Parts</h3>
+                    <p>High-performance upgrades for maximum power and reliability on any terrain</p>
+                    <button class="shop-button" onclick="testService('/api/products/', 'Performance Parts')">
+                        <i class="fas fa-tachometer-alt"></i> Browse Parts
+                    </button>
+                </div>
+
+                <div class="category-card">
+                    <div class="category-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h3>Cart & Checkout</h3>
+                    <p>Heavy-duty cart system for processing your off-road gear orders</p>
+                    <button class="shop-button" onclick="testService('/api/cart/', 'Shopping Cart')">
+                        <i class="fas fa-truck"></i> View Cart
+                    </button>
+                </div>
+
+                <div class="category-card">
+                    <div class="category-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h3>Lighting Systems</h3>
+                    <p>Professional-grade LED lighting for night trail adventures</p>
+                    <button class="shop-button" onclick="testService('/api/products/search/lighting', 'Lighting Systems')">
+                        <i class="fas fa-search"></i> Search Lights
+                    </button>
+                </div>
+
+                <div class="category-card">
+                    <div class="category-icon">
+                        <i class="fas fa-compass"></i>
+                    </div>
+                    <h3>Overland Gear</h3>
+                    <p>Complete overland setups for extended off-road expeditions</p>
+                    <button class="shop-button" onclick="testService('/api/products/search/overland', 'Overland Gear')">
+                        <i class="fas fa-map"></i> Explore Gear
+                    </button>
+                </div>
+            </section>
+
+            <section id="performance" class="performance-section">
+                <h2><i class="fas fa-chart-line"></i> System Performance Testing</h2>
+                <p>Test our high-performance infrastructure under different load conditions</p>
+                
+                <div class="load-testing">
+                    <button class="load-button" onclick="startLoadTest('light')">
+                        <i class="fas fa-cloud"></i><br>Light Traffic<br><small>2 req/sec</small>
+                    </button>
+                    <button class="load-button" onclick="startLoadTest('moderate')">
+                        <i class="fas fa-cloud-rain"></i><br>Moderate Load<br><small>10 req/sec</small>
+                    </button>
+                    <button class="load-button" onclick="startLoadTest('heavy')">
+                        <i class="fas fa-bolt"></i><br>Heavy Load<br><small>20 req/sec</small>
+                    </button>
+                    <button class="load-button" onclick="startLoadTest('extreme')">
+                        <i class="fas fa-fire"></i><br>Extreme Test<br><small>50 req/sec</small>
+                    </button>
+                    <button class="load-button" onclick="stopLoadTest()">
+                        <i class="fas fa-stop"></i><br>Stop Test<br><small>Rest Mode</small>
+                    </button>
+                </div>
+
+                <div id="loadStatus" class="status-display"></div>
+
+                <div class="metrics">
+                    <div class="metric-card">
+                        <div class="metric-value" id="requestCount">0</div>
+                        <div class="metric-label">Requests Processed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="responseTime">--</div>
+                        <div class="metric-label">Avg Response (ms)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="loadLevel">Idle</div>
+                        <div class="metric-label">Current Load Level</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="systemHealth">100%</div>
+                        <div class="metric-label">System Health</div>
+                    </div>
+                </div>
+
+                <div id="response" class="response-area">
+                    System ready for performance testing...
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 TrailForge Off-Road | Premium Parts & Supplies | Powered by CPU-Intensive Infrastructure</p>
+        </footer>
+
+        <script>
+            let loadInterval;
+            let requestCounter = 0;
+            let responseTimes = [];
+
+            async function testService(endpoint, serviceName) {
+                const startTime = Date.now();
+                try {
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    const responseTime = Date.now() - startTime;
+                    
+                    requestCounter++;
+                    responseTimes.push(responseTime);
+                    
+                    document.getElementById('requestCount').textContent = requestCounter;
+                    updateAverageResponseTime();
+                    
+                    // Safe rendering - prevent XSS
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.innerHTML = ''; // Clear previous content
+                    
+                    const header = document.createElement('h4');
+                    header.textContent = `🔧 ${serviceName} Response:`;
+                    responseDiv.appendChild(header);
+                    
+                    const pre = document.createElement('pre');
+                    pre.textContent = JSON.stringify(data, null, 2);
+                    responseDiv.appendChild(pre);
+                } catch (error) {
+                    // Safe error rendering - prevent XSS
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.innerHTML = ''; // Clear previous content
+                    
+                    const header = document.createElement('h4');
+                    header.textContent = `⚠️ ${serviceName} Error:`;
+                    responseDiv.appendChild(header);
+                    
+                    const pre = document.createElement('pre');
+                    pre.style.color = '#e74c3c';
+                    pre.textContent = error.message;
+                    responseDiv.appendChild(pre);
+                }
+            }
+
+            function updateAverageResponseTime() {
+                if (responseTimes.length > 0) {
+                    const avg = responseTimes.reduce((a, b) => a + b) / responseTimes.length;
+                    document.getElementById('responseTime').textContent = Math.round(avg);
+                }
+            }
+
+            function startLoadTest(intensity) {
+                stopLoadTest();
+                
+                const loadConfigs = {
+                    'light': { interval: 500, concurrent: 2, name: 'Light Traffic 🌤️', duration: 60 },
+                    'moderate': { interval: 100, concurrent: 5, name: 'Moderate Load 🌧️', duration: 120 },
+                    'heavy': { interval: 50, concurrent: 10, name: 'Heavy Load ⛈️', duration: 180 },
+                    'extreme': { interval: 20, concurrent: 20, name: 'Extreme Test 🔥', duration: 300 }
+                };
+
+                const config = loadConfigs[intensity];
+                const statusDiv = document.getElementById('loadStatus');
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = `🚀 ${config.name} active for ${config.duration}s...`;
+                
+                document.getElementById('loadLevel').textContent = config.name;
+                
+                // Update button states
+                document.querySelectorAll('.load-button').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+
+                loadInterval = setInterval(() => {
+                    for (let i = 0; i < config.concurrent; i++) {
+                        const endpoints = ['/api/products/', '/api/cart/', '/api/products/search/test'];
+                        const randomEndpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
+                        fetch(randomEndpoint).catch(e => console.log('Load test request failed:', e));
+                    }
+                }, config.interval);
+
+                // Auto-stop after duration
+                setTimeout(() => {
+                    if (loadInterval) {
+                        stopLoadTest();
+                    }
+                }, config.duration * 1000);
+            }
+
+            function stopLoadTest() {
+                if (loadInterval) {
+                    clearInterval(loadInterval);
+                    loadInterval = null;
+                    const statusDiv = document.getElementById('loadStatus');
+                    statusDiv.textContent = '✅ Load test completed - system at rest';
+                    document.getElementById('loadLevel').textContent = 'Idle';
+                    
+                    // Remove active button states
+                    document.querySelectorAll('.load-button').forEach(btn => btn.classList.remove('active'));
+                    
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+
+            // Initialize
+            window.onload = function() {
+                testService('/health', 'System Health Check');
+                
+                // Simulate health updates
+                setInterval(() => {
+                    const health = Math.random() > 0.1 ? '100%' : (95 + Math.random() * 5).toFixed(1) + '%';
+                    document.getElementById('systemHealth').textContent = health;
+                }, 5000);
+            };
+        </script>
+    </body>
+    </html>
+
+---
+# Off-Road Themed Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trailforge-frontend
+  namespace: oceansurge
+  labels:
+    app: trailforge-frontend
+    tier: frontend
+    storm-surge.io/component: offroad-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: trailforge-frontend
+  template:
+    metadata:
+      labels:
+        app: trailforge-frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+        - name: html
+          mountPath: /usr/share/nginx/html
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+      volumes:
+      - name: config
+        configMap:
+          name: frontend-config-cpu-routing
+      - name: html
+        configMap:
+          name: offroad-storefront-html
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trailforge-frontend-service
+  namespace: oceansurge
+spec:
+  selector:
+    app: trailforge-frontend
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer

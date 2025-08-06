@@ -118,8 +118,7 @@ spec:
         configMap:
           name: rabbitmq-config
       - name: rabbitmq-storage
-        persistentVolumeClaim:
-          claimName: rabbitmq-pvc
+        emptyDir: {}
 
 ---
 # RabbitMQ Service

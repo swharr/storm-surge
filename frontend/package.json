@@ -1,6 +1,6 @@
 {
   "name": "storm-surge-dashboard",
-  "version": "1.1.0",
+  "version": "1.2.0-internal",
   "description": "Storm Surge Feature Flag & Cluster Management Dashboard",
   "type": "module",
   "scripts": {

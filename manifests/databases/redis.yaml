@@ -1,4 +1,16 @@
 ---
+# Redis Secret - TEMPLATE ONLY  
+# Generate actual secret with: kubectl create secret generic redis-secret --from-literal=REDIS_PASSWORD="$(openssl rand -base64 32)"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: oceansurge
+type: Opaque
+stringData:
+  REDIS_PASSWORD: "REPLACE_WITH_SECURE_PASSWORD"
+
+---
 # Redis ConfigMap
 apiVersion: v1
 kind: ConfigMap
@@ -7,7 +19,8 @@ metadata:
   namespace: oceansurge
 data:
   redis.conf: |
-    # Redis configuration for production workload
+    # Redis configuration for production workload with authentication
+    requirepass REPLACE_WITH_SECURE_PASSWORD
     maxmemory 512mb
     maxmemory-policy allkeys-lru
     save 900 1
@@ -23,6 +36,7 @@ data:
     auto-aof-rewrite-min-size 64mb
     timeout 0
     tcp-keepalive 300
+    protected-mode yes
 
 ---
 # Redis Persistent Volume
@@ -104,8 +118,7 @@ spec:
         configMap:
           name: redis-config
       - name: redis-storage
-        persistentVolumeClaim:
-          claimName: redis-pvc
+        emptyDir: {}
 
 ---
 # Redis Service
