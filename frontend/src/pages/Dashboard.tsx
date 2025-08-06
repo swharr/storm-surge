@@ -1,4 +1,3 @@
-import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { 
   DollarSign, 
@@ -8,13 +7,10 @@ import {
   TrendingDown, 
   Activity,
   Clock,
-  AlertTriangle,
   CheckCircle,
   XCircle
 } from 'lucide-react'
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,

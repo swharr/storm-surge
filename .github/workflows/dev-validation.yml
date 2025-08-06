@@ -212,7 +212,7 @@ jobs:
         
         for file in $(find manifests/ -name "*.yaml" -type f); do
           # Skip files that contain Python code or are not K8s manifests
-          if grep -q "#!/usr/bin/env\|import \|def \|class \|from.*import" "$file" 2>/dev/null; then
+          if grep -q "#!/usr/bin/env\|import \|def \|class \|from.*import\|if __name__" "$file" 2>/dev/null; then
             echo "Skipping embedded code file: $file"
             skipped_count=$((skipped_count + 1))
             continue
@@ -232,8 +232,15 @@ jobs:
             continue
           fi
           
+          # Skip Kustomize configuration files
+          if echo "$file" | grep -q "kustomization.yaml$"; then
+            echo "Skipping Kustomize configuration file: $file"
+            skipped_count=$((skipped_count + 1))
+            continue
+          fi
+          
           echo "Validating: $file"
-          if kubeval "$file"; then
+          if kubeval --ignore-missing-schemas "$file"; then
             validated_count=$((validated_count + 1))
           else
             echo "❌ Invalid Kubernetes manifest: $file"

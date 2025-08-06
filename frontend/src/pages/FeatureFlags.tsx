@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Flag, Plus, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react'
 import api from '../services/api'

@@ -1,4 +1,4 @@
-import React from 'react'
+// import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Layout from './components/Layout'
@@ -26,7 +26,7 @@ function App() {
   })
 
   // Initialize WebSocket connection for authenticated users
-  const { isConnected } = useWebSocket({
+  useWebSocket({
     autoConnect: !!token && !!user,
   })
 

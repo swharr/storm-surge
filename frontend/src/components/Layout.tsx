@@ -12,7 +12,7 @@ import {
   Menu, 
   X,
   Zap,
-  User,
+  User as UserIcon,
   Users
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -177,7 +177,7 @@ export default function Layout({ user, children }: LayoutProps) {
 }
 
 interface SidebarContentProps {
-  navigation: typeof navigation
+  navigation: Array<{ name: string; href: string; icon: any }>
   location: { pathname: string }
   systemHealth?: SystemHealth
   user: User

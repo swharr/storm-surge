@@ -5,6 +5,7 @@ export interface User {
   name: string
   role: 'admin' | 'operator' | 'viewer'
   avatar?: string
+  isActive: boolean
   lastLogin?: string
   createdAt: string
 }

@@ -1,4 +1,3 @@
-import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Server, Plus, Activity, TrendingUp, TrendingDown } from 'lucide-react'
 import api from '../services/api'
