@@ -2,7 +2,7 @@ name: Storm Surge Test Suite
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, dev ]
   pull_request:
     branches: [ main ]
 
