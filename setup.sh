@@ -5,6 +5,58 @@
 
 set -e
 
+# Help functionality
+show_help() {
+    echo "Storm Surge Multi-Cloud Setup Script"
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help     Show this help message and exit"
+    echo "  -p PROVIDER    Cloud provider (aws, gcp, azure)"
+    echo "  -r REGION      Cloud region"
+    echo "  -n NODES       Number of nodes (default: 3)"
+    echo "  -f FQDN        Fully qualified domain name"
+    echo ""
+    echo "Interactive Mode:"
+    echo "  Run without arguments for interactive setup"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                    # Interactive mode"
+    echo "  $0 -p aws -r us-west-2 -n 3         # AWS with specific settings"
+    echo "  $0 --help                           # Show this help"
+    exit 0
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      ;;
+    -p|--provider)
+      CLOUD_PROVIDER="$2"
+      shift 2
+      ;;
+    -r|--region)
+      REGION="$2"
+      shift 2
+      ;;
+    -n|--nodes)
+      NODES="$2"
+      shift 2
+      ;;
+    -f|--fqdn)
+      FQDN="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option $1"
+      show_help
+      ;;
+  esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

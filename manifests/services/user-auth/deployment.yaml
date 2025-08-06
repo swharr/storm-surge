@@ -15,17 +15,18 @@ data:
   ENVIRONMENT: "development"
 
 ---
-# User Auth API Secret
+# User Auth API Secret - TEMPLATE ONLY
+# Generate actual secret with: kubectl create secret generic user-auth-api-secret --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 32)"
 apiVersion: v1
 kind: Secret
 metadata:
   name: user-auth-api-secret
   namespace: oceansurge
 type: Opaque
-data:
-  POSTGRES_USER: b2NlYW5zdXJnZQ==  # oceansurge
-  POSTGRES_PASSWORD: UG9zdGdyZXMxMjM=  # Postgres123
-  JWT_SECRET_KEY: b2NlYW5zdXJnZS1qd3Qtc2VjcmV0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==  # oceansurge-jwt-secret-key-change-in-production
+stringData:
+  POSTGRES_USER: "oceansurge"
+  POSTGRES_PASSWORD: "REPLACE_WITH_SECURE_PASSWORD"
+  JWT_SECRET_KEY: "REPLACE_WITH_JWT_SECRET"
 
 ---
 # User Auth API Deployment
