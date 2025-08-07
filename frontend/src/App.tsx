@@ -48,7 +48,7 @@ function App() {
   }
 
   return (
-    <Layout user={user}>
+    <Layout user={user!}>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />

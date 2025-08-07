@@ -95,7 +95,7 @@ const UserManagement: React.FC = () => {
       userId: editingUser.id,
       updates: {
         name: formData.get('name') as string,
-        role: formData.get('role') as string,
+        role: formData.get('role') as 'admin' | 'operator' | 'viewer',
         isActive: formData.get('isActive') === 'true',
       },
     })

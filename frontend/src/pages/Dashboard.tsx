@@ -24,7 +24,7 @@ import {
 } from 'recharts'
 import api from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
-import type { ClusterMetrics, FeatureFlag, CostMetrics, ScalingEvent } from '../types'
+import type { ScalingEvent } from '../types'
 
 export default function Dashboard() {
   const { data: clusters, isLoading: clustersLoading } = useQuery({

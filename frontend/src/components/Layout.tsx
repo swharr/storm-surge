@@ -153,7 +153,7 @@ export default function Layout({ user, children }: LayoutProps) {
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-600" />
+                    <UserIcon className="w-4 h-4 text-primary-600" />
                   </div>
                   <div className="hidden md:block">
                     <div className="text-sm font-medium text-gray-900">{user.name}</div>
@@ -239,7 +239,7 @@ function SidebarContent({ navigation, location, systemHealth, user, onLogout }: 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-primary-600" />
+              <UserIcon className="w-4 h-4 text-primary-600" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{user.name}</div>
