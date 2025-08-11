@@ -1,0 +1,224 @@
+# GCP Custom Role for GKE Administration
+# This defines permissions needed for full GKE cluster management
+
+title: "Storm Surge GKE Admin"
+description: "Full administrative access for managing GKE clusters and associated resources"
+stage: "GA"
+includedPermissions:
+# GKE Cluster Management
+- container.clusters.create
+- container.clusters.delete
+- container.clusters.get
+- container.clusters.list
+- container.clusters.update
+- container.clusters.getCredentials
+- container.operations.get
+- container.operations.list
+- container.operations.cancel
+
+# Node Pool Management
+- container.nodePools.create
+- container.nodePools.delete
+- container.nodePools.get
+- container.nodePools.list
+- container.nodePools.update
+- container.nodePools.rollback
+- container.nodePools.setAutoscaling
+- container.nodePools.setManagement
+- container.nodePools.setSize
+
+# Compute Engine (for nodes)
+- compute.acceleratorTypes.list
+- compute.addresses.create
+- compute.addresses.delete
+- compute.addresses.get
+- compute.addresses.list
+- compute.addresses.use
+- compute.autoscalers.create
+- compute.autoscalers.delete
+- compute.autoscalers.get
+- compute.autoscalers.list
+- compute.autoscalers.update
+- compute.backendServices.create
+- compute.backendServices.delete
+- compute.backendServices.get
+- compute.backendServices.list
+- compute.backendServices.update
+- compute.disks.create
+- compute.disks.delete
+- compute.disks.get
+- compute.disks.list
+- compute.disks.use
+- compute.firewalls.create
+- compute.firewalls.delete
+- compute.firewalls.get
+- compute.firewalls.list
+- compute.firewalls.update
+- compute.forwardingRules.create
+- compute.forwardingRules.delete
+- compute.forwardingRules.get
+- compute.forwardingRules.list
+- compute.globalAddresses.create
+- compute.globalAddresses.delete
+- compute.globalAddresses.get
+- compute.globalAddresses.list
+- compute.globalAddresses.use
+- compute.healthChecks.create
+- compute.healthChecks.delete
+- compute.healthChecks.get
+- compute.healthChecks.list
+- compute.healthChecks.update
+- compute.httpHealthChecks.create
+- compute.httpHealthChecks.delete
+- compute.httpHealthChecks.get
+- compute.httpHealthChecks.list
+- compute.httpHealthChecks.update
+- compute.httpsHealthChecks.create
+- compute.httpsHealthChecks.delete
+- compute.httpsHealthChecks.get
+- compute.httpsHealthChecks.list
+- compute.httpsHealthChecks.update
+- compute.instanceGroupManagers.create
+- compute.instanceGroupManagers.delete
+- compute.instanceGroupManagers.get
+- compute.instanceGroupManagers.list
+- compute.instanceGroupManagers.update
+- compute.instanceGroups.create
+- compute.instanceGroups.delete
+- compute.instanceGroups.get
+- compute.instanceGroups.list
+- compute.instanceGroups.update
+- compute.instanceGroups.use
+- compute.instances.create
+- compute.instances.delete
+- compute.instances.get
+- compute.instances.list
+- compute.instances.setLabels
+- compute.instances.setMetadata
+- compute.instances.setTags
+- compute.instances.start
+- compute.instances.stop
+- compute.instances.use
+- compute.machineTypes.get
+- compute.machineTypes.list
+- compute.networks.create
+- compute.networks.delete
+- compute.networks.get
+- compute.networks.list
+- compute.networks.update
+- compute.networks.updatePolicy
+- compute.projects.get
+- compute.regions.get
+- compute.regions.list
+- compute.routers.create
+- compute.routers.delete
+- compute.routers.get
+- compute.routers.list
+- compute.routers.update
+- compute.routes.create
+- compute.routes.delete
+- compute.routes.get
+- compute.routes.list
+- compute.sslCertificates.create
+- compute.sslCertificates.delete
+- compute.sslCertificates.get
+- compute.sslCertificates.list
+- compute.subnetworks.create
+- compute.subnetworks.delete
+- compute.subnetworks.expandIpCidrRange
+- compute.subnetworks.get
+- compute.subnetworks.list
+- compute.subnetworks.update
+- compute.subnetworks.use
+- compute.subnetworks.useExternalIp
+- compute.targetHttpProxies.create
+- compute.targetHttpProxies.delete
+- compute.targetHttpProxies.get
+- compute.targetHttpProxies.list
+- compute.targetHttpProxies.setUrlMap
+- compute.targetHttpsProxies.create
+- compute.targetHttpsProxies.delete
+- compute.targetHttpsProxies.get
+- compute.targetHttpsProxies.list
+- compute.targetHttpsProxies.setUrlMap
+- compute.targetPools.addInstance
+- compute.targetPools.create
+- compute.targetPools.delete
+- compute.targetPools.get
+- compute.targetPools.list
+- compute.targetPools.removeInstance
+- compute.targetPools.update
+- compute.urlMaps.create
+- compute.urlMaps.delete
+- compute.urlMaps.get
+- compute.urlMaps.list
+- compute.urlMaps.update
+- compute.zones.get
+- compute.zones.list
+
+# IAM Management
+- iam.roles.create
+- iam.roles.delete
+- iam.roles.get
+- iam.roles.list
+- iam.roles.update
+- iam.serviceAccountKeys.create
+- iam.serviceAccountKeys.delete
+- iam.serviceAccountKeys.get
+- iam.serviceAccountKeys.list
+- iam.serviceAccounts.actAs
+- iam.serviceAccounts.create
+- iam.serviceAccounts.delete
+- iam.serviceAccounts.get
+- iam.serviceAccounts.getIamPolicy
+- iam.serviceAccounts.list
+- iam.serviceAccounts.setIamPolicy
+- iam.serviceAccounts.update
+
+# Resource Manager
+- resourcemanager.projects.get
+- resourcemanager.projects.getIamPolicy
+- resourcemanager.projects.setIamPolicy
+
+# Service Usage
+- serviceusage.services.enable
+- serviceusage.services.get
+- serviceusage.services.list
+
+# Logging and Monitoring
+- logging.logEntries.list
+- logging.logs.delete
+- logging.logs.list
+- monitoring.metricDescriptors.create
+- monitoring.metricDescriptors.delete
+- monitoring.metricDescriptors.get
+- monitoring.metricDescriptors.list
+- monitoring.timeSeries.create
+- monitoring.timeSeries.list
+
+# KMS for encryption
+- cloudkms.cryptoKeys.create
+- cloudkms.cryptoKeys.get
+- cloudkms.cryptoKeys.list
+- cloudkms.cryptoKeys.update
+- cloudkms.cryptoKeyVersions.create
+- cloudkms.cryptoKeyVersions.destroy
+- cloudkms.cryptoKeyVersions.get
+- cloudkms.cryptoKeyVersions.list
+- cloudkms.cryptoKeyVersions.useToDecrypt
+- cloudkms.cryptoKeyVersions.useToEncrypt
+- cloudkms.keyRings.create
+- cloudkms.keyRings.get
+- cloudkms.keyRings.list
+
+# Storage (for logs and backups)
+- storage.buckets.create
+- storage.buckets.delete
+- storage.buckets.get
+- storage.buckets.list
+- storage.buckets.update
+- storage.objects.create
+- storage.objects.delete
+- storage.objects.get
+- storage.objects.list
+- storage.objects.update

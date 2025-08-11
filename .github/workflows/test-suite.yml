@@ -138,7 +138,7 @@ jobs:
             # Update gcloud components (this works better in GH Actions)
             gcloud components update --quiet || echo "Note: Some components may require manual update"
           else
-            echo "📦 Installing gcloud CLI..."
+            echo "Installing gcloud CLI..."
             curl https://sdk.cloud.google.com | bash
             source ~/google-cloud-sdk/path.bash.inc
           fi
@@ -150,7 +150,7 @@ jobs:
             unzip awscliv2.zip
             sudo ./aws/install --update
           else
-            echo "📦 Installing AWS CLI..."
+            echo "Installing AWS CLI..."
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
@@ -161,7 +161,7 @@ jobs:
             echo "✅ Azure CLI found, updating..."
             az upgrade --yes
           else
-            echo "📦 Installing Azure CLI..."
+            echo "Installing Azure CLI..."
             curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
           fi
 
@@ -214,6 +214,30 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
+  # IAM policy validation
+  iam-validation:
+    name: IAM Policy Validation
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run IAM test suite
+        run: |
+          echo "Running comprehensive IAM test suite..."
+          ./tests/run-iam-tests.sh
+
   # Documentation validation
   docs-validation:
     name: Documentation Validation
@@ -250,7 +274,7 @@ jobs:
     name: Release Readiness Check
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    needs: [minikube-test, script-validation, security-scan, docs-validation]
+    needs: [minikube-test, script-validation, security-scan, iam-validation, docs-validation]
     steps:
       - uses: actions/checkout@v4
 
@@ -259,23 +283,24 @@ jobs:
           if git describe --tags --exact-match HEAD 2>/dev/null; then
             echo "✅ Commit is tagged for release"
           else
-            echo "ℹ️  Commit is not tagged (development build)"
+            echo "Commit is not tagged (development build)"
           fi
 
       - name: Validate changelog
         run: |
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
-            echo "⚠️  Unreleased changes found in CHANGELOG.md"
+            echo "WARNING: Unreleased changes found in CHANGELOG.md"
           else
             echo "✅ CHANGELOG.md is up to date"
           fi
 
       - name: Create release summary
         run: |
-          echo "## 🚀 Release Readiness Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Security scan completed" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Documentation validated" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Multi-cloud scripts validated" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Readiness Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "- IAM policies validated" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation validated" >> $GITHUB_STEP_SUMMARY
+          echo "- Multi-cloud scripts validated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Ready for production deployment! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for production deployment" >> $GITHUB_STEP_SUMMARY

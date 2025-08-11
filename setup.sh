@@ -319,6 +319,99 @@ collect_azure_config() {
     print_info "Azure Location: $AZURE_LOCATION"
 }
 
+# IAM Setup Functions
+setup_iam_policies() {
+    echo
+    echo -e "${YELLOW}═══════════════════════════════════════════════${NC}"
+    echo -e "${YELLOW}IAM Policy Setup${NC}"
+    echo -e "${YELLOW}═══════════════════════════════════════════════${NC}"
+    echo
+    echo -e "${BLUE}Storm Surge requires administrative permissions to manage Kubernetes clusters.${NC}"
+    echo -e "${BLUE}We can help you apply the necessary IAM policies to your cloud account.${NC}"
+    echo
+    echo -e "${YELLOW}IMPORTANT: You need admin access to apply these policies.${NC}"
+    echo
+    read -p "Would you like to apply IAM policies now? (y/N): " -n 1 -r
+    echo
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        case $CLOUD_PROVIDER in
+            aws)
+                setup_aws_iam
+                ;;
+            gcp)
+                setup_gcp_iam
+                ;;
+            azure)
+                setup_azure_iam
+                ;;
+        esac
+    else
+        echo -e "${YELLOW}Skipping IAM setup.${NC}"
+        echo "You can manually apply policies from: manifests/providerIAM/${CLOUD_PROVIDER}/"
+        echo
+        echo -e "${YELLOW}Warning: Deployment may fail without proper permissions!${NC}"
+        read -p "Press Enter to continue..."
+    fi
+}
+
+setup_aws_iam() {
+    print_step "Setting up AWS IAM policies..."
+    
+    if [ -x "scripts/iam/apply-aws-iam.sh" ]; then
+        scripts/iam/apply-aws-iam.sh
+    else
+        print_error "IAM setup script not found or not executable"
+        echo "Please run manually: bash scripts/iam/apply-aws-iam.sh"
+    fi
+}
+
+setup_gcp_iam() {
+    print_step "Setting up GCP IAM policies..."
+    
+    if [ -x "scripts/iam/apply-gcp-iam.sh" ]; then
+        scripts/iam/apply-gcp-iam.sh
+    else
+        print_error "IAM setup script not found or not executable"
+        echo "Please run manually: bash scripts/iam/apply-gcp-iam.sh"
+    fi
+}
+
+setup_azure_iam() {
+    print_step "Setting up Azure RBAC policies..."
+    
+    if [ -x "scripts/iam/apply-azure-iam.sh" ]; then
+        scripts/iam/apply-azure-iam.sh
+    else
+        print_error "IAM setup script not found or not executable"
+        echo "Please run manually: bash scripts/iam/apply-azure-iam.sh"
+    fi
+}
+
+validate_iam_permissions() {
+    print_step "Validating IAM permissions..."
+    
+    if [ -x "manifests/providerIAM/validate-permissions.sh" ]; then
+        if manifests/providerIAM/validate-permissions.sh "$CLOUD_PROVIDER"; then
+            echo -e "${GREEN}✓ IAM permissions validated successfully${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ IAM permission validation failed${NC}"
+            echo
+            echo -e "${YELLOW}Some required permissions are missing.${NC}"
+            echo "This may cause deployment failures."
+            echo
+            read -p "Continue anyway? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
+        fi
+    else
+        print_warning "Permission validator not found. Skipping validation."
+    fi
+}
+
 # Update configuration files with user values
 update_configuration_files() {
     print_step "Updating configuration files with your settings..."
@@ -531,6 +624,9 @@ EOF
 deploy_infrastructure() {
     print_step "Deploying infrastructure for $CLOUD_PROVIDER..."
     
+    # Validate IAM permissions before deployment
+    validate_iam_permissions
+    
     case $CLOUD_PROVIDER in
         aws)
             deploy_aws
@@ -668,6 +764,16 @@ show_completion_summary() {
     echo
     
     echo -e "${GREEN}Storm Surge deployment completed successfully.${NC}"
+    
+    # Final IAM validation
+    echo
+    print_step "Final IAM validation..."
+    if validate_iam_permissions; then
+        echo -e "${GREEN}✓ IAM permissions verified for cluster management${NC}"
+    else
+        echo -e "${YELLOW}! Some IAM permissions may need adjustment for full cluster management${NC}"
+        echo "Review: manifests/providerIAM/${CLOUD_PROVIDER}/README.md"
+    fi
 }
 
 # Main execution
@@ -677,6 +783,11 @@ main() {
     # Run setup steps
     check_prerequisites
     collect_configuration
+    
+    # IAM setup after cloud provider selection
+    setup_iam_policies
+    
+    # Continue with configuration
     update_configuration_files
     generate_secrets
     
