@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""
+Storm Surge Core Middleware
+Minimal middleware for basic Kubernetes application management
+"""
+
+import os
+import json
+import logging
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import time
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', os.urandom(32).hex())
+
+# Enable CORS for frontend
+CORS(app, origins=["*"])  # Configure appropriately for production
+
+# Basic configuration
+NAMESPACE = os.getenv('NAMESPACE', 'storm-surge-prod')
+CLUSTER_NAME = os.getenv('CLUSTER_NAME', 'storm-surge-prod')
+
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': time.time(),
+        'version': 'core-v1.0.0',
+        'namespace': NAMESPACE,
+        'cluster': CLUSTER_NAME
+    })
+
+
+@app.route('/api/v1/status', methods=['GET'])
+def get_status():
+    """Get application status"""
+    return jsonify({
+        'application': 'Storm Surge Core',
+        'status': 'operational',
+        'timestamp': time.time(),
+        'environment': {
+            'namespace': NAMESPACE,
+            'cluster': CLUSTER_NAME,
+            'pod_name': os.getenv('HOSTNAME', 'unknown'),
+            'node_name': os.getenv('NODE_NAME', 'unknown')
+        }
+    })
+
+
+@app.route('/api/v1/metrics', methods=['GET'])
+def get_metrics():
+    """Get basic application metrics"""
+    return jsonify({
+        'uptime': time.time() - app.start_time,
+        'requests_total': app.request_counter,
+        'timestamp': time.time()
+    })
+
+
+@app.before_request
+def before_request():
+    """Track request metrics"""
+    if not hasattr(app, 'request_counter'):
+        app.request_counter = 0
+    app.request_counter += 1
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({
+        'error': 'Not Found',
+        'message': 'The requested resource was not found',
+        'status': 404
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    logger.error(f"Internal server error: {error}")
+    return jsonify({
+        'error': 'Internal Server Error',
+        'message': 'An internal error occurred',
+        'status': 500
+    }), 500
+
+
+if __name__ == '__main__':
+    logger.info("Starting Storm Surge Core Middleware")
+    logger.info(f"Namespace: {NAMESPACE}")
+    logger.info(f"Cluster: {CLUSTER_NAME}")
+    
+    # Track application start time
+    app.start_time = time.time()
+    app.request_counter = 0
+    
+    # Run the application
+    app.run(host='0.0.0.0', port=8000, debug=False)
