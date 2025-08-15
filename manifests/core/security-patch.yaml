@@ -4,6 +4,9 @@ metadata:
   name: storm-surge-middleware
   namespace: storm-surge-prod
 spec:
+  selector:
+    matchLabels:
+      app: storm-surge-middleware
   template:
     spec:
       securityContext:

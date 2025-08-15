@@ -3,19 +3,23 @@ kind: Kustomization
 
 namespace: storm-surge-prod
 
+# Core resources
 resources:
   - namespace.yaml
-  - ../middleware/configmap-minimal.yaml
-  - ../middleware/deployment-minimal.yaml
-  - ../middleware/service-minimal.yaml
-  - ../middleware/secrets-minimal.yaml
-  - ../security/production-security-hardening.yaml
+  - secrets.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
 
-# Add security patches
-patchesStrategicMerge:
-  - security-patch.yaml
+# Apply security patches
+patches:
+  - path: security-patch.yaml
+    target:
+      kind: Deployment
+      name: storm-surge-middleware
 
-commonLabels:
-  app.kubernetes.io/name: storm-surge-core
-  app.kubernetes.io/version: "1.0.0"
-  app.kubernetes.io/managed-by: kustomize
+labels:
+  - pairs:
+      app.kubernetes.io/name: storm-surge-core
+      app.kubernetes.io/version: "1.0.0"
+      app.kubernetes.io/managed-by: kustomize

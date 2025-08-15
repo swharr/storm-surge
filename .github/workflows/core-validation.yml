@@ -62,7 +62,7 @@ jobs:
         sudo mv kubeval /usr/local/bin/
         
         echo "Validating core manifests..."
-        for file in manifests/core/*.yaml manifests/middleware/*-minimal.yaml; do
+        for file in manifests/core/*.yaml; do
           if [ -f "$file" ] && ! echo "$file" | grep -q "kustomization.yaml"; then
             echo "Validating: $file"
             kubeval --ignore-missing-schemas "$file" || exit 1
@@ -76,12 +76,12 @@ jobs:
         echo "Verifying security contexts..."
         
         # Check deployment has security context
-        if ! grep -q "runAsNonRoot: true" manifests/middleware/deployment-minimal.yaml; then
+        if ! grep -q "runAsNonRoot: true" manifests/core/deployment.yaml; then
           echo "❌ Missing runAsNonRoot in deployment"
           exit 1
         fi
         
-        if ! grep -q "runAsUser: 1000" manifests/middleware/deployment-minimal.yaml; then
+        if ! grep -q "runAsUser: 1000" manifests/core/deployment.yaml; then
           echo "❌ Missing runAsUser in deployment"
           exit 1
         fi
