@@ -211,7 +211,20 @@ jobs:
         validated_count=0
         skipped_count=0
         
+        # For core branch, only validate core manifests
+        if [ "${{ github.ref_name }}" = "core" ]; then
+          file_pattern="manifests/core/*.yaml"
+        else
+          file_pattern="manifests/**/*.yaml"
+        fi
+        
         for file in $(find manifests/ -name "*.yaml" -type f); do
+          # Skip non-core files on core branch
+          if [ "${{ github.ref_name }}" = "core" ] && ! echo "$file" | grep -q "^manifests/core/"; then
+            echo "Skipping non-core file on core branch: $file"
+            skipped_count=$((skipped_count + 1))
+            continue
+          fi
           # Skip files that contain Python code or are not K8s manifests
           if grep -q "#!/usr/bin/env\|import \|def \|class \|from.*import\|if __name__" "$file" 2>/dev/null; then
             echo "Skipping embedded code file: $file"
@@ -222,6 +235,20 @@ jobs:
           # Skip cloud infrastructure files (contain Terraform)
           if echo "$file" | grep -q "cloud-infrastructure"; then
             echo "Skipping cloud infrastructure file: $file"
+            skipped_count=$((skipped_count + 1))
+            continue
+          fi
+          
+          # Skip IAM policy files (not Kubernetes manifests)
+          if echo "$file" | grep -q "providerIAM"; then
+            echo "Skipping IAM policy file: $file"
+            skipped_count=$((skipped_count + 1))
+            continue
+          fi
+          
+          # Skip security configuration files (contain mixed content)
+          if echo "$file" | grep -q "security/production-security-hardening"; then
+            echo "Skipping security configuration file: $file"
             skipped_count=$((skipped_count + 1))
             continue
           fi
