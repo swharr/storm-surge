@@ -83,12 +83,3 @@ spec:
         configMap:
           name: middleware-code
           defaultMode: 0755
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: middleware-code
-  namespace: storm-surge-prod
-data:
-  main_minimal.py: |
-{{ .Files.Get "main_minimal.py" | indent 4 }}

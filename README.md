@@ -1,583 +1,194 @@
-# Storm Surge - Multi-Cloud Kubernetes Platform
+# Storm Surge Core
 
-![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
-![Security](https://img.shields.io/badge/Security-Production--Ready-green?style=for-the-badge)
-![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
-![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
+**Version**: core-v1.0.0
 
-Production-ready microservices platform demonstrating enterprise-grade Kubernetes deployment patterns across AWS EKS, Google GKE, and Azure AKS with comprehensive security controls and infrastructure automation.
+## Overview
+
+Storm Surge Core is a minimal, production-ready Kubernetes deployment stack focused on security and simplicity. This branch contains only the essential components needed to run a basic Kubernetes application with proper security controls.
+
+## Features
+
+- **Multi-Cloud Support**: Deploy to AWS EKS, Google GKE, or Azure AKS
+- **Security-First Design**: Implements Kubernetes security best practices
+- **Minimal Dependencies**: No third-party integrations or external services
+- **Production-Ready**: Includes health checks, monitoring endpoints, and proper resource limits
+- **IAM Policies**: Pre-configured IAM policies for each cloud provider
 
 ## Quick Start
 
-### Automated Deployment
 ```bash
-./setup.sh
+# Interactive setup
+./setup-minimal.sh
+
+# Or with parameters
+./setup-minimal.sh -p aws -r us-west-2 -n 3
 ```
-
-The interactive deployment script provides:
-- **Custom FQDN Configuration**: Configure your domain (e.g., `k8stest.company.com`)
-- **Cloud Provider Selection**: Deploy to AWS EKS, Google GKE, or Azure AKS
-- **Infrastructure as Code**: Automatically configure all deployment manifests
-- **Secret Management**: Generate secure JWT tokens, passwords, and certificates
-- **Complete Stack Deployment**: Infrastructure, load balancers, and SSL certificates
-- **Security Hardening**: Apply production-grade security configurations
-
-### Prerequisites
-- `kubectl` - Kubernetes command-line interface
-- `helm` - Kubernetes package manager  
-- Cloud CLI tools (`aws`/`gcloud`/`az`)
-- `openssl` - Cryptographic operations
-- `jq` - JSON processing utility
-- `terraform` (recommended for infrastructure provisioning)
 
 ## Architecture
 
-### Multi-Cloud Support
-- **AWS EKS**: Application Load Balancer + WAF + ACM certificates
-- **Google GKE**: Global Load Balancer + Cloud Armor + Managed SSL
-- **Azure AKS**: Application Gateway + WAF v2 + Key Vault certificates
+### Core Components
 
-### Application Components
-- **Product Catalog API**: FastAPI with JWT authentication
-- **Shopping Cart Service**: Stateful service with Redis
-- **Order Processing**: Event-driven microservice
-- **Frontend**: React-based TrailForge off-road parts storefront
-- **Databases**: PostgreSQL + Redis with connection pooling
+1. **Middleware Service**
+   - Minimal Python Flask application
+   - Health check endpoint
+   - Basic metrics collection
+   - CORS-enabled for frontend integration
 
-### Security Architecture
-- **Authentication**: JWT with RS256 cryptographic signing
-- **Authorization**: Role-based access control (RBAC)
-- **Input Validation**: SQL injection and XSS prevention
-- **Web Application Firewall**: DDoS mitigation and rate limiting  
-- **Secrets Management**: Cloud-native secret stores integration
-- **Audit Logging**: Comprehensive security event monitoring
-- **Network Security**: Pod security contexts and network policies
+2. **Load Balancer**
+   - Cloud-native load balancer (ELB/GLB/ALB)
+   - Automatic SSL termination (when configured)
+   - Health probe configuration
 
-## Supported Domain Configuration
+3. **Security Features**
+   - Pod Security Standards (restricted)
+   - Network Policies
+   - Secrets management
+   - Non-root containers
+   - Security contexts
 
-The setup script supports any valid FQDN format:
-- `k8stest.company.com`
-- `api.stormsurge.com` 
-- `my-app.example.org`
-- `platform.your-company.io`
+## Deployment
 
-All infrastructure files will be automatically updated with your chosen domain.
+### Prerequisites
 
-## Manual Deployment
+- kubectl installed
+- Cloud provider CLI (aws/gcloud/az)
+- Docker (for local development)
+- Administrative access to cloud account
 
-If you prefer manual deployment:
-
-1. **Configure Domain**:
-   ```bash
-   # Update all files with your FQDN
-   find manifests/ -name "*.yaml" -exec sed -i 's/api\.stormsurge\.example\.com/your-domain.com/g' {} \;
-   ```
-
-2. **Generate Secrets**:
-   ```bash
-   # Create secure passwords
-   kubectl create secret generic app-secrets \
-     --from-literal=JWT_SECRET=$(openssl rand -base64 32) \
-     --from-literal=ADMIN_PASSWORD=$(openssl rand -base64 16)
-   ```
-
-3. **Deploy Infrastructure**:
-   ```bash
-   # For AWS EKS
-   eksctl create cluster -f manifests/cloud-infrastructure/aws-infrastructure.yaml
-   
-   # For Google GKE  
-   cd manifests/cloud-infrastructure && terraform apply -var="project_id=YOUR_PROJECT"
-   
-   # For Azure AKS
-   az group create --name storm-surge-rg --location eastus
-   cd manifests/cloud-infrastructure && terraform apply
-   ```
-
-4. **Deploy Application**:
-   ```bash
-   kubectl apply -f manifests/security/production-security-hardening.yaml
-   kubectl apply -f manifests/dev/services.yaml
-   ```
-
-### Enhanced Deployment Logic
-The main deployment script (`scripts/deploy.sh`) includes comprehensive improvements:
-
-- **Intelligent Argument Parsing**: Robust command-line argument handling with validation and help system
-- **Provider Configuration**: Built-in region/zone mappings for GKE, EKS, and AKS with validation
-- **Interactive Mode**: User-friendly prompts for provider, region, zone, and cluster configuration
-- **Non-Interactive Mode**: `--yes` flag for automated deployments with sensible defaults
-- **Existing Cluster Detection**: Smart detection of existing clusters with user choice options:
-  - Deploy workloads only (faster, reuses existing cluster)
-  - Delete and recreate cluster (slower, fresh start)
-  - Cancel deployment
-- **Multi-Provider Support**: Deploy to single provider or all providers with unified interface
-- **Custom Cluster Naming**: Support for custom cluster names with alphanumeric validation and automatic fallback to defaults
-- **Environment Variable Loading**: Automatic `.env` file loading for configuration
-- **CLI Tool Validation**: Checks for required CLI tools (gcloud, aws, az) before deployment
-- **AWS Profile Support**: Interactive profile selection when no default AWS credentials are configured
-  - Specify profile with `--aws-profile=PROFILE` parameter
-  - Automatic detection and listing of available AWS profiles
-  - Profile validation before deployment
-  - Enhanced error messages for authentication failures
-- **Multi-AZ Support for EKS**: EKS deployments require minimum 2 availability zones
-  - Interactive mode prompts for space-separated zone selection
-  - Non-interactive mode automatically selects first 2 available zones
-  - Zone validation ensures all zones belong to the selected region
-  - Command-line usage: `--zone="us-east-1a us-east-1b us-east-1c"`
-
-### GKE Security Enhancements
-The GKE deployment script (`scripts/providers/gke.sh`) includes enhanced security features:
-
-- **Cluster Hardening**: Creates clusters with shielded nodes, private networking, and disabled legacy authorization
-- **Security Workloads**: Automatically deploys RBAC authentication mapping, namespace role bindings, and validation test pods
-- **Insecure Port Detection**: Comprehensive scanning for insecure ports (10255, 10250-10256, 2379-2380)
-- **Network Policies**: Applies restrictive network policies blocking insecure kubelet access
-- **Automatic Lockdown**: Executes security lockdown script (`lockitdown.sh`) when security issues are detected
-- **RBAC Validation**: Verifies proper role-based access control configuration post-deployment
-
-### Supported Regions & Zones
-
-**GKE (Google Cloud)**
-- `us-central1` (Iowa): zones a, b, c, f
-- `us-east1` (South Carolina): zones b, c, d
-- `us-west1` (Oregon): zones a, b, c
-- `us-west2` (California): zones a, b, c
-- `europe-west1` (Belgium): zones b, c, d
-- `asia-east1` (Taiwan): zones a, b, c
-
-**EKS (AWS)** *(Requires minimum 2 availability zones for high availability)*
-- `us-east-1` (N. Virginia): zones a, b, c, d, e, f
-- `us-east-2` (Ohio): zones a, b, c
-- `us-west-1` (N. California): zones a, b, c
-- `us-west-2` (Oregon): zones a, b, c
-- `eu-west-1` (Ireland): zones a, b, c
-- `ap-southeast-1` (Singapore): zones a, b, c
-
-**AKS (Azure)**
-- `eastus` (East US): zones 1, 2, 3
-- `westus2` (West US 2): zones 1, 2, 3
-- `centralus` (Central US): zones 1, 2, 3
-- `westeurope` (West Europe): zones 1, 2, 3
-- `southeastasia` (Southeast Asia): zones 1, 2, 3
-
-### Production Deployment (Recommended)
-```bash
-# Full deployment with All Features across all three hyperscalers (if configured)
-./scripts/prod_deploy_preview.sh
-
-# Or specify provider directly
-./scripts/prod_deploy_preview.sh --provider=gke #or "azure" or "aws"
-
-# Configuration only (no deployment)
-./scripts/prod_deploy_preview.sh --config-only
-```
-
-The production script will collect your LaunchDarkly SDK key, Spot API token, and cluster configuration interactively.
-
-### AWS Profile Configuration
-
-For EKS deployments, the script supports AWS profile management:
+### Basic Deployment
 
 ```bash
-# Use a specific AWS profile
-./scripts/deploy.sh --provider=eks --aws-profile=production
+# Deploy using Kustomize
+kubectl apply -k manifests/core/
 
-# Interactive profile selection (when no default credentials)
-./scripts/deploy.sh --provider=eks
-# Will prompt: "Select AWS profile for EKS deployment:"
-
-# List available profiles
-aws configure list-profiles
-
-# Configure a new profile
-aws configure --profile myprofile
+# Or deploy individual components
+kubectl apply -f manifests/middleware/configmap-minimal.yaml
+kubectl apply -f manifests/middleware/deployment-minimal.yaml
+kubectl apply -f manifests/middleware/service-minimal.yaml
 ```
 
-**AWS Profile Features:**
-- Automatic detection of missing or expired credentials
-- Interactive profile selection with validation
-- Support for multiple AWS accounts
-- Profile validation before deployment begins
-- Clear error messages for authentication issues
-
----
-
-## Local Testing & Validation
-
-### Quick Local Tests
-```bash
-# Run embedded local validation suite (now supports offline validation)
-./test-local.sh
-
-# Full test suite with comprehensive checks
-./tests/test-suite.sh
-```
-
-### Offline Validation Support
-The testing suite now supports offline validation when no Kubernetes cluster is available:
+### Verify Deployment
 
 ```bash
-# Install standalone kustomize for offline validation (recommended)
-curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-sudo mv kustomize /usr/local/bin/
+# Check pod status
+kubectl get pods -n storm-surge-prod
 
-# Validation priorities:
-# 1. Standalone kustomize (offline-friendly)
-# 2. kubectl with cluster connection (full validation)
-# 3. Basic YAML syntax validation (fallback)
+# Get load balancer URL
+kubectl get service storm-surge-lb -n storm-surge-prod
+
+# Check application health
+curl http://<LOAD_BALANCER_IP>/health
 ```
 
-The validation scripts automatically detect available tools and connectivity, providing graceful fallbacks for offline environments.
+## API Endpoints
 
-### Pre-commit Hooks Setup
-```bash
-# Install pre-commit hooks for automated validation
-pip install pre-commit
-pre-commit install
+- `GET /health` - Health check endpoint
+- `GET /api/v1/status` - Application status
+- `GET /api/v1/metrics` - Basic metrics
 
-# Run pre-commit on all files manually
-pre-commit run --all-files
-
-# Pre-commit automatically runs on git commits to validate:
-# - YAML syntax and formatting
-# - Markdown lint checks
-# - Trailing whitespace removal
-# - End-of-file formatting
-```
-
-### Advanced Test Suites
-```bash
-# Run individual test suites
-python3 tests/test_middleware.py        # Middleware and Flask API tests
-python3 tests/test_security.py          # Security and compliance tests
-python3 tests/test_scripts.py           # Script validation tests
-
-# Run FinOps controller tests (requires virtual environment)
-python3 -m venv finops-venv
-source finops-venv/bin/activate
-pip install -r finops/requirements.txt
-python3 finops/tests/test_basic.py
-python3 finops/tests/test_finops_controller.py
-python3 finops/tests/test_integration.py
-```
-
-### Test Coverage
-
-#### Comprehensive Test Suite (104/112 tests passing - 92.9% success rate)
-
-**FinOps Controller Tests** (43/43 tests - 100% passing)
-- Controller initialization and method validation
-- Environment variable handling and configuration
-- LaunchDarkly integration readiness testing
-- Spot Ocean API integration scenarios
-- Business hours and timezone handling
-- Error handling and failure recovery
-
-**Middleware Tests** (21/24 tests - 87.5% passing)
-- Flask application endpoint testing (health, cluster status)
-- LaunchDarkly webhook handling and validation
-- Spot Ocean API integration and scaling operations
-- Security validation (HMAC signatures, input validation)
-- Error handling scenarios and edge cases
-
-**Security Tests** (15/19 tests - 78.9% passing)
-- Kubernetes security configurations (security contexts, resource limits)
-- Container image security (no :latest tags, trusted registries)
-- Secrets management (no hardcoded secrets, proper Secret resources)
-- Script security (permissions, credentials, shebangs)
-- Dockerfile security practices and compliance checks
-
-**Script Validation Tests** (25/26 tests - 96.2% passing)
-- Script syntax validation and structure
-- Deployment script functionality and parameter validation
-- Cloud provider script authentication and region validation
-- Utility script testing and security aspects
-- Documentation and help functionality
-
-#### Legacy Test Coverage
-- **Script Syntax**: Validates all bash scripts for syntax errors
-- **Parameter Validation**: Tests deployment script argument handling
-- **Zone/Region Validation**: Ensures proper region-zone combinations
-- **Kubernetes Manifests**: Validates all YAML manifests with kustomize
-- **Security Configuration**: Checks for runAsNonRoot, resource limits
-- **Secret Detection**: Scans for hardcoded credentials
-- **Insecure Port Detection**: Validates cluster configuration for insecure ports
-- **RBAC Validation**: Tests role-based access control configuration
-
-### Retry Logic & Error Handling
-
-All deployment scripts include robust retry mechanisms:
-
-```bash
-# Environment variables for retry configuration
-export STORM_RETRY_COUNT=3      # Number of retry attempts (default: 3)
-export STORM_RETRY_DELAY=30     # Delay between retries in seconds (default: 30)
-```
-
-Retry logic applies to:
-- Cluster creation operations
-- Workload deployment
-- Health check validations
-- API calls to cloud providers
-
-## Feature Flag Provider Setup
-
-Storm Surge supports both **LaunchDarkly** and **Statsig** for feature flag management. Use the interactive configuration script to set up your preferred provider.
-
-### Quick Setup
-```bash
-# Interactive configuration for feature flag provider
-python feature_flag_configure.py
-```
-
-### Manual Configuration
-
-#### LaunchDarkly Setup
-1. Create a boolean flag: `enable-cost-optimizer`
-2. Get your **Server-side SDK key** from LaunchDarkly (Account Settings > Projects > Environment)
-3. Configure webhook endpoint (after deployment):
-   - URL: `https://your-domain.com/webhook/launchdarkly`
-   - Secret: Generated during deployment
-
-#### Statsig Setup
-1. Create a feature gate: `enable_cost_optimizer`
-2. Get your **Server Key** from Statsig Console (Project Settings > Keys & Environments)
-3. Configure webhook endpoint (after deployment):
-   - URL: `https://your-domain.com/webhook/statsig`
-   - Secret: Generated during deployment
-
-### Spot API Configuration
-**Pre-Requisite**: You need to have a Spot Console (https://console.spotinst.com) base organization set up with your Admin account verified.
-1. Get your **Spot API token** from Spot Console (Settings > API)
-2. Find your **Spot Cluster ID** (Ocean > Clusters)
-3. Ensure cluster has proper permissions for scaling
+## Configuration
 
 ### Environment Variables
+
+- `NAMESPACE` - Kubernetes namespace (auto-populated)
+- `NODE_NAME` - Node name (auto-populated)
+- `CLUSTER_NAME` - Cluster identifier
+- `FLASK_SECRET_KEY` - Flask session secret (auto-generated)
+
+### Resource Limits
+
+```yaml
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+```
+
+## Security
+
+### IAM Policies
+
+Pre-configured IAM policies are available for each cloud provider:
+
+- AWS: `manifests/providerIAM/aws/eks-admin-policy.json`
+- GCP: `manifests/providerIAM/gcp/gke-admin-role.yaml`
+- Azure: `manifests/providerIAM/azure/aks-admin-role.json`
+
+### Security Best Practices
+
+1. All containers run as non-root
+2. Security contexts enforced
+3. Network policies enabled
+4. Secrets stored securely
+5. No hardcoded credentials
+6. Minimal container capabilities
+
+## Monitoring
+
+Basic monitoring is available through the metrics endpoint:
+
 ```bash
-# Required for production deployment
-export FEATURE_FLAG_PROVIDER="launchdarkly"  # or "statsig"
-export LAUNCHDARKLY_SDK_KEY="api-integration-key-from-ld-here"  # if using LaunchDarkly
-export STATSIG_SERVER_KEY="secret-server-key-from-statsig"      # if using Statsig
-export SPOT_API_TOKEN="your-spot-api-token"
-export SPOT_CLUSTER_ID="ocn-cluster-id"
-export WEBHOOK_SECRET="your-webhook-secret"
+# Get application metrics
+curl http://<LOAD_BALANCER_IP>/api/v1/metrics
 ```
 
-4. Toggle the flag → see automated cluster scaling in real time
+## Testing & Validation
 
----
+### Basic Health Checks
 
-## Cloud Provider Support
-
-| Provider | Script                              | Requirements          | Security Features |
-|----------|-------------------------------------|------------------------|-------------------|
-| GKE      | `scripts/providers/gke.sh`          | `gcloud`, enabled APIs | Enhanced security hardening, insecure port detection, RBAC validation |
-| EKS      | `scripts/providers/eks.sh`          | `aws`, `eksctl`        | Standard security controls |
-| AKS      | `scripts/providers/aks.sh`          | `az`, login session    | Standard security controls |
-
----
-
-## Project Structure
-
-```
-ocean-surge/
-├── scripts/
-│   ├── deploy.sh                    # Interactive deployment with region/zone selection
-│   ├── deploy-middleware.sh         # Middleware-only deployment
-│   ├── deploy-finops.sh            # FinOps controller deployment
-│   ├── test-local.sh               # Embedded local testing suite
-│   ├── prod_deploy_preview.sh      # Production deployment with integrations
-│   ├── cleanup/
-│   │   └── cluster-sweep.sh         # Comprehensive cluster cleanup
-│   └── providers/
-│       ├── gke.sh                   # Google Kubernetes Engine with retry logic
-│       ├── eks.sh                   # Amazon EKS with retry logic
-│       └── aks.sh                   # Azure AKS with retry logic
-├── manifests/
-│   ├── base/                        # Core application manifests
-│   │   ├── kustomization.yaml
-│   │   ├── deployments.yaml         # Core Application with web front end
-│   │   ├── services.yaml
-│   │   ├── configmaps.yaml
-│   │   ├── namespace.yaml           # oceansurge namespace
-│   │   └── hpa.yaml
-│   ├── middleware/                  # API Controller Middleware
-│   │   ├── kustomization.yaml
-│   │   ├── deployment.yaml          # Python Flask middleware
-│   │   ├── service.yaml             # LoadBalancer + Ingress
-│   │   ├── configmap.yaml           # Application code + configuration
-│   │   └── secret.yaml              # API keys and webhooks
-│   ├── sec_fixes/                   # Security validation and hardening (GKE-specific)
-│   │   ├── rbac_authmap.yaml        # RBAC authentication mapping
-│   │   ├── rbac_namespace_fix.yaml  # RBAC namespace role binding
-│   │   └── sectest_validate.yaml    # Security validation test pod
-│   └── finops/                      # FinOps controller manifests
-│       └── kustomization.yaml
-├── tests/
-│   ├── test-suite.sh               # Comprehensive test suite
-│   ├── hooks/                       # Git hooks for validation
-│   │   ├── validate-deploy-scripts.sh
-│   │   ├── validate-manifests.sh
-│   │   └── validate-security.sh
-│   └── README.md
-├── finops/
-│   ├── finops_controller.py         # FinOps controller implementation
-│   ├── requirements.txt
-│   └── tests/                       # FinOps-specific tests
-├── logs/                            # Deployment logs
-├── .env                            # Environment configuration
-└── README.md
-```
-
----
-
-## Current Status
-
-- [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
-- [x] **Robust Error Handling**: Comprehensive retry logic and validation
-- [x] **Security Hardening**: Embedded security checks and validation with insecure port detection
-- [x] **Local Testing Suite**: Built-in validation with syntax, security, and offline-capable manifest checks
-- [x] **Cluster Management**: Smart detection and handling of existing clusters
-- [x] **Interactive Configuration**: User-friendly deployment with guided setup
-- [x] **Enhanced Deployment Logic**: Improved argument parsing, validation, and multi-provider support with intelligent defaults
-- [x] **Existing Cluster Management**: Smart detection and handling of existing clusters with user choice options
-- [x] **Security Workloads Integration**: RBAC validation, authenticated kubelet access testing, and defensive security measures (GKE-specific)
-- [x] **Enhanced GKE Security**: Integrated security workloads deployment, comprehensive insecure port detection, and automatic security lockdown script execution
-- [x] **Offline Validation Support**: Standalone kustomize validation with graceful fallbacks for offline environments
-- [x] **Shell Script Quality**: ShellCheck compliant scripts with proper quoting, error handling, and input validation
-- [ ] **LaunchDarkly Webhook Integration**: Real-time feature flag processing (In Progress)
-- [ ] **Spot Ocean API Integration**: Automated cluster scaling (In Progress)
-- [x] **Production Middleware**: Flask app with proper security
-- [x] **Load Testing**: Built-in traffic generation and scaling tests
-- [x] **Monitoring**: Health checks, logging, and status endpoints
-
-### Security Features
-
-- **Non-root containers**: All deployments run with `runAsNonRoot: true`
-- **Resource limits**: Comprehensive CPU/memory limits on all workloads
-- **Secret management**: No hardcoded credentials, proper Kubernetes secrets
-- **Namespace isolation**: Dedicated `oceansurge` namespace for all resources
-- **Validation hooks**: Pre-commit hooks for security and syntax validation
-- **Region restrictions**: Cloud deployment restricted to approved regions only
-- **Insecure port hardening**: Automatic detection and mitigation of insecure ports (10255, 10250-10256, 2379-2380) - GKE deployments
-- **Network policies**: Restrictive network policies blocking insecure kubelet access - GKE deployments
-- **RBAC validation**: Comprehensive role-based access control with authenticated kubelet access testing - GKE deployments
-- **Security workloads**: Integrated security validation pods and defensive security measures - GKE deployments
-- **Cluster hardening**: Enhanced GKE cluster creation with shielded nodes, private networking, and disabled legacy authorization
-
-> **Note**: The security workloads in `manifests/sec_fixes/` are specifically designed for GKE deployments to address Google Cloud-specific security configurations. **AKS and EKS users do not need these security fixes** as Azure and AWS managed Kubernetes services have different security models and built-in protections.
-
-## Roadmap
-
-- [ ] OpenFeature + flagd support
-- [ ] Backstage IDP Scaffolding
-- [ ] Microsoft Azure DevOps Pipeline
-- [ ] Github Runners for Deploy
-- [ ] FinOps Alerts based on infra changes
-- [ ] Advanced Spot Ocean policies (scheduling, taints)
-- [ ] GitOps flow via ArgoCD
-- [ ] FinOps Dashboard plugin
-- [ ] Multi-cluster support
-- [ ] Advanced cost analytics
-- [ ] Karpenter Support?
-- [ ] Bring your own Application to test with
-- [ ] NetApp Trident / Cloud Insights integration for Storage control (and testing)
-
----
-
-## Support Channels
-
-- [Flexera Docs](https://docs.spot.io)
-- [Spot Slack](https://community.flexera.com)
-- GitHub Issues
-
----
-
-## Usage Examples
-
-### Basic Platform Deployment
 ```bash
-# Deploy the platform application
-./scripts/deploy.sh --provider=gke
+# Test health endpoint
+curl http://<LOAD_BALANCER_IP>/health
+
+# Check API status
+curl http://<LOAD_BALANCER_IP>/api/v1/status
+
+# Monitor metrics
+curl http://<LOAD_BALANCER_IP>/api/v1/metrics
 ```
 
-### Full Production Stack
+### Deployment Validation
+
 ```bash
-# Deploy with LaunchDarkly + Spot API integration
-./scripts/prod_deploy_preview.sh --provider=gke
+# Verify all pods are running
+kubectl get pods -n storm-surge-prod
 
-# Monitor middleware logs
-kubectl logs -f deployment/ld-spot-middleware -n oceansurge
+# Check deployment status
+kubectl rollout status deployment/storm-surge-middleware -n storm-surge-prod
 
-# Check scaling status
-kubectl get hpa -n oceansurge
+# View logs
+kubectl logs -f deployment/storm-surge-middleware -n storm-surge-prod
 ```
 
-### Testing the Integration
+### Security Validation
+
 ```bash
-# Create the cost optimizer flag in LaunchDarkly
-# Toggle flag ON → Cluster scales down for cost optimization
-# Toggle flag OFF → Cluster scales up for performance
+# Verify security contexts
+kubectl get pods -n storm-surge-prod -o jsonpath='{.items[*].spec.securityContext}'
 
-# Monitor scaling in Spot Console
-# Check middleware webhook logs
-kubectl logs -f deployment/ld-spot-middleware -n oceansurge
-
-# Run local validation before deployment
-./test-local.sh
-
-# Test specific provider deployment with custom cluster name
-export STORM_REGION="us-central1"
-export STORM_ZONE="us-central1-a"
-export STORM_NODES="3"
-export STORM_CLUSTER_NAME="my-test-cluster"
-./scripts/providers/gke.sh
+# Check service endpoints
+kubectl get endpoints -n storm-surge-prod
 ```
 
-### Troubleshooting
+## Cleanup
 
-**Zone/Region Mismatch**
+To remove the deployment:
+
 ```bash
-# Error: Zone 'us-west-2-a' invalid for region 'us-central1'
-# Solution: Use matching zone (us-central1-a) or different region
+# Delete all resources
+kubectl delete namespace storm-surge-prod
+
+# Or use cloud-specific cleanup
+./scripts/cleanup/<provider>-cleanup.sh
 ```
 
-**Existing Cluster Detected**
-```bash
-# The deployment script will prompt you to:
-# 1) Deploy workloads only (reuse existing cluster)
-# 2) Delete and recreate cluster (fresh start)
-# 3) Cancel deployment
-```
+## Support
 
-**Custom Cluster Naming**
-```bash
-# Interactive mode prompts for cluster name
-./scripts/deploy.sh --provider=gke
-# Enter custom name or press Enter for default: storm-surge-gke
+For issues or questions, please refer to the main Storm Surge documentation or create an issue in the repository.
 
-# Non-interactive mode with custom name
-./scripts/deploy.sh --provider=gke --cluster-name=production-cluster --yes
+## License
 
-# Invalid names automatically fall back to defaults
-./scripts/deploy.sh --provider=gke --cluster-name=invalid@name --yes
-# Will use: storm-surge-gke (default)
-```
-
-**Retry Logic in Action**
-```bash
-# Deployment operations will automatically retry on failure:
-# 📋 Creating cluster (attempt 1/3)...
-# ⚠️  Creating cluster failed, retrying in 30s...
-# 📋 Creating cluster (attempt 2/3)...
-# ✅ Creating cluster succeeded
-```
-
----
-
-**Version**: dev-v1.2.0-internal
-**Updated**: 2025-08-06 - Internal development release with multi-cloud infrastructure, production security hardening, and professional documentation
-**Status**: DEVELOPMENT RELEASE - Internal Testing and Validation
-Professional multi-cloud Kubernetes platform for enterprise engineering teams
+See LICENSE file in the root directory.

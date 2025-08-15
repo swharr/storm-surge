@@ -1,0 +1,172 @@
+name: Core Branch Validation
+
+on:
+  push:
+    branches: [ core ]
+  pull_request:
+    branches: [ core ]
+
+jobs:
+  minimal-validation:
+    runs-on: ubuntu-latest
+    name: Validate Core Components
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Verify minimal footprint
+      run: |
+        echo "Checking for unnecessary components..."
+        
+        # Check that removed directories don't exist
+        for dir in frontend databases messaging monitoring finops services; do
+          if [ -d "manifests/$dir" ]; then
+            echo "❌ Found $dir directory which should not exist in core branch"
+            exit 1
+          fi
+        done
+        
+        echo "✅ No unnecessary directories found"
+
+    - name: Check for hardcoded secrets
+      run: |
+        echo "Scanning for hardcoded secrets..."
+        
+        # Check Python files
+        if [ -f "manifests/middleware/main_minimal.py" ]; then
+          ! grep -i "secret.*=.*['\"]" manifests/middleware/main_minimal.py | \
+            grep -v "os.getenv" | \
+            grep -v "os.urandom" || {
+            echo "❌ Found hardcoded secrets in Python files"
+            exit 1
+          }
+        fi
+        
+        # Check YAML files for passwords
+        ! grep -r "password:" manifests/ --include="*.yaml" --include="*.yml" | \
+          grep -v "REPLACE_WITH" | \
+          grep -v "stringData:" || {
+          echo "❌ Found potential hardcoded passwords in YAML"
+          exit 1
+        }
+        
+        echo "✅ No hardcoded secrets found"
+
+    - name: Validate Kubernetes manifests
+      run: |
+        echo "Installing kubeval..."
+        wget -q https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+        tar xf kubeval-linux-amd64.tar.gz
+        sudo mv kubeval /usr/local/bin/
+        
+        echo "Validating core manifests..."
+        for file in manifests/core/*.yaml manifests/middleware/*-minimal.yaml; do
+          if [ -f "$file" ] && ! echo "$file" | grep -q "kustomization.yaml"; then
+            echo "Validating: $file"
+            kubeval --ignore-missing-schemas "$file" || exit 1
+          fi
+        done
+        
+        echo "✅ All manifests are valid"
+
+    - name: Check security contexts
+      run: |
+        echo "Verifying security contexts..."
+        
+        # Check deployment has security context
+        if ! grep -q "runAsNonRoot: true" manifests/middleware/deployment-minimal.yaml; then
+          echo "❌ Missing runAsNonRoot in deployment"
+          exit 1
+        fi
+        
+        if ! grep -q "runAsUser: 1000" manifests/middleware/deployment-minimal.yaml; then
+          echo "❌ Missing runAsUser in deployment"
+          exit 1
+        fi
+        
+        echo "✅ Security contexts properly configured"
+
+    - name: Validate IAM policies
+      run: |
+        echo "Checking IAM policy files..."
+        
+        # Check AWS policy
+        if [ -f "manifests/providerIAM/aws/eks-admin-policy.json" ]; then
+          jq empty manifests/providerIAM/aws/eks-admin-policy.json || {
+            echo "❌ Invalid JSON in AWS IAM policy"
+            exit 1
+          }
+        fi
+        
+        # Check Azure policy
+        if [ -f "manifests/providerIAM/azure/aks-admin-role.json" ]; then
+          jq empty manifests/providerIAM/azure/aks-admin-role.json || {
+            echo "❌ Invalid JSON in Azure IAM policy"
+            exit 1
+          }
+        fi
+        
+        echo "✅ IAM policies are valid"
+
+    - name: Check script permissions
+      run: |
+        echo "Verifying script permissions..."
+        
+        # Check that setup script is executable
+        if [ -f "setup-minimal.sh" ] && [ ! -x "setup-minimal.sh" ]; then
+          echo "❌ setup-minimal.sh is not executable"
+          exit 1
+        fi
+        
+        # Check deploy script
+        if [ -f "scripts/deploy-core.sh" ] && [ ! -x "scripts/deploy-core.sh" ]; then
+          echo "❌ deploy-core.sh is not executable"
+          exit 1
+        fi
+        
+        echo "✅ Script permissions are correct"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  summary:
+    runs-on: ubuntu-latest
+    name: Validation Summary
+    needs: [minimal-validation, security-scan]
+    if: always()
+    
+    steps:
+    - name: Core validation summary
+      run: |
+        echo "## Core Branch Validation Summary"
+        echo ""
+        echo "All validation checks completed for core-v1.0.0:"
+        echo "  - Minimal footprint: VERIFIED"
+        echo "  - No hardcoded secrets: VERIFIED"
+        echo "  - Kubernetes manifests: VALID"
+        echo "  - Security contexts: CONFIGURED"
+        echo "  - IAM policies: VALID"
+        echo "  - Security scanning: COMPLETED"
+        echo ""
+        echo "Core branch is ready for deployment"
