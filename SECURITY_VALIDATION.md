@@ -34,7 +34,7 @@ Run before committing:
 ```
 
 This script validates:
-- No hardcoded credentials
+- No hardcoded credentials (excludes CHANGEME_ and REPLACE_WITH placeholders)
 - No API keys exposed
 - No secret files (.pem, .key, .pfx)
 - Security contexts configured

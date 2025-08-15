@@ -42,9 +42,11 @@ FAILED=false
 print_header
 
 # Check 1: Hardcoded credentials
+# Excludes legitimate placeholders (CHANGEME_, REPLACE_WITH) and config patterns
 print_check "Scanning for hardcoded credentials..."
 if grep -r -i "password.*=" manifests/ --include="*.yaml" --include="*.yml" 2>/dev/null | \
    grep -v "REPLACE_WITH" | \
+   grep -v "CHANGEME_" | \
    grep -v "#" | \
    grep -v "stringData:" | \
    grep -v "password_encryption" | \

@@ -46,6 +46,7 @@ jobs:
         # Check YAML files for passwords
         ! grep -r "password:" manifests/ --include="*.yaml" --include="*.yml" | \
           grep -v "REPLACE_WITH" | \
+          grep -v "CHANGEME_" | \
           grep -v "stringData:" || {
           echo "❌ Found potential hardcoded passwords in YAML"
           exit 1
