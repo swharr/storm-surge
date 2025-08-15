@@ -128,6 +128,26 @@ jobs:
         
         echo "✅ Script permissions are correct"
 
+    - name: Validate core documentation
+      run: |
+        echo "Checking core documentation..."
+        
+        # Check for core security documentation
+        if [ -f "manifests/CORE_SECURITY.md" ]; then
+          echo "✅ Core security documentation exists"
+        else
+          echo "❌ Missing core security documentation"
+          exit 1
+        fi
+        
+        # Check for core README
+        if [ -f "README.md" ]; then
+          echo "✅ Core README exists"
+        else
+          echo "❌ Missing README.md"
+          exit 1
+        fi
+
   security-scan:
     runs-on: ubuntu-latest
     name: Security Scanning
