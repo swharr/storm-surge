@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: oceansurge
-  labels:
-    name: oceansurge
-    app.kubernetes.io/name: storm-surge
-    app.kubernetes.io/part-of: oceansurge
-    storm-surge.io/managed: "true"

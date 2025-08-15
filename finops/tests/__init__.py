@@ -1,1 +1,0 @@
-# FinOps Controller Tests Package

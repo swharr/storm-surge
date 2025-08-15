@@ -135,6 +135,44 @@ Basic monitoring is available through the metrics endpoint:
 curl http://<LOAD_BALANCER_IP>/api/v1/metrics
 ```
 
+## Testing & Validation
+
+### Basic Health Checks
+
+```bash
+# Test health endpoint
+curl http://<LOAD_BALANCER_IP>/health
+
+# Check API status
+curl http://<LOAD_BALANCER_IP>/api/v1/status
+
+# Monitor metrics
+curl http://<LOAD_BALANCER_IP>/api/v1/metrics
+```
+
+### Deployment Validation
+
+```bash
+# Verify all pods are running
+kubectl get pods -n storm-surge-prod
+
+# Check deployment status
+kubectl rollout status deployment/storm-surge-middleware -n storm-surge-prod
+
+# View logs
+kubectl logs -f deployment/storm-surge-middleware -n storm-surge-prod
+```
+
+### Security Validation
+
+```bash
+# Verify security contexts
+kubectl get pods -n storm-surge-prod -o jsonpath='{.items[*].spec.securityContext}'
+
+# Check service endpoints
+kubectl get endpoints -n storm-surge-prod
+```
+
 ## Cleanup
 
 To remove the deployment:
