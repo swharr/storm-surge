@@ -31,6 +31,22 @@ The interactive deployment script provides:
 - `jq` - JSON processing utility
 - `terraform` (recommended for infrastructure provisioning)
 
+## Platform Management
+
+### Cluster Status Monitoring
+```bash
+./scripts/pstats.sh              # Full platform status across all clouds
+./scripts/pstats.sh --aws-only   # Check AWS EKS clusters
+./scripts/pstats.sh --demo       # View demo output with sample data
+```
+
+The `pstats.sh` tool provides:
+- **Multi-Cloud Visibility**: Monitor clusters across AWS, GCP, and Azure
+- **Resource Tracking**: Node count, pod status, and workload health
+- **Cost Information**: Integration with cloud billing APIs
+- **Uptime Monitoring**: Track deployment and cluster uptime
+- **Quick Actions**: Direct links to cleanup and deployment scripts
+
 ## Architecture
 
 ### Multi-Cloud Support
