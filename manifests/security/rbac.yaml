@@ -1,0 +1,243 @@
+# RBAC Configuration for Storm Surge Application
+# Implements principle of least privilege
+---
+# ServiceAccount for frontend pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  namespace: oceansurge
+  labels:
+    app: frontend
+---
+# ServiceAccount for backend services
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-sa
+  namespace: oceansurge
+  labels:
+    tier: backend
+---
+# ServiceAccount for middleware
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: middleware-sa
+  namespace: oceansurge
+  labels:
+    app: middleware
+---
+# ServiceAccount for database pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: database-sa
+  namespace: oceansurge
+  labels:
+    tier: database
+---
+# ServiceAccount for monitoring
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-sa
+  namespace: oceansurge
+  labels:
+    tier: monitoring
+---
+# Role for backend services to read ConfigMaps and Secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-reader
+  namespace: oceansurge
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+  resourceNames: ["api-security-secrets", "jwt-secrets"]
+---
+# Role for middleware to read secrets and manage pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: middleware-operator
+  namespace: oceansurge
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "update"]
+---
+# Role for monitoring to read metrics
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: monitoring-reader
+  namespace: oceansurge
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+---
+# RoleBinding for backend services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-reader-binding
+  namespace: oceansurge
+subjects:
+- kind: ServiceAccount
+  name: backend-sa
+  namespace: oceansurge
+roleRef:
+  kind: Role
+  name: backend-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for middleware
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: middleware-operator-binding
+  namespace: oceansurge
+subjects:
+- kind: ServiceAccount
+  name: middleware-sa
+  namespace: oceansurge
+roleRef:
+  kind: Role
+  name: middleware-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring-reader-binding
+  namespace: oceansurge
+subjects:
+- kind: ServiceAccount
+  name: monitoring-sa
+  namespace: oceansurge
+roleRef:
+  kind: Role
+  name: monitoring-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRole for finops controller (needs cluster-wide view)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: finops-controller
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+---
+# ServiceAccount for finops controller
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finops-controller-sa
+  namespace: oceansurge
+---
+# ClusterRoleBinding for finops controller
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: finops-controller-binding
+subjects:
+- kind: ServiceAccount
+  name: finops-controller-sa
+  namespace: oceansurge
+roleRef:
+  kind: ClusterRole
+  name: finops-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+# PodSecurityPolicy (or Pod Security Standards for newer K8s)
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: false
+---
+# ClusterRole to use the PSP
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: restricted-psp-user
+rules:
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+  resourceNames:
+  - restricted-psp
+---
+# Bind PSP to all service accounts in namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: restricted-psp-all-serviceaccounts
+roleRef:
+  kind: ClusterRole
+  name: restricted-psp-user
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: Group
+  name: system:serviceaccounts:oceansurge
+  apiGroup: rbac.authorization.k8s.io
