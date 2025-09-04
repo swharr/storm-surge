@@ -1,0 +1,57 @@
+# Demo-specific patches for enhanced conference experience
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        storm-surge.io/demo: conference
+    spec:
+      containers:
+      - name: frontend
+        env:
+        - name: DEMO_BANNER
+          value: "Storm Surge - Conference Demo"
+        - name: DEMO_MODE
+          value: "true"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        storm-surge.io/demo: conference
+    spec:
+      containers:
+      - name: shopping-cart
+        env:
+        - name: LOAD_SIMULATION
+          value: "enabled"
+        - name: DEMO_MODE
+          value: "true"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        storm-surge.io/demo: conference
+    spec:
+      containers:
+      - name: product-catalog
+        env:
+        - name: DEMO_MODE
+          value: "true"

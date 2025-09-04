@@ -1,0 +1,49 @@
+# YAML Lint Configuration for Storm Surge Security
+extends: default
+
+rules:
+  # Security-focused YAML linting rules
+  line-length:
+    max: 120
+    level: warning
+  
+  # Allow long lines in base64 encoded secrets and certificates  
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+  
+  # Security: Ensure consistent formatting for readability
+  trailing-spaces: enable
+  empty-lines:
+    max: 2
+    max-start: 1
+    max-end: 1
+  
+  # Security: Enforce consistent key ordering for easier review
+  key-ordering: disable  # Kubernetes manifests have specific ordering requirements
+  
+  # Allow longer lines for URLs, base64 data, and complex configurations
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: true
+  
+  # Security-specific rules
+  quoted-strings:
+    quote-type: double
+    required: only-when-needed
+  
+  # Allow empty values for optional security configurations
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+# Ignore patterns for security scanning
+ignore: |
+  *.spdx.json
+  *.sarif
+  build/
+  logs/
+  .git/
+  node_modules/
+  venv/

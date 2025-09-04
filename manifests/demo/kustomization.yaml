@@ -1,0 +1,43 @@
+# Conference Demo Kustomization - Well-Architected Stack
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base configuration
+resources:
+- ../base
+- ../monitoring
+- ../finops
+
+# Namespace override
+namespace: oceansurge
+
+# Demo-specific patches
+patchesStrategicMerge:
+- demo-patches.yaml
+
+# ConfigMap generators for demo content
+configMapGenerator:
+- name: demo-config
+  literals:
+  - DEMO_MODE=true
+  - CONFERENCE_NAME="Cloud Native Conference 2025"
+  - LOAD_GENERATOR_ENABLED=true
+  - SCALING_DEMO_ACTIVE=true
+  
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Labels for demo environment
+labels:
+- pairs:
+    storm-surge.io/environment: demo
+    storm-surge.io/conference: "true"
+
+commonAnnotations:
+  storm-surge.io/demo-version: "v1.0.0"
+  storm-surge.io/architecture-review: "well-architected-compliant"
+
+# Use enhanced images
+images:
+- name: nginxinc/nginx-unprivileged
+  newTag: 1.25-alpine

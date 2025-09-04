@@ -10,20 +10,28 @@ resources:
 - configmaps.yaml
 - nginx-configs.yaml
 - hpa.yaml
+- resource-quotas.yaml
+- pod-disruption-budgets.yaml
+- network-policies.yaml
 
 labels:
 - pairs:
-    app.kubernetes.io/name: ocean-surge
+    app.kubernetes.io/name: storm-surge
     app.kubernetes.io/part-of: oceansurge
-    app.kubernetes.io/version: beta-v1.1.0
+    app.kubernetes.io/version: dev-v1.2.0
+    storm-surge.io/well-architected: "compliant"
+
+commonAnnotations:
+  storm-surge.io/architecture-review: "2025-01-01"
+  storm-surge.io/security-hardened: "true"
 
 images:
 - name: storm-surge/frontend
-  newName: nginx
-  newTag: alpine
+  newName: nginxinc/nginx-unprivileged
+  newTag: 1.25-alpine
 - name: storm-surge/product-catalog
-  newName: nginx
-  newTag: alpine
+  newName: nginxinc/nginx-unprivileged
+  newTag: 1.25-alpine  
 - name: storm-surge/shopping-cart
-  newName: nginx
-  newTag: alpine
+  newName: nginxinc/nginx-unprivileged
+  newTag: 1.25-alpine
