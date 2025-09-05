@@ -294,7 +294,7 @@ class TestWebhookSecurity(unittest.TestCase):
         mock_provider.verify_webhook_signature.return_value = False
         mock_flag_manager.get_provider.return_value = mock_provider
         mock_flag_manager.get_provider_type.return_value = 'launchdarkly'
-        
+
         webhook_payload = {
             'kind': 'flag',
             'data': {

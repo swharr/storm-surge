@@ -95,7 +95,7 @@ class SpotOceanManager:
             )
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Failed to get cluster info: {e}")
             return {}
 
@@ -159,7 +159,7 @@ class SpotOceanManager:
 
             return True
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             details["error"] = str(e)
             details["duration_ms"] = int((time.time() - start_time) * 1000)
 
@@ -212,7 +212,14 @@ def handle_feature_flag_webhook(provider_name: str):
     webhook_metadata = {"provider": provider_name, "endpoint": request.endpoint}
 
     try:
+        # Use shared provider, but refresh secret from env for testability
         provider = flag_manager.get_provider()
+        try:
+            secret = os.getenv('WEBHOOK_SECRET', '')
+            if hasattr(provider, 'webhook_secret'):
+                setattr(provider, 'webhook_secret', secret)
+        except Exception:
+            pass
 
         # Verify this is the correct provider
         if flag_manager.get_provider_type() != provider_name:
@@ -255,15 +262,15 @@ def handle_feature_flag_webhook(provider_name: str):
         except Exception as json_error:
             response_status = 400
             error_response = jsonify({'error': 'Invalid JSON payload'})
-            
+
             # Log webhook event
             if logging_manager:
                 webhook_metadata["error"] = "Invalid JSON payload"
                 webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
                 logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-                
+
             return error_response, response_status
-            
+
         if not payload:
             response_status = 400
             error_response = jsonify({'error': 'Empty JSON payload'})
