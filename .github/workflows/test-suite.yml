@@ -52,7 +52,10 @@ jobs:
           npx tsc --noEmit --skipLibCheck
 
       - name: Run pre-commit hooks
-        run: pre-commit run --all-files || true
+        run: pre-commit run --all-files
+
+      - name: Run local validations (offline)
+        run: ./test-local.sh
 
   # Frontend tests
   frontend-test:

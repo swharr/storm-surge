@@ -60,7 +60,6 @@ export default function Layout({ user, children }: LayoutProps) {
       window.location.href = '/login'
     } catch (error) {
       // Force logout even if API call fails
-      localStorage.removeItem('storm_surge_token')
       window.location.href = '/login'
     }
   }

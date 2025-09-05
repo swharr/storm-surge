@@ -27,3 +27,6 @@ flask-cors==4.0.0
 
 # Password hashing
 bcrypt==4.0.1
+
+# Rate limiting
+Flask-Limiter==3.7.0
