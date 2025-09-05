@@ -1,0 +1,48 @@
+# Trivy configuration for Storm Surge
+# See: https://aquasecurity.github.io/trivy/latest/docs/references/configuration/config-file/
+
+# Scanner configuration
+scan:
+  scanners:
+    - vuln
+    - secret
+  
+# Vulnerability settings  
+vulnerability:
+  type:
+    - os
+    - library
+  
+# Output settings
+format: sarif
+output: trivy-results.sarif
+
+# Severity levels to report
+severity:
+  - HIGH
+  - CRITICAL
+
+# Skip files and directories
+skip-files:
+  - "**/.git/**"
+  - "**/node_modules/**" 
+  - "**/.npm/**"
+  - "**/coverage/**"
+  - "**/test-logs/**"
+
+# Skip directories entirely
+skip-dirs:
+  - ".git"
+  - "node_modules"
+  - ".npm"
+  - "coverage"
+  - "test-logs"
+
+# Secret scanner configuration  
+secret:
+  skip-files:
+    - "**/.trivyignore"
+    - "**/trivy.yaml"
+    - "**/*.md"
+    - "**/CHANGELOG.md"
+    - "**/LICENSE"

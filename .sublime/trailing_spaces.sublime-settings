@@ -1,0 +1,12 @@
+{
+    "trailing_spaces_enabled": true,
+    "trailing_spaces_trim_on_save": true,
+    "trailing_spaces_save_after_trim": true,
+    "trailing_spaces_highlight_color": "invalid",
+    "trailing_spaces_file_max_size": 1048576,
+    "trailing_spaces_include_current_line": false,
+    "trailing_spaces_include_empty_lines": true,
+    "trailing_spaces_regexp": "[ \t]+",
+    "trailing_spaces_scope_ignore": ["comment", "string"],
+    "trailing_spaces_syntax_ignore": ["Markdown", "Plain text"]
+}

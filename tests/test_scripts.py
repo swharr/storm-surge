@@ -84,7 +84,7 @@ class TestDeploymentScript(unittest.TestCase):
 
         # Should contain help information
         output = result.stdout + result.stderr
-        self.assertIn('Usage:', output.lower())
+        self.assertIn('usage:', output.lower())
 
     def test_deploy_script_invalid_provider(self):
         """Test deployment script with invalid provider"""
@@ -279,7 +279,7 @@ class TestScriptSyntax(unittest.TestCase):
                 for line_num, line in enumerate(lines, 1):
                     for pattern in deprecated_patterns:
                         if pattern in line and not line.strip().startswith('#'):
-                            print(f"⚠️  Script {script_file}:{line_num} uses deprecated syntax: {line.strip()}")
+                            print(f"WARN: Script {script_file}:{line_num} uses deprecated syntax: {line.strip()}")
 
     def test_scripts_use_proper_variable_quoting(self):
         """Test that scripts use proper variable quoting"""
@@ -292,7 +292,7 @@ class TestScriptSyntax(unittest.TestCase):
                 # Look for unquoted variables that might cause issues
                 # This is a basic check - a full implementation would be more complex
                 if '$@' in content and '"$@"' not in content:
-                    print(f"⚠️  Script {script_file} might need to quote $@ properly")
+                    print(f"WARN: Script {script_file} might need to quote $@ properly")
 
 
 class TestScriptFunctionality(unittest.TestCase):
@@ -320,7 +320,7 @@ class TestScriptFunctionality(unittest.TestCase):
                 ])
 
                 if not has_error_handling:
-                    print(f"⚠️  Script {script_file} might need better error handling")
+                    print(f"WARN: Script {script_file} might need better error handling")
 
     def test_scripts_validate_prerequisites(self):
         """Test that scripts validate prerequisites"""
@@ -333,11 +333,11 @@ class TestScriptFunctionality(unittest.TestCase):
                 # Check if scripts validate required tools
                 if 'kubectl' in content:
                     if 'command -v kubectl' not in content and 'which kubectl' not in content:
-                        print(f"⚠️  Script {script_file} uses kubectl but doesn't validate it's installed")
+                        print(f"WARN: Script {script_file} uses kubectl but doesn't validate it's installed")
 
                 if 'docker' in content:
                     if 'command -v docker' not in content and 'which docker' not in content:
-                        print(f"⚠️  Script {script_file} uses docker but doesn't validate it's installed")
+                        print(f"WARN: Script {script_file} uses docker but doesn't validate it's installed")
 
     def test_scripts_provide_user_feedback(self):
         """Test that scripts provide user feedback"""
@@ -358,7 +358,7 @@ class TestScriptFunctionality(unittest.TestCase):
                 ])
 
                 if not has_feedback:
-                    print(f"⚠️  Script {script_file} might need better user feedback")
+                    print(f"WARN: Script {script_file} might need better user feedback")
 
 
 class TestScriptSecurity(unittest.TestCase):
@@ -402,7 +402,7 @@ class TestScriptSecurity(unittest.TestCase):
                 if '/tmp/' in content:
                     # Look for mktemp usage
                     if 'mktemp' not in content:
-                        print(f"⚠️  Script {script_file} uses /tmp without mktemp")
+                        print(f"WARN: Script {script_file} uses /tmp without mktemp")
 
     def test_scripts_validate_inputs(self):
         """Test that scripts validate inputs"""
@@ -424,7 +424,7 @@ class TestScriptSecurity(unittest.TestCase):
                     ])
 
                     if not has_validation:
-                        print(f"⚠️  Script {script_file} takes arguments but might not validate them")
+                        print(f"WARN: Script {script_file} takes arguments but might not validate them")
 
 
 class TestScriptDocumentation(unittest.TestCase):
@@ -450,7 +450,7 @@ class TestScriptDocumentation(unittest.TestCase):
                         break
 
                 if not has_description:
-                    print(f"⚠️  Script {script_file} should have a description comment")
+                    print(f"WARN: Script {script_file} should have a description comment")
 
     def test_main_scripts_have_help(self):
         """Test that main scripts have help functionality"""
@@ -476,7 +476,7 @@ class TestScriptDocumentation(unittest.TestCase):
                     ])
 
                     if not has_help:
-                        print(f"⚠️  Script {script_name} should have help functionality")
+                        print(f"WARN: Script {script_name} should have help functionality")
 
 
 if __name__ == '__main__':
@@ -484,7 +484,7 @@ if __name__ == '__main__':
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Print test information
-    print("📜 Running Script Validation Tests")
+    print("Running Script Validation Tests")
     print("=" * 35)
     print()
 

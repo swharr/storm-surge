@@ -1,16 +1,16 @@
 #!/bin/bash
 set -e
 
-echo "🔍 Storm Surge Dependency Verification Script"
-echo "============================================="
+echo "Storm Surge Dependency Verification Script"
+echo "=========================================="
 
 # Check if we're in the right directory
 if [ ! -f "feature_flag_configure.py" ]; then
-    echo "❌ Error: Please run this script from the storm-surge root directory"
+    echo "ERROR: Please run this script from the storm-surge root directory"
     exit 1
 fi
 
-echo "✅ Running from correct directory"
+echo "OK: Running from correct directory"
 
 # Function to check if a command exists
 command_exists() {
@@ -18,70 +18,70 @@ command_exists() {
 }
 
 # Check Python
-echo -n "🐍 Python 3: "
+echo -n "Python 3: "
 if command_exists python3; then
     python3 --version
 else
-    echo "❌ Not found"
+    echo "ERROR: Not found"
     exit 1
 fi
 
 # Check Node.js
-echo -n "📦 Node.js: "
+echo -n "Node.js: "
 if command_exists node; then
     node --version
 else
-    echo "❌ Not found"
+    echo "ERROR: Not found"
 fi
 
 # Check npm
-echo -n "📦 npm: "
+echo -n "npm: "
 if command_exists npm; then
     npm --version
 else
-    echo "❌ Not found"
+    echo "ERROR: Not found"
 fi
 
 # Check Docker
-echo -n "🐳 Docker: "
+echo -n "Docker: "
 if command_exists docker; then
     docker --version | head -1
 else
-    echo "⚠️  Not found (optional for local development)"
+    echo "WARN: Not found (optional for local development)"
 fi
 
 # Check kubectl
-echo -n "☸️  kubectl: "
+echo -n "kubectl: "
 if command_exists kubectl; then
     kubectl version --client --short 2>/dev/null || (kubectl version --client 2>/dev/null | head -1)
 else
-    echo "⚠️  Not found (needed for deployment)"
+    echo "WARN: Not found (needed for deployment)"
 fi
 
 echo ""
-echo "📋 Python Dependencies Check"
-echo "=============================="
+echo "Python Dependencies Check"
+echo "========================="
 
 # Check if requirements.txt exists
 if [ -f "manifests/middleware/requirements.txt" ]; then
-    echo "✅ Requirements file found"
-    echo "📦 Required packages:"
+    echo "OK: Requirements file found"
+    echo "Required packages:"
     grep -v "^#" manifests/middleware/requirements.txt | grep -v "^$" | while read -r package; do
         echo "  - $package"
     done
 else
-    echo "❌ Requirements file missing"
+    echo "ERROR: Requirements file missing"
 fi
 
 echo ""
-echo "⚛️  React Dependencies Check"
-echo "==========================="
+echo "React Dependencies Check"
+echo "========================"
 
 if [ -f "frontend/package.json" ]; then
-    echo "✅ package.json found"
+    echo "OK: package.json found"
 
     if command_exists node; then
-        echo "📦 Package info:"
+        echo "Package info:"
         node -e "
         const pkg = require('./frontend/package.json');
         console.log('  Name:', pkg.name);
@@ -91,12 +91,12 @@ if [ -f "frontend/package.json" ]; then
         "
     fi
 else
-    echo "❌ package.json missing"
+    echo "ERROR: package.json missing"
 fi
 
 echo ""
-echo "🧪 Configuration Files Check"
-echo "============================"
+echo "Configuration Files Check"
+echo "========================="
 
 config_files=(
     "frontend/tsconfig.json:TypeScript config"
@@ -113,15 +113,15 @@ for file_desc in "${config_files[@]}"; do
     desc=$(echo "$file_desc" | cut -d: -f2)
 
     if [ -f "$file" ]; then
-        echo "✅ $desc"
+        echo "OK: $desc"
     else
-        echo "❌ $desc missing ($file)"
+        echo "ERROR: $desc missing ($file)"
     fi
 done
 
 echo ""
-echo "☸️  Kubernetes Manifests Check"
-echo "=============================="
+echo "Kubernetes Manifests Check"
+echo "=========================="
 
 k8s_files=(
     "manifests/middleware/deployment.yaml:Middleware deployment"
@@ -137,15 +137,15 @@ for file_desc in "${k8s_files[@]}"; do
     desc=$(echo "$file_desc" | cut -d: -f2)
 
     if [ -f "$file" ]; then
-        echo "✅ $desc"
+        echo "OK: $desc"
     else
-        echo "❌ $desc missing ($file)"
+        echo "ERROR: $desc missing ($file)"
     fi
 done
 
 echo ""
-echo "🏗️  Build Scripts Check"
-echo "======================"
+echo "Build Scripts Check"
+echo "==================="
 
 build_scripts=(
     "feature_flag_configure.py:Configuration script"
@@ -159,18 +159,18 @@ for script_desc in "${build_scripts[@]}"; do
 
     if [ -f "$script" ]; then
         if [ -x "$script" ]; then
-            echo "✅ $desc (executable)"
+            echo "OK: $desc (executable)"
         else
-            echo "⚠️  $desc (not executable)"
+            echo "WARN: $desc (not executable)"
         fi
     else
-        echo "❌ $desc missing ($script)"
+        echo "ERROR: $desc missing ($script)"
     fi
 done
 
 echo ""
-echo "🎯 Ready for Installation?"
-echo "========================="
+echo "Ready for Installation?"
+echo "======================="
 
 echo ""
 echo "To install Python dependencies:"
@@ -182,4 +182,4 @@ echo ""
 echo "To run the configuration:"
 echo "  python3 feature_flag_configure.py"
 echo ""
-echo "🎉 Dependency verification complete!"
+echo "Dependency verification complete."
