@@ -75,7 +75,7 @@ done
 # Report results
 if [ ${#FILES_FIXED[@]} -gt 0 ]; then
     echo
-    echo -e "${GREEN}✅ Fixed trailing whitespace in ${#FILES_FIXED[@]} file(s):${NC}"
+    echo -e "${GREEN}Fixed trailing whitespace in ${#FILES_FIXED[@]} file(s):${NC}"
     for FILE in "${FILES_FIXED[@]}"; do
         echo -e "   - $FILE"
     done
@@ -99,4 +99,3 @@ done
 
 echo -e "${GREEN}✨ Pre-commit checks complete!${NC}"
 exit 0
-
