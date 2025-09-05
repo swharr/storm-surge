@@ -495,27 +495,26 @@ class TestSecurityValidation(unittest.TestCase):
         self.assertEqual(threshold, 0.05)
 
     def test_hmac_signature_validation(self):
-        """Test HMAC signature validation"""
+        """Test HMAC signature validation via provider implementation"""
         if not MIDDLEWARE_AVAILABLE:
             self.skipTest("Middleware not available")
 
+        payload = b"{\"kind\": \"flag\", \"data\": {\"key\": \"test\"}}"
         secret = "test-secret"
-        payload = b"test-payload"
 
-        # Generate valid signature
-        valid_signature = hmac.new(
-            secret.encode('utf-8'),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+        # LaunchDarkly provider signature behavior
+        with patch.dict(os.environ, {'FEATURE_FLAG_PROVIDER': 'launchdarkly', 'WEBHOOK_SECRET': secret}):
+            fm = FeatureFlagManager('launchdarkly')
+            provider = fm.get_provider()
+            valid_sig = hmac.new(secret.encode('utf-8'), payload, hashlib.sha256).hexdigest()
+            self.assertTrue(provider.verify_webhook_signature(payload, valid_sig))
+            self.assertFalse(provider.verify_webhook_signature(payload, 'invalid'))
 
-        # Test with environment variable set
-        with patch.dict(os.environ, {'WEBHOOK_SECRET': secret}):
-            self.assertTrue(verify_webhook_signature(payload, valid_signature))
-
-        # Test with empty secret (should return True - no verification)
-        with patch.dict(os.environ, {'WEBHOOK_SECRET': ''}):
-            self.assertTrue(verify_webhook_signature(payload, "any-signature"))
+        # If secret empty, provider should accept (no verification case)
+        with patch.dict(os.environ, {'FEATURE_FLAG_PROVIDER': 'launchdarkly', 'WEBHOOK_SECRET': ''}):
+            fm = FeatureFlagManager('launchdarkly')
+            provider = fm.get_provider()
+            self.assertTrue(provider.verify_webhook_signature(payload, 'any'))
 
 
 if __name__ == '__main__':
