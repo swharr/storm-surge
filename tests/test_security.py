@@ -229,11 +229,11 @@ class TestSecretsManagement(unittest.TestCase):
             'key: SPOT_CLUSTER_ID',         # Secret key reference
             'key: LAUNCHDARKLY_SDK_KEY'     # Secret key reference
         ]
-        
+
         # Configuration placeholder patterns (not actual secrets)
         config_placeholder_patterns = [
             'launchdarkly',
-            'statsig', 
+            'statsig',
             'development',
             'production',
             'staging',
@@ -274,7 +274,7 @@ class TestSecretsManagement(unittest.TestCase):
                         if pattern in line_lower:
                             # Check if this is an acceptable pattern
                             is_acceptable = any(acceptable in line for acceptable in acceptable_patterns)
-                            
+
                             # Check if this is a configuration placeholder
                             is_config_placeholder = False
                             if ':' in line:
@@ -561,10 +561,10 @@ class TestVulnerabilityScanning(unittest.TestCase):
     def test_json_syntax_validation(self):
         """Test JSON syntax validation"""
         json_files = list(Path(__file__).parent.parent.glob('**/*.json'))
-        
+
         # Filter out directories that may contain invalid JSON files
         excluded_paths = ['node_modules', '.npm', 'coverage', 'test-logs', '.git']
-        
+
         filtered_files = []
         for json_file in json_files:
             # Skip files in excluded directories
