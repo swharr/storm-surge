@@ -29,6 +29,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
+# Ensure non-root user can run nginx and serve content
+RUN chown -R nginx:nginx /var/cache/nginx /var/run /etc/nginx /usr/share/nginx/html
+USER nginx
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1

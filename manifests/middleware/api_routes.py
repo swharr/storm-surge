@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from typing import Dict, Any, List, Optional
 import jwt
 from functools import wraps
@@ -17,11 +17,16 @@ import hashlib
 import secrets
 import bcrypt
 import uuid
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
 # Create API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# API rate limiter (initialized in main.py via init_app)
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per hour", "50 per minute"])
 
 # Password hashing functions
 def hash_password(password: str) -> str:
@@ -40,7 +45,9 @@ def generate_user_id() -> str:
 # Initialize mock users with properly hashed passwords
 def init_mock_users():
     """Initialize mock users with hashed passwords"""
-    return {
+    env = os.getenv('ENVIRONMENT', 'development').lower()
+    prod = env == 'production'
+    users = {
         'admin@stormsurge.dev': {
             'id': 'admin-user-uuid-1',
             'email': 'admin@stormsurge.dev',
@@ -49,7 +56,7 @@ def init_mock_users():
             'password_hash': hash_password('admin123'),  # Password: admin123
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': True,
+            'is_active': not prod,
             'failed_login_attempts': 0,
             'locked_until': None
         },
@@ -61,7 +68,7 @@ def init_mock_users():
             'password_hash': hash_password('operator123'),  # Password: operator123
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': True,
+            'is_active': not prod,
             'failed_login_attempts': 0,
             'locked_until': None
         },
@@ -73,11 +80,12 @@ def init_mock_users():
             'password_hash': hash_password('viewer123'),  # Password: viewer123
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': True,
+            'is_active': not prod,
             'failed_login_attempts': 0,
             'locked_until': None
         }
     }
+    return users
 
 # Mock database (in production, replace with real database)
 MOCK_USERS = init_mock_users()
@@ -192,11 +200,14 @@ def require_auth(f):
     """Decorator to require authentication with session validation"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
+        # Prefer httpOnly cookie; fall back to Authorization header for backward compatibility
+        token = request.cookies.get('auth_token')
+        if not token:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+        if not token:
             return jsonify({'error': 'Authentication required'}), 401
-        
-        token = auth_header.split(' ')[1]
         
         # Check if session is valid
         if not is_session_valid(token):
@@ -235,8 +246,27 @@ def require_role(required_role: str):
         return decorated_function
     return decorator
 
+
+# CSRF protection for state-changing requests when using cookie auth
+def require_csrf(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Skip CSRF for safe methods
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return f(*args, **kwargs)
+        # Allow login without CSRF (no session yet)
+        if request.path.endswith('/auth/login'):
+            return f(*args, **kwargs)
+        csrf_cookie = request.cookies.get('csrf_token')
+        csrf_header = request.headers.get('X-CSRF-Token')
+        if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+            return jsonify({'error': 'CSRF validation failed'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Authentication endpoints
 @api_bp.route('/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """User login endpoint with security features"""
     data = request.get_json()
@@ -278,24 +308,35 @@ def login():
     # Update last login
     user['last_login'] = datetime.utcnow().isoformat() + 'Z'
     
-    # Generate token
+    # Generate token and CSRF token
     token = generate_token(user)
-    
+    csrf_token = secrets.token_urlsafe(24)
+
     # Create session
     create_session(user['id'], token)
-    
-    # Return user data without sensitive fields
+
+    # Prepare response and set cookies
     user_data = {k: v for k, v in user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
-    
     logger.info(f"User {email} logged in successfully")
-    
-    return jsonify({
-        'token': token,
-        'user': user_data
-    })
+
+    resp = make_response(jsonify({'user': user_data}))
+    # Determine cookie security
+    secure_cookies = os.getenv('ENVIRONMENT', 'production').lower() == 'production'
+    # Auth cookie: httpOnly, secure (in prod), strict same-site
+    resp.set_cookie(
+        'auth_token', token,
+        httponly=True, secure=secure_cookies, samesite='Strict', max_age=JWT_EXPIRATION, path='/'
+    )
+    # CSRF cookie: readable by JS to set header
+    resp.set_cookie(
+        'csrf_token', csrf_token,
+        httponly=False, secure=secure_cookies, samesite='Strict', max_age=JWT_EXPIRATION, path='/'
+    )
+    return resp
 
 @api_bp.route('/auth/logout', methods=['POST'])
 @require_auth
+@require_csrf
 def logout():
     """User logout endpoint with session invalidation"""
     auth_header = request.headers.get('Authorization')
@@ -303,12 +344,16 @@ def logout():
         token = auth_header.split(' ')[1]
         invalidate_session(token)
         logger.info(f"User {request.current_user.get('email')} logged out")
-    
-    return jsonify({'message': 'Logged out successfully'})
+    resp = make_response(jsonify({'message': 'Logged out successfully'}))
+    # Clear cookies
+    resp.set_cookie('auth_token', '', expires=0, path='/')
+    resp.set_cookie('csrf_token', '', expires=0, path='/')
+    return resp
 
 @api_bp.route('/auth/register', methods=['POST'])
 @require_auth
 @require_role('admin')
+@require_csrf
 def register_user():
     """User registration endpoint (admin only)"""
     data = request.get_json()
@@ -359,6 +404,7 @@ def register_user():
 
 @api_bp.route('/auth/change-password', methods=['POST'])
 @require_auth
+@require_csrf
 def change_password():
     """Change user password"""
     data = request.get_json()
@@ -419,6 +465,7 @@ def list_users():
 @api_bp.route('/users', methods=['POST'])
 @require_auth
 @require_role('admin')
+@require_csrf
 def create_user():
     """Create a new user (admin only)"""
     data = request.get_json()
@@ -478,6 +525,7 @@ def get_user(user_id):
 @api_bp.route('/users/<user_id>', methods=['PUT'])
 @require_auth
 @require_role('admin')
+@require_csrf
 def update_user(user_id):
     """Update user (admin only)"""
     data = request.get_json()
@@ -511,6 +559,7 @@ def update_user(user_id):
 @api_bp.route('/users/<user_id>', methods=['DELETE'])
 @require_auth
 @require_role('admin')
+@require_csrf
 def delete_user(user_id):
     """Delete user (admin only)"""
     # Prevent deleting self

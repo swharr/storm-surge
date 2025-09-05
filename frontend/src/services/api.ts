@@ -9,7 +9,6 @@ import type {
   AlertRule,
   AuditLogEntry,
   SystemHealth,
-  ApiResponse,
   PaginatedResponse,
   CreateFlagForm,
   ClusterConfigForm,
@@ -22,24 +21,19 @@ class ApiService {
     this.client = axios.create({
       baseURL: '/api',
       timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
+      withCredentials: true,
+      xsrfCookieName: 'csrf_token',
+      xsrfHeaderName: 'X-CSRF-Token',
     })
 
     this.setupInterceptors()
   }
 
   private setupInterceptors() {
-    // Request interceptor
+    // Request interceptor (no Authorization header; cookie-based auth + XSRF)
     this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('storm_surge_token')
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-        return config
-      },
+      (config) => config,
       (error) => Promise.reject(error)
     )
 
@@ -48,7 +42,6 @@ class ApiService {
       (response: AxiosResponse) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('storm_surge_token')
           window.location.href = '/login'
         } else if (error.response?.status >= 500) {
           toast.error('Server error occurred. Please try again.')
@@ -61,19 +54,14 @@ class ApiService {
   }
 
   // Auth endpoints
-  async login(email: string, password: string): Promise<{ token: string; user: User }> {
+  async login(email: string, password: string): Promise<{ user: User }> {
     const response = await this.client.post('/auth/login', { email, password })
-    
-    if (response.data.token) {
-      localStorage.setItem('storm_surge_token', response.data.token)
-    }
-    
+    // Auth cookie and CSRF cookie are set by server
     return response.data
   }
 
   async logout(): Promise<void> {
     await this.client.post('/auth/logout')
-    localStorage.removeItem('storm_surge_token')
   }
 
   async getCurrentUser(): Promise<User> {

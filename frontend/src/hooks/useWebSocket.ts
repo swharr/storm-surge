@@ -27,16 +27,8 @@ export function useWebSocket({
   useEffect(() => {
     if (!autoConnect) return
 
-    const token = localStorage.getItem('storm_surge_token')
-    if (!token) return
-
     // Initialize socket connection
-    const socket = io(url, {
-      auth: {
-        token,
-      },
-      transports: ['websocket', 'polling'],
-    })
+    const socket = io(url, { transports: ['websocket', 'polling'], withCredentials: true })
 
     socketRef.current = socket
 

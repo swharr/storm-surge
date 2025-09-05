@@ -1,4 +1,3 @@
-import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Layout from './components/Layout'
@@ -16,19 +15,14 @@ import LoadingSpinner from './components/LoadingSpinner'
 import { useWebSocket } from './hooks/useWebSocket'
 
 function App() {
-  const token = localStorage.getItem('storm_surge_token')
-
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['user'],
     queryFn: api.getCurrentUser,
-    enabled: !!token,
     retry: false,
   })
 
   // Initialize WebSocket connection for authenticated users
-  const { isConnected } = useWebSocket({
-    autoConnect: !!token && !!user,
-  })
+  useWebSocket({ autoConnect: !!user })
 
   if (isLoading) {
     return (
@@ -38,7 +32,7 @@ function App() {
     )
   }
 
-  if (!token || error) {
+  if (error) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />

@@ -352,6 +352,11 @@ prometheus.yml.local
 # Grafana
 grafana/data/
 
+# CI/CD failure analysis files
+storm-surge-job-failure-explanation.md
+storm-surge-job-failure-explaination.md
+*-job-failure-*.md
+
 # =============================================================================
 # End of .gitignore
 # =============================================================================

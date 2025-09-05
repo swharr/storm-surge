@@ -15,8 +15,7 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       api.login(email, password),
-    onSuccess: (data) => {
-      localStorage.setItem('storm_surge_token', data.token)
+    onSuccess: () => {
       toast.success('Welcome back!')
       navigate('/dashboard')
     },
@@ -50,15 +49,17 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Demo credentials notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h3>
-          <div className="text-sm text-blue-700 space-y-1">
-            <div><strong>Admin:</strong> admin@stormsurge.dev / admin123</div>
-            <div><strong>Operator:</strong> operator@stormsurge.dev / operator123</div>
-            <div><strong>Viewer:</strong> viewer@stormsurge.dev / viewer123</div>
+        {/* Demo credentials notice (hidden in production builds) */}
+        {import.meta.env.MODE !== 'production' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h3>
+            <div className="text-sm text-blue-700 space-y-1">
+              <div><strong>Admin:</strong> admin@stormsurge.dev / admin123</div>
+              <div><strong>Operator:</strong> operator@stormsurge.dev / operator123</div>
+              <div><strong>Viewer:</strong> viewer@stormsurge.dev / viewer123</div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Login form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
