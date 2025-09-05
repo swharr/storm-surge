@@ -6,7 +6,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: frontend
+      app: storm-surge-frontend
   policyTypes:
     - Ingress
   ingress:
@@ -27,7 +27,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: frontend
+      app: storm-surge-frontend
   policyTypes:
     - Egress
   egress:
@@ -47,4 +47,3 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-
