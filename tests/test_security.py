@@ -334,7 +334,9 @@ class TestImageSecurity(unittest.TestCase):
             'gcr.io',
             'quay.io',
             'registry.k8s.io',
-            'nginxinc'  # For nginx unprivileged
+            'nginxinc',  # For nginx unprivileged
+            'python',    # For python:3.11-slim images
+            'nginx'      # For nginx:alpine images
         ]
 
         deployment_files = list(self.manifests_dir.glob('**/*.yaml'))
