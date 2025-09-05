@@ -1,0 +1,35 @@
+# Test dependencies for Storm Surge
+# This file consolidates all testing dependencies across the project
+
+# Core testing framework
+pytest==7.4.3
+pytest-mock==3.12.0
+
+# Web framework testing
+flask==2.3.3
+requests==2.31.0
+
+# Configuration and parsing
+pyyaml==6.0.1
+python-dotenv==1.0.0
+
+# Security and authentication testing
+bcrypt==4.0.1
+PyJWT==2.8.0
+
+# Rate limiting testing
+Flask-Limiter==3.7.0
+
+# CORS and WebSocket testing
+flask-cors==4.0.0
+flask-socketio==5.3.6
+
+# Time handling
+pytz==2023.3
+
+# Feature flag SDKs for integration testing
+launchdarkly-server-sdk==8.2.1
+# statsig==1.20.0  # Uncomment if needed
+
+# Redis for session storage testing (optional)
+redis==5.0.1
