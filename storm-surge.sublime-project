@@ -1,0 +1,74 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "folder_exclude_patterns": [
+                "__pycache__",
+                ".pytest_cache", 
+                "node_modules",
+                ".git",
+                "coverage",
+                "test-logs",
+                ".npm"
+            ],
+            "file_exclude_patterns": [
+                "*.pyc",
+                "*.pyo",
+                ".DS_Store",
+                "*.min.js",
+                "*.min.css"
+            ]
+        }
+    ],
+    "settings": {
+        "ensure_newline_at_eof_on_save": true,
+        "trim_trailing_white_space_on_save": true,
+        "trim_automatic_white_space": true,
+        "tab_size": 4,
+        "translate_tabs_to_spaces": true,
+        "default_line_ending": "unix",
+        "rulers": [80, 120],
+        "word_wrap": false,
+        "syntax_specific": {
+            "Python": {
+                "tab_size": 4
+            },
+            "YAML": {
+                "tab_size": 2
+            },
+            "JSON": {
+                "tab_size": 2
+            },
+            "JavaScript": {
+                "tab_size": 2
+            },
+            "TypeScript": {
+                "tab_size": 2
+            },
+            "Markdown": {
+                "trim_trailing_white_space_on_save": false,
+                "tab_size": 2
+            }
+        }
+    },
+    "build_systems": [
+        {
+            "name": "Fix Whitespace",
+            "shell_cmd": "./scripts/fix-whitespace.sh",
+            "working_dir": "${project_path}",
+            "file_regex": "^(.+):([0-9]+):([0-9]+): (.+)$"
+        },
+        {
+            "name": "Run Tests",
+            "shell_cmd": "make test",
+            "working_dir": "${project_path}",
+            "file_regex": "^File \"(.+)\", line ([0-9]+)"
+        },
+        {
+            "name": "Pre-commit Check",
+            "shell_cmd": "pre-commit run --all-files",
+            "working_dir": "${project_path}"
+        }
+    ]
+}
+

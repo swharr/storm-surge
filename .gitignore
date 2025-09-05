@@ -35,8 +35,10 @@ $RECYCLE.BIN/
 # Development & IDE Files
 # =============================================================================
 
-# Visual Studio Code
-.vscode/
+# Visual Studio Code (allow shared project settings)
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
 *.code-workspace
 
 # IntelliJ IDEA
@@ -57,9 +59,9 @@ tmp/
 *.swp
 *~.nib
 
-# Sublime Text
-*.sublime-project
+# Sublime Text (allow shared project file)
 *.sublime-workspace
+.sublime/trailing_spaces.sublime-settings
 
 # Vim
 *.swp
@@ -96,6 +98,9 @@ secrets/
 config.local.*
 *.local.yaml
 *.local.json
+
+# Claude Code personal settings (keep these local)
+.claude/settings.local.json
 
 # =============================================================================
 # Logs & Runtime Files

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: middleware-sa
+  namespace: oceansurge
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  namespace: oceansurge
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: middleware-readonly
+  namespace: oceansurge
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints", "configmaps"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: middleware-readonly-binding
+  namespace: oceansurge
+subjects:
+  - kind: ServiceAccount
+    name: middleware-sa
+    namespace: oceansurge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: middleware-readonly
+

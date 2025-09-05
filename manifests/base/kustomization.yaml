@@ -5,6 +5,8 @@ namespace: oceansurge
 
 resources:
 - namespace.yaml
+- namespace-security.yaml
+- rbac.yaml
 - deployments.yaml
 - services.yaml
 - configmaps.yaml
