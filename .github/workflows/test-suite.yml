@@ -11,6 +11,8 @@ jobs:
   pre-commit:
     name: Pre-commit Validation
     runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/.npm-cache
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +32,8 @@ jobs:
         run: |
           pip install pre-commit
           pip install -r requirements-test.txt
+      - name: Prepare npm cache for markdownlint
+        run: mkdir -p "$NPM_CONFIG_CACHE"
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
@@ -85,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
 
       - name: Run TypeScript check
         run: |
