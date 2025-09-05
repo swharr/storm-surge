@@ -13,6 +13,7 @@ import tempfile
 import hmac
 import hashlib
 import time
+import requests
 
 # Add middleware directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manifests', 'middleware'))
@@ -285,9 +286,15 @@ class TestWebhookSecurity(unittest.TestCase):
             # Test with incorrect signature
             self.assertFalse(provider.verify_webhook_signature(payload, "invalid"))
 
-    @patch.dict(os.environ, {'WEBHOOK_SECRET': 'test-secret'})
-    def test_webhook_with_invalid_signature(self):
+    @patch('main.flag_manager')
+    def test_webhook_with_invalid_signature(self, mock_flag_manager):
         """Test webhook rejection with invalid signature"""
+        # Mock provider to have a secret and fail signature verification
+        mock_provider = Mock()
+        mock_provider.verify_webhook_signature.return_value = False
+        mock_flag_manager.get_provider.return_value = mock_provider
+        mock_flag_manager.get_provider_type.return_value = 'launchdarkly'
+        
         webhook_payload = {
             'kind': 'flag',
             'data': {
@@ -348,7 +355,7 @@ class TestSpotOceanManager(unittest.TestCase):
     @patch('main.requests.get')
     def test_get_cluster_info_failure(self, mock_get):
         """Test cluster info retrieval failure"""
-        mock_get.side_effect = Exception("API Error")
+        mock_get.side_effect = requests.exceptions.RequestException("API Error")
 
         result = self.manager.get_cluster_info()
 
@@ -439,7 +446,7 @@ class TestSpotOceanManager(unittest.TestCase):
         mock_get.return_value = mock_get_response
 
         # Mock scale request to fail
-        mock_put.side_effect = Exception("Scaling failed")
+        mock_put.side_effect = requests.exceptions.RequestException("Scaling failed")
 
         result = self.manager.scale_cluster('optimize')
 
@@ -448,7 +455,7 @@ class TestSpotOceanManager(unittest.TestCase):
     @patch('main.requests.get')
     def test_scale_cluster_no_cluster_info(self, mock_get):
         """Test cluster scaling when cluster info is unavailable"""
-        mock_get.side_effect = Exception("API Error")
+        mock_get.side_effect = requests.exceptions.RequestException("API Error")
 
         result = self.manager.scale_cluster('optimize')
 

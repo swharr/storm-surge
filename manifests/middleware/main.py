@@ -250,10 +250,23 @@ def handle_feature_flag_webhook(provider_name: str):
             return error_response, response_status
 
         # Parse webhook payload
-        payload = request.get_json()
-        if not payload:
+        try:
+            payload = request.get_json(force=True)
+        except Exception as json_error:
             response_status = 400
             error_response = jsonify({'error': 'Invalid JSON payload'})
+            
+            # Log webhook event
+            if logging_manager:
+                webhook_metadata["error"] = "Invalid JSON payload"
+                webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
+                logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
+                
+            return error_response, response_status
+            
+        if not payload:
+            response_status = 400
+            error_response = jsonify({'error': 'Empty JSON payload'})
 
             # Log webhook event
             if logging_manager:
@@ -328,6 +341,7 @@ def handle_feature_flag_webhook(provider_name: str):
 
             response_data = {
                 'status': 'received',
+                'kind': payload.get('kind', 'unknown'),
                 'provider': provider_name,
                 'timestamp': time.time()
             }
