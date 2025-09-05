@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify, make_response, session
 from typing import Dict, Any, List, Optional
 import jwt
 from functools import wraps
@@ -19,14 +19,20 @@ import bcrypt
 import uuid
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import redis
+from flask_session import Session
 
 logger = logging.getLogger(__name__)
 
 # Create API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-# API rate limiter (initialized in main.py via init_app)
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per hour", "50 per minute"])
+# API rate limiter with stricter defaults
+limiter = Limiter(
+    key_func=get_remote_address, 
+    default_limits=["100 per hour", "20 per minute"],
+    storage_uri=os.getenv('REDIS_URL', 'memory://')
+)
 
 # Password hashing functions
 def hash_password(password: str) -> str:
@@ -42,21 +48,31 @@ def generate_user_id() -> str:
     """Generate a unique user ID"""
     return str(uuid.uuid4())
 
-# Initialize mock users with properly hashed passwords
-def init_mock_users():
-    """Initialize mock users with hashed passwords"""
+# Pre-computed password hashes to avoid runtime hashing
+# Passwords: admin123, operator123, viewer123
+PRECOMPUTED_HASHES = {
+    'admin123': '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj3w8kGuVpoi',
+    'operator123': '$2b$12$EXRkfkdmHxNG8fiunsWce.k7Z5lEo3KYl6YzTcxm5Lw4QJiS5yJoq',
+    'viewer123': '$2b$12$V8BNKt4BrRo9NnWONnDhXOKMn4C7cz2VKf5VvJGUqfV2k2H8WzBuO'
+}
+
+def get_mock_users():
+    """Get mock users with pre-computed hashes (development only)"""
     env = os.getenv('ENVIRONMENT', 'development').lower()
-    prod = env == 'production'
-    users = {
+    if env == 'production':
+        logger.error("Mock users should not be used in production")
+        return {}
+    
+    return {
         'admin@stormsurge.dev': {
             'id': 'admin-user-uuid-1',
             'email': 'admin@stormsurge.dev',
             'name': 'Admin User',
             'role': 'admin',
-            'password_hash': hash_password('admin123'),  # Password: admin123
+            'password_hash': PRECOMPUTED_HASHES['admin123'],
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': not prod,
+            'is_active': True,
             'failed_login_attempts': 0,
             'locked_until': None
         },
@@ -65,10 +81,10 @@ def init_mock_users():
             'email': 'operator@stormsurge.dev', 
             'name': 'Operator User',
             'role': 'operator',
-            'password_hash': hash_password('operator123'),  # Password: operator123
+            'password_hash': PRECOMPUTED_HASHES['operator123'],
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': not prod,
+            'is_active': True,
             'failed_login_attempts': 0,
             'locked_until': None
         },
@@ -77,18 +93,17 @@ def init_mock_users():
             'email': 'viewer@stormsurge.dev',
             'name': 'Viewer User', 
             'role': 'viewer',
-            'password_hash': hash_password('viewer123'),  # Password: viewer123
+            'password_hash': PRECOMPUTED_HASHES['viewer123'],
             'created_at': '2024-01-01T00:00:00Z',
             'last_login': None,
-            'is_active': not prod,
+            'is_active': True,
             'failed_login_attempts': 0,
             'locked_until': None
         }
     }
-    return users
 
 # Mock database (in production, replace with real database)
-MOCK_USERS = init_mock_users()
+MOCK_USERS = get_mock_users()
 
 MOCK_FLAGS = [
     {
@@ -148,17 +163,54 @@ MOCK_CLUSTERS = [
     }
 ]
 
-# JWT configuration
-JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key-change-in-production')
+# JWT configuration - Fail if not properly configured in production
+JWT_SECRET = os.getenv('JWT_SECRET')
+if not JWT_SECRET:
+    env = os.getenv('ENVIRONMENT', 'development').lower()
+    if env == 'production':
+        raise ValueError("JWT_SECRET environment variable must be set in production")
+    JWT_SECRET = 'development-secret-key-not-for-production'
+    logger.warning("Using development JWT secret - NOT SUITABLE FOR PRODUCTION")
+
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION = 24 * 60 * 60  # 24 hours
 
-# Session management (in-memory for development, use Redis/DB for production)
-active_sessions = {}
+# Redis connection for session storage
+redis_client = None
+
+def init_redis():
+    """Initialize Redis connection for session storage"""
+    global redis_client
+    try:
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        redis_client = redis.from_url(redis_url, decode_responses=True)
+        redis_client.ping()  # Test connection
+        logger.info(f"Redis connected successfully: {redis_url}")
+        return True
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {e}. Falling back to in-memory sessions")
+        return False
+
+# Fallback in-memory sessions for development
+_memory_sessions = {}
 
 def create_session(user_id: str, token: str) -> None:
-    """Create a new session"""
-    active_sessions[token] = {
+    """Create a new session in Redis or memory fallback"""
+    session_data = {
+        'user_id': user_id,
+        'created_at': datetime.utcnow().isoformat(),
+        'last_activity': datetime.utcnow().isoformat()
+    }
+    
+    if redis_client:
+        try:
+            redis_client.setex(f"session:{token}", JWT_EXPIRATION, json.dumps(session_data))
+            return
+        except Exception as e:
+            logger.error(f"Redis session creation failed: {e}")
+    
+    # Fallback to memory
+    _memory_sessions[token] = {
         'user_id': user_id,
         'created_at': datetime.utcnow(),
         'last_activity': datetime.utcnow()
@@ -166,12 +218,53 @@ def create_session(user_id: str, token: str) -> None:
 
 def invalidate_session(token: str) -> None:
     """Invalidate a session"""
-    active_sessions.pop(token, None)
+    if redis_client:
+        try:
+            redis_client.delete(f"session:{token}")
+            return
+        except Exception as e:
+            logger.error(f"Redis session invalidation failed: {e}")
+    
+    # Fallback to memory
+    _memory_sessions.pop(token, None)
+
+def invalidate_all_user_sessions(user_id: str) -> None:
+    """Invalidate all sessions for a user (for session rotation)"""
+    if redis_client:
+        try:
+            # Find and delete all sessions for this user
+            for key in redis_client.scan_iter(match="session:*"):
+                session_data = redis_client.get(key)
+                if session_data:
+                    data = json.loads(session_data)
+                    if data.get('user_id') == user_id:
+                        redis_client.delete(key)
+            return
+        except Exception as e:
+            logger.error(f"Redis bulk session invalidation failed: {e}")
+    
+    # Fallback to memory
+    to_remove = [token for token, data in _memory_sessions.items() if data['user_id'] == user_id]
+    for token in to_remove:
+        _memory_sessions.pop(token, None)
 
 def is_session_valid(token: str) -> bool:
     """Check if session is valid and update last activity"""
-    if token in active_sessions:
-        active_sessions[token]['last_activity'] = datetime.utcnow()
+    if redis_client:
+        try:
+            session_data = redis_client.get(f"session:{token}")
+            if session_data:
+                data = json.loads(session_data)
+                data['last_activity'] = datetime.utcnow().isoformat()
+                redis_client.setex(f"session:{token}", JWT_EXPIRATION, json.dumps(data))
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Redis session validation failed: {e}")
+    
+    # Fallback to memory
+    if token in _memory_sessions:
+        _memory_sessions[token]['last_activity'] = datetime.utcnow()
         return True
     return False
 
@@ -259,7 +352,9 @@ def require_csrf(f):
             return f(*args, **kwargs)
         csrf_cookie = request.cookies.get('csrf_token')
         csrf_header = request.headers.get('X-CSRF-Token')
-        if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        
+        # Use constant-time comparison to prevent timing attacks
+        if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
             return jsonify({'error': 'CSRF validation failed'}), 403
         return f(*args, **kwargs)
     return decorated_function
@@ -351,6 +446,7 @@ def logout():
     return resp
 
 @api_bp.route('/auth/register', methods=['POST'])
+@limiter.limit("3 per minute")  # Strict rate limiting for user creation
 @require_auth
 @require_role('admin')
 @require_csrf
@@ -403,6 +499,7 @@ def register_user():
     }), 201
 
 @api_bp.route('/auth/change-password', methods=['POST'])
+@limiter.limit("3 per minute")  # Rate limit password changes
 @require_auth
 @require_csrf
 def change_password():
@@ -430,9 +527,15 @@ def change_password():
     # Update password
     user['password_hash'] = hash_password(new_password)
     
-    logger.info(f"User {user_email} changed their password")
+    # Invalidate all sessions for security (session rotation)
+    invalidate_all_user_sessions(user['id'])
     
-    return jsonify({'message': 'Password changed successfully'})
+    logger.info(f"User {user_email} changed their password - all sessions invalidated")
+    
+    return jsonify({
+        'message': 'Password changed successfully. Please log in again.',
+        'session_invalidated': True
+    })
 
 @api_bp.route('/auth/me', methods=['GET'])
 @require_auth
@@ -582,8 +685,10 @@ def delete_user(user_id):
     return jsonify({'message': 'User deleted successfully'})
 
 @api_bp.route('/users/<user_id>/reset-password', methods=['POST'])
+@limiter.limit("5 per minute")  # Rate limit password resets
 @require_auth
 @require_role('admin')
+@require_csrf
 def reset_user_password(user_id):
     """Reset user password (admin only)"""
     data = request.get_json()

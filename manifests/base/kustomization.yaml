@@ -10,6 +10,7 @@ resources:
 - configmaps.yaml
 - nginx-configs.yaml
 - hpa.yaml
+- redis.yaml
 
 labels:
 - pairs:

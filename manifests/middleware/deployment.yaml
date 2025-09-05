@@ -77,6 +77,15 @@ spec:
             secretKeyRef:
               name: feature-flag-secrets
               key: spot-api-token
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: feature-flag-secrets
+              key: jwt-secret
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: ENVIRONMENT
+          value: "production"
         - name: SPOT_CLUSTER_ID
           valueFrom:
             configMapKeyRef:

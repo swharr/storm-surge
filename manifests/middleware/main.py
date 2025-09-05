@@ -19,7 +19,7 @@ from feature_flags import FeatureFlagManager
 from logging_providers import LoggingManager
 from api_routes import api_bp
 from api_routes import limiter as api_limiter
-from api_routes import verify_token, is_session_valid
+from api_routes import verify_token, is_session_valid, init_redis
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,9 @@ app.register_blueprint(api_bp)
 
 # Initialize API rate limiting
 api_limiter.init_app(app)
+
+# Initialize Redis for session storage
+init_redis()
 
 # Configuration from environment variables
 FEATURE_FLAG_PROVIDER = os.getenv('FEATURE_FLAG_PROVIDER', 'launchdarkly')
@@ -375,9 +378,11 @@ def get_cluster_status():
 # WebSocket connection handlers
 @socketio.on('connect')
 def handle_connect():
-    """Handle WebSocket connection with optional auth validation in production"""
-    env = os.getenv('ENVIRONMENT', 'development').lower()
-    if env == 'production':
+    """Handle WebSocket connection with auth validation"""
+    # Allow bypass only with explicit environment variable
+    bypass_auth = os.getenv('WEBSOCKET_AUTH_BYPASS', 'false').lower() == 'true'
+    
+    if not bypass_auth:
         token = request.cookies.get('auth_token')
         if not token or not is_session_valid(token) or not verify_token(token):
             logger.warning("WebSocket connect rejected: unauthenticated")
