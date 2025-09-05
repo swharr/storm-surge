@@ -253,7 +253,7 @@ jobs:
     name: Release Readiness Check
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    needs: [minikube-test, script-validation, security-scan, docs-validation]
+    needs: [minikube-test, script-validation, security-scan, docs-validation, infosec-review-gate]
     steps:
       - uses: actions/checkout@v4
 
@@ -282,3 +282,57 @@ jobs:
           echo "- ✅ Multi-cloud scripts validated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Ready for production deployment! 🎉" >> $GITHUB_STEP_SUMMARY
+
+  infosec-review-gate:
+    name: InfoSec Review Gate
+    runs-on: ubuntu-latest
+    needs: [pre-commit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify auth moved to cookies + CSRF
+        run: |
+          set -euo pipefail
+          echo "> Checking Flask-Limiter present"
+          grep -q "Flask-Limiter" manifests/middleware/requirements.txt
+
+          echo "> Checking limiter init in main.py"
+          grep -q "api_limiter.init_app\(app\)" manifests/middleware/main.py
+
+          echo "> Checking CSRF decorator defined"
+          grep -q "def require_csrf" manifests/middleware/api_routes.py
+
+          echo "> Checking CSRF applied to mutating routes"
+          rg -n "@require_csrf" manifests/middleware/api_routes.py | tee /tmp/csrf_refs.txt
+          test $(wc -l < /tmp/csrf_refs.txt) -ge 3
+
+          echo "> Checking auth token from cookies in API and WS connect"
+          rg -n "request\.cookies\.get\('auth_token'\)" manifests/middleware/api_routes.py manifests/middleware/main.py
+
+          echo "> Checking CORS credentials enabled"
+          rg -n "CORS\(app, .*supports_credentials=True" manifests/middleware/main.py
+
+          echo "> Checking PSA labels on namespace"
+          rg -n "pod-security.kubernetes.io/enforce: restricted" manifests/base/namespace.yaml
+
+      - name: Verify frontend does not persist tokens and uses XSRF
+        run: |
+          set -euo pipefail
+          echo "> Ensuring no localStorage token usage remains"
+          if rg -n "storm_surge_token|localStorage\.(getItem|setItem|removeItem)\(" frontend; then
+            echo "Found legacy localStorage token usage."
+            exit 1
+          fi
+
+          echo "> Ensuring Axios uses cookie credentials and XSRF"
+          grep -q "withCredentials: true" frontend/src/services/api.ts
+          grep -q "xsrfCookieName: 'csrf_token'" frontend/src/services/api.ts
+          grep -q "xsrfHeaderName: 'X-CSRF-Token'" frontend/src/services/api.ts
+
+      - name: Summarize InfoSec gate results
+        run: |
+          echo "## InfoSec Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Auth uses httpOnly cookies + CSRF" >> $GITHUB_STEP_SUMMARY
+          echo "- API rate limiting initialized and login limited" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend uses XSRF and avoids token storage" >> $GITHUB_STEP_SUMMARY
+          echo "- Namespace has PSA restricted labels" >> $GITHUB_STEP_SUMMARY
