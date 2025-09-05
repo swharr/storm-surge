@@ -451,7 +451,7 @@ ocean-surge/
 
 ## 📞 Support Channels
 
-- 📖 [Flexera Docs](https://docs-spot.flexera.com)
+- 📖 [Flexera Docs](https://docs.spot.io)
 - 💬 [Spot Slack](https://community.flexera.com)
 - 🐛 GitHub Issues
 

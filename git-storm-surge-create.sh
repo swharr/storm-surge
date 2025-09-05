@@ -516,7 +516,7 @@ Other Tools, Plugins, and Features may be developed by outside groups, and cover
 - 📧 Email: support@spot.io
 - 💬 Slack: [Spot.io Community](https://flexera.enterprise.slack.com/archives/C08SAM2JDGS)
 - 🐛 Issues: [GitHub Issues](https://github.com/swharr/OceanSurge/issues)
-- 📖 Docs: [Full Spot API Documentation](https://docs-spot.flexera.com)
+- 📖 Docs: [Full Spot API Documentation](https://docs.spot.io)
 
 ## 🗺️ Roadmap
 
