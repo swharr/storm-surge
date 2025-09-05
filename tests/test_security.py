@@ -160,7 +160,7 @@ class TestKubernetesSecurityConfigs(unittest.TestCase):
 
         if not rbac_files_exist:
             # This is a warning, not a failure, as RBAC might be handled differently
-            print("⚠️  No RBAC files found - consider adding service accounts and role bindings")
+            print("WARN: No RBAC files found - consider adding service accounts and role bindings")
 
     def test_network_policies_security(self):
         """Test network policies for security"""
@@ -169,7 +169,7 @@ class TestKubernetesSecurityConfigs(unittest.TestCase):
 
         if not network_policy_files:
             # This is a warning, not a failure
-            print("⚠️  No network policies found - consider adding network policies for security")
+            print("WARN: No network policies found - consider adding network policies for security")
 
         # If network policies exist, validate them
         for file_path in network_policy_files:
@@ -225,6 +225,8 @@ class TestSecretsManagement(unittest.TestCase):
             'key: ld-sdk-key',              # Secret key reference
             'key: FEATURE_FLAG_PROVIDER',   # ConfigMap key reference
             'key: LOGGING_PROVIDER',        # ConfigMap key reference
+            'key: COST_IMPACT_THRESHOLD',   # ConfigMap key reference
+            'key: LOG_LEVEL',               # ConfigMap key reference
             'key: SPOT_API_TOKEN',          # Secret key reference
             'key: SPOT_CLUSTER_ID',         # Secret key reference
             'key: LAUNCHDARKLY_SDK_KEY'     # Secret key reference
@@ -410,7 +412,7 @@ class TestImageSecurity(unittest.TestCase):
                 is_trusted = any(registry in image for registry in trusted_registries)
 
                 if not is_trusted:
-                    print(f"⚠️  Container in {file_path} uses untrusted registry: {image}")
+                    print(f"WARN: Container in {file_path} uses untrusted registry: {image}")
 
 
 class TestScriptSecurity(unittest.TestCase):
@@ -447,7 +449,7 @@ class TestScriptSecurity(unittest.TestCase):
 
                 # Check for bash shebang
                 if '#!/bin/bash' not in first_line and '#!/usr/bin/env bash' not in first_line:
-                    print(f"⚠️  Script {script_file} might not use bash shebang")
+                    print(f"WARN: Script {script_file} might not use bash shebang")
 
     def test_scripts_use_set_e(self):
         """Test that scripts use 'set -e' for error handling"""
@@ -462,7 +464,7 @@ class TestScriptSecurity(unittest.TestCase):
                 has_set_e = any('set -e' in line for line in lines)
 
                 if not has_set_e:
-                    print(f"⚠️  Script {script_file} should consider using 'set -e' for error handling")
+                    print(f"WARN: Script {script_file} should consider using 'set -e' for error handling")
 
     def test_no_hardcoded_credentials_in_scripts(self):
         """Test that scripts don't contain hardcoded credentials"""
@@ -533,11 +535,11 @@ class TestVulnerabilityScanning(unittest.TestCase):
 
             # Check for ADD vs COPY
             if line.startswith('ADD '):
-                print(f"⚠️  Dockerfile {dockerfile_path} uses ADD instead of COPY")
+                print(f"WARN: Dockerfile {dockerfile_path} uses ADD instead of COPY")
 
             # Check for package manager cache cleanup
             if 'apt-get install' in line and 'rm -rf /var/lib/apt/lists/*' not in line:
-                print(f"⚠️  Dockerfile {dockerfile_path} should clean package manager cache")
+                print(f"WARN: Dockerfile {dockerfile_path} should clean package manager cache")
 
         if not has_user_directive:
             self.fail(f"Dockerfile {dockerfile_path} should specify a non-root USER")
@@ -607,7 +609,7 @@ if __name__ == '__main__':
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Print test information
-    print("🛡️  Running Security Tests")
+    print("Running Security Tests")
     print("=" * 25)
     print()
 
