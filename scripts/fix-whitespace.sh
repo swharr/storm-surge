@@ -20,23 +20,23 @@ is_binary() {
 # Function to fix whitespace in a file
 fix_file() {
     local file="$1"
-    
+
     # Skip binary files
     if is_binary "$file"; then
         return 0
     fi
-    
+
     # Skip specific directories
     case "$file" in
-        */node_modules/*|*/.git/*|*/.npm/*|*/coverage/*|*/test-logs/*|*/__pycache__/*)
+        */node_modules/*|*/.git/*|*/.npm/*|*/coverage/*|*/test-logs/*|*/__pycache__/*|*/.venv/*|*/venv/*|*/env/*|*/.env/*|*/.pytest_cache/*|*/.mypy_cache/*)
             return 0
             ;;
     esac
-    
+
     # Check if file has trailing whitespace
     if grep -q '[[:space:]]$' "$file" 2>/dev/null; then
         echo -e "${YELLOW}  Fixing: $file${NC}"
-        
+
         # Remove trailing whitespace based on OS
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS

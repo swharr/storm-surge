@@ -6,13 +6,13 @@ scan:
   scanners:
     - vuln
     - secret
-  
-# Vulnerability settings  
+
+# Vulnerability settings
 vulnerability:
   type:
     - os
     - library
-  
+
 # Output settings
 format: sarif
 output: trivy-results.sarif
@@ -25,7 +25,7 @@ severity:
 # Skip files and directories
 skip-files:
   - "**/.git/**"
-  - "**/node_modules/**" 
+  - "**/node_modules/**"
   - "**/.npm/**"
   - "**/coverage/**"
   - "**/test-logs/**"
@@ -38,7 +38,7 @@ skip-dirs:
   - "coverage"
   - "test-logs"
 
-# Secret scanner configuration  
+# Secret scanner configuration
 secret:
   skip-files:
     - "**/.trivyignore"
