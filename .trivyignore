@@ -17,3 +17,4 @@ CVE-2024-47081
 
 # Node.js/npm related vulnerabilities from development dependencies
 # These are typically in devDependencies and not in production builds
+
