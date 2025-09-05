@@ -9,6 +9,12 @@ export interface User {
   createdAt: string
 }
 
+// Extended User interface that matches backend response
+export interface UserWithBackendFields extends User {
+  is_active?: boolean
+  last_login?: string  // Backend uses snake_case
+}
+
 export interface FeatureFlag {
   key: string
   name: string

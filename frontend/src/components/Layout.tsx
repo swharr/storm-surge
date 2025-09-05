@@ -176,7 +176,7 @@ export default function Layout({ user, children }: LayoutProps) {
 }
 
 interface SidebarContentProps {
-  navigation: typeof navigation
+  navigation: ReturnType<typeof getNavigation>
   location: { pathname: string }
   systemHealth?: SystemHealth
   user: User
