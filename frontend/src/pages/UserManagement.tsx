@@ -197,13 +197,13 @@ const UserManagement: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    {user.is_active ? (
+                    {user.is_active !== false ? (
                       <CheckCircleIcon className="w-4 h-4 text-green-500 mr-1" />
                     ) : (
                       <XCircleIcon className="w-4 h-4 text-red-500 mr-1" />
                     )}
-                    <span className={user.is_active ? 'text-green-800' : 'text-red-800'}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                    <span className={user.is_active !== false ? 'text-green-800' : 'text-red-800'}>
+                      {user.is_active !== false ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </td>
@@ -350,7 +350,7 @@ const UserManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <select
                     name="is_active"
-                    defaultValue={editingUser.is_active ? 'true' : 'false'}
+                    defaultValue={editingUser.is_active !== false ? 'true' : 'false'}
                     required
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >

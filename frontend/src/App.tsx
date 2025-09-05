@@ -42,6 +42,15 @@ function App() {
     )
   }
 
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
+
   return (
     <Layout user={user}>
       <Routes>

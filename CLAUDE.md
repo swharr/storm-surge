@@ -111,3 +111,4 @@ Run tests at multiple levels:
 - **Manual Testing**: Deploy to local cluster and use port-forwarding
 
 Security validations include checking for hardcoded secrets, insecure ports (GKE), proper RBAC configuration, and webhook signature verification.
+- Always use descriptive variable names
