@@ -11,7 +11,7 @@ import {
   XCircleIcon,
 } from 'lucide-react'
 import api from '../services/api'
-import type { UserWithBackendFields as User } from '../types'
+import type { User } from '../types'
 
 const UserManagement: React.FC = () => {
   const [showAddUser, setShowAddUser] = useState(false)
@@ -197,18 +197,18 @@ const UserManagement: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    {(user as any).is_active ? (
+                    {user.is_active ? (
                       <CheckCircleIcon className="w-4 h-4 text-green-500 mr-1" />
                     ) : (
                       <XCircleIcon className="w-4 h-4 text-red-500 mr-1" />
                     )}
-                    <span className={(user as any).is_active ? 'text-green-800' : 'text-red-800'}>
-                      {(user as any).is_active ? 'Active' : 'Inactive'}
+                    <span className={user.is_active ? 'text-green-800' : 'text-red-800'}>
+                      {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {(user as any).last_login ? new Date((user as any).last_login).toLocaleDateString() : 'Never'}
+                  {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <div className="flex space-x-2">
@@ -350,7 +350,7 @@ const UserManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <select
                     name="is_active"
-                    defaultValue={(editingUser as any).is_active ? 'true' : 'false'}
+                    defaultValue={editingUser.is_active ? 'true' : 'false'}
                     required
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >

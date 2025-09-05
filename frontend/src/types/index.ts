@@ -7,10 +7,7 @@ export interface User {
   avatar?: string
   lastLogin?: string
   createdAt: string
-}
-
-// Extended User interface that matches backend response
-export interface UserWithBackendFields extends User {
+  // Backend fields for compatibility
   is_active?: boolean
   last_login?: string  // Backend uses snake_case
 }
