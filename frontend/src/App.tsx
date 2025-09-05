@@ -22,7 +22,7 @@ function App() {
   })
 
   // Initialize WebSocket connection for authenticated users
-  useWebSocket({ autoConnect: !!user })
+  const { isConnected } = useWebSocket({ autoConnect: !!user })
 
   if (isLoading) {
     return (
