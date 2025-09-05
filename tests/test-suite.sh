@@ -104,7 +104,7 @@ test_deployments() {
     log "Validating middleware manifests..."
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" --dry-run=client > "$LOG_DIR/middleware-validation.log" 2>&1
     success "Middleware manifests validation passed"
-    
+
     # Test frontend manifests
     log "Validating frontend manifests..."
     if [ -d "frontend/k8s" ]; then
@@ -118,7 +118,7 @@ test_deployments() {
     log "Deploying to test namespace..."
     kubectl apply -k manifests/base/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/base-deploy.log" 2>&1
     kubectl apply -k manifests/middleware/ --namespace="$TEST_NAMESPACE" > "$LOG_DIR/middleware-deploy.log" 2>&1
-    
+
     # Deploy frontend if available
     if [ -d "frontend/k8s" ]; then
         log "Deploying frontend to test namespace..."
@@ -138,33 +138,36 @@ test_deployments() {
 # Test Python components
 test_python_components() {
     log "Testing Python components..."
-    
+
     # Test middleware components
     if [ -f "tests/test_middleware.py" ]; then
         log "Running middleware tests..."
         python3 tests/test_middleware.py > "$LOG_DIR/middleware-tests.log" 2>&1
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             success "Middleware tests passed"
         else
             warning "Some middleware tests failed (expected without dependencies)"
         fi
     fi
-    
+
     # Test frontend components
     if [ -f "tests/test_frontend.py" ]; then
         log "Running frontend tests..."
         python3 tests/test_frontend.py > "$LOG_DIR/frontend-tests.log" 2>&1
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             success "Frontend tests passed"
         else
             warning "Some frontend tests failed"
         fi
     fi
-    
+
     # Test configuration script
     if [ -f "feature_flag_configure.py" ]; then
         log "Testing configuration script syntax..."
         python3 -m py_compile feature_flag_configure.py > "$LOG_DIR/config-script-test.log" 2>&1
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             success "Configuration script syntax valid"
         else

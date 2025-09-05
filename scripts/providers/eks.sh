@@ -91,7 +91,7 @@ else
   # Convert space-separated zones to comma-separated for eksctl
   ZONES_COMMA=$(echo "$ZONE" | tr ' ' ',')
   echo "   🗺️  Using availability zones: $ZONES_COMMA"
-  
+
   eksctl create cluster \
     --name "$CLUSTER_NAME" \
     --region "$REGION" \

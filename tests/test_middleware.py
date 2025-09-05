@@ -263,12 +263,12 @@ class TestWebhookSecurity(unittest.TestCase):
         """Test webhook signature verification via FeatureFlagManager"""
         if not MIDDLEWARE_AVAILABLE:
             self.skipTest("Middleware not available")
-        
+
         # Test LaunchDarkly provider signature verification
         with patch.dict(os.environ, {'FEATURE_FLAG_PROVIDER': 'launchdarkly', 'LAUNCHDARKLY_SDK_KEY': 'test-key', 'WEBHOOK_SECRET': 'test-secret'}):
             flag_manager = FeatureFlagManager('launchdarkly')
             provider = flag_manager.get_provider()
-            
+
             secret = "test-secret"
             payload = b'{"kind": "flag", "data": {"key": "test"}}'
 

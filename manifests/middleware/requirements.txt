@@ -15,7 +15,7 @@ pyyaml==6.0.1
 # LaunchDarkly SDK (optional - only if using LaunchDarkly)
 # launchdarkly-server-sdk==8.2.1
 
-# Statsig SDK (optional - only if using Statsig)  
+# Statsig SDK (optional - only if using Statsig)
 # statsig==1.20.0
 
 # WebSocket support for real-time features

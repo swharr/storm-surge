@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { 
-  DollarSign, 
-  Server, 
-  Flag, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  DollarSign,
+  Server,
+  Flag,
+  TrendingUp,
+  TrendingDown,
   Activity,
   Clock,
   CheckCircle,
@@ -151,12 +151,12 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={costHistory}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="timestamp" 
+                  <XAxis
+                    dataKey="timestamp"
                     tickFormatter={(value) => new Date(value).toLocaleDateString()}
                   />
                   <YAxis tickFormatter={(value) => `$${value}`} />
-                  <Tooltip 
+                  <Tooltip
                     labelFormatter={(value) => new Date(value).toLocaleDateString()}
                     formatter={(value: number, name: string) => [
                       `$${value.toFixed(2)}`,
@@ -384,9 +384,9 @@ function StatusBadge({ status }: { status: string }) {
     down: { label: 'Down', className: 'badge-danger' },
   }
 
-  const config = statusConfig[status as keyof typeof statusConfig] || { 
-    label: status, 
-    className: 'badge-gray' 
+  const config = statusConfig[status as keyof typeof statusConfig] || {
+    label: status,
+    className: 'badge-gray'
   }
 
   return (

@@ -62,7 +62,7 @@ def init_mock_users():
         },
         'operator@stormsurge.dev': {
             'id': 'operator-user-uuid-2',
-            'email': 'operator@stormsurge.dev', 
+            'email': 'operator@stormsurge.dev',
             'name': 'Operator User',
             'role': 'operator',
             'password_hash': hash_password('operator123'),  # Password: operator123
@@ -75,7 +75,7 @@ def init_mock_users():
         'viewer@stormsurge.dev': {
             'id': 'viewer-user-uuid-3',
             'email': 'viewer@stormsurge.dev',
-            'name': 'Viewer User', 
+            'name': 'Viewer User',
             'role': 'viewer',
             'password_hash': hash_password('viewer123'),  # Password: viewer123
             'created_at': '2024-01-01T00:00:00Z',
@@ -208,22 +208,22 @@ def require_auth(f):
                 token = auth_header.split(' ')[1]
         if not token:
             return jsonify({'error': 'Authentication required'}), 401
-        
+
         # Check if session is valid
         if not is_session_valid(token):
             return jsonify({'error': 'Session expired or invalid'}), 401
-        
+
         user_data = verify_token(token)
         if not user_data:
             invalidate_session(token)
             return jsonify({'error': 'Invalid or expired token'}), 401
-        
+
         # Check if user is still active
         user = MOCK_USERS.get(user_data.get('email', ''))
         if not user or not user.get('is_active', True):
             invalidate_session(token)
             return jsonify({'error': 'Account is disabled'}), 401
-        
+
         request.current_user = user_data
         return f(*args, **kwargs)
     return decorated_function
@@ -235,13 +235,13 @@ def require_role(required_role: str):
         def decorated_function(*args, **kwargs):
             if not hasattr(request, 'current_user'):
                 return jsonify({'error': 'Authentication required'}), 401
-            
+
             user_role = request.current_user.get('role')
             role_hierarchy = {'viewer': 1, 'operator': 2, 'admin': 3}
-            
+
             if role_hierarchy.get(user_role, 0) < role_hierarchy.get(required_role, 999):
                 return jsonify({'error': 'Insufficient permissions'}), 403
-            
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -272,42 +272,42 @@ def login():
     data = request.get_json()
     email = data.get('email', '').lower().strip()
     password = data.get('password', '')
-    
+
     if not email or not password:
         return jsonify({'error': 'Email and password required'}), 400
-    
+
     user = MOCK_USERS.get(email)
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
-    
+
     # Check if account is active
     if not user.get('is_active', True):
         return jsonify({'error': 'Account is disabled'}), 401
-    
+
     # Check if account is locked
     locked_until = user.get('locked_until')
     if locked_until and datetime.fromisoformat(locked_until.replace('Z', '+00:00')) > datetime.utcnow():
         return jsonify({'error': 'Account is temporarily locked due to failed login attempts'}), 401
-    
+
     # Verify password using bcrypt
     if not verify_password(password, user['password_hash']):
         # Increment failed login attempts
         user['failed_login_attempts'] = user.get('failed_login_attempts', 0) + 1
-        
+
         # Lock account after 5 failed attempts for 15 minutes
         if user['failed_login_attempts'] >= 5:
             user['locked_until'] = (datetime.utcnow() + timedelta(minutes=15)).isoformat() + 'Z'
             return jsonify({'error': 'Account locked due to too many failed login attempts. Try again in 15 minutes.'}), 401
-        
+
         return jsonify({'error': 'Invalid credentials'}), 401
-    
+
     # Reset failed login attempts on successful login
     user['failed_login_attempts'] = 0
     user['locked_until'] = None
-    
+
     # Update last login
     user['last_login'] = datetime.utcnow().isoformat() + 'Z'
-    
+
     # Generate token and CSRF token
     token = generate_token(user)
     csrf_token = secrets.token_urlsafe(24)
@@ -361,20 +361,20 @@ def register_user():
     password = data.get('password', '')
     name = data.get('name', '').strip()
     role = data.get('role', 'viewer').lower()
-    
+
     # Validation
     if not email or not password or not name:
         return jsonify({'error': 'Email, password, and name are required'}), 400
-    
+
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters long'}), 400
-    
+
     if role not in ['admin', 'operator', 'viewer']:
         return jsonify({'error': 'Invalid role. Must be admin, operator, or viewer'}), 400
-    
+
     if email in MOCK_USERS:
         return jsonify({'error': 'User with this email already exists'}), 409
-    
+
     # Create new user
     user_id = generate_user_id()
     new_user = {
@@ -389,14 +389,14 @@ def register_user():
         'failed_login_attempts': 0,
         'locked_until': None
     }
-    
+
     MOCK_USERS[email] = new_user
-    
+
     # Return user data without sensitive fields
     user_data = {k: v for k, v in new_user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
-    
+
     logger.info(f"New user {email} registered by {request.current_user.get('email')}")
-    
+
     return jsonify({
         'message': 'User registered successfully',
         'user': user_data
@@ -410,28 +410,28 @@ def change_password():
     data = request.get_json()
     current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
-    
+
     if not current_password or not new_password:
         return jsonify({'error': 'Current password and new password are required'}), 400
-    
+
     if len(new_password) < 8:
         return jsonify({'error': 'New password must be at least 8 characters long'}), 400
-    
+
     user_email = request.current_user.get('email')
     user = MOCK_USERS.get(user_email)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     # Verify current password
     if not verify_password(current_password, user['password_hash']):
         return jsonify({'error': 'Current password is incorrect'}), 401
-    
+
     # Update password
     user['password_hash'] = hash_password(new_password)
-    
+
     logger.info(f"User {user_email} changed their password")
-    
+
     return jsonify({'message': 'Password changed successfully'})
 
 @api_bp.route('/auth/me', methods=['GET'])
@@ -440,12 +440,12 @@ def get_current_user():
     """Get current user information"""
     user_id = request.current_user['user_id']
     user_email = request.current_user['email']
-    
+
     # Find user in mock database
     user = next((u for u in MOCK_USERS.values() if u['id'] == user_id), None)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     user_data = {k: v for k, v in user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
     return jsonify(user_data)
 
@@ -459,7 +459,7 @@ def list_users():
     for user in MOCK_USERS.values():
         user_data = {k: v for k, v in user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
         users.append(user_data)
-    
+
     return jsonify(users)
 
 @api_bp.route('/users', methods=['POST'])
@@ -469,21 +469,21 @@ def list_users():
 def create_user():
     """Create a new user (admin only)"""
     data = request.get_json()
-    
+
     # Validate required fields
     required_fields = ['email', 'password', 'name', 'role']
     for field in required_fields:
         if not data.get(field):
             return jsonify({'error': f'Missing required field: {field}'}), 400
-    
+
     # Check if user already exists
     if data['email'] in MOCK_USERS:
         return jsonify({'error': 'User already exists'}), 400
-    
+
     # Validate role
     if data['role'] not in ['admin', 'operator', 'viewer']:
         return jsonify({'error': 'Invalid role'}), 400
-    
+
     # Create new user
     user_id = generate_user_id()
     new_user = {
@@ -498,13 +498,13 @@ def create_user():
         'failed_login_attempts': 0,
         'locked_until': None
     }
-    
+
     # Add to mock database
     MOCK_USERS[data['email']] = new_user
-    
+
     # Return user data (without password hash)
     user_response = {k: v for k, v in new_user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
-    
+
     return jsonify({
         'message': 'User created successfully',
         'user': user_response
@@ -518,7 +518,7 @@ def get_user(user_id):
     user = next((u for u in MOCK_USERS.values() if u['id'] == user_id), None)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     user_data = {k: v for k, v in user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
     return jsonify(user_data)
 
@@ -529,30 +529,30 @@ def get_user(user_id):
 def update_user(user_id):
     """Update user (admin only)"""
     data = request.get_json()
-    
+
     user = next((u for u in MOCK_USERS.values() if u['id'] == user_id), None)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     # Update allowed fields
     if 'name' in data:
         user['name'] = data['name'].strip()
-    
+
     if 'role' in data:
         if data['role'] not in ['admin', 'operator', 'viewer']:
             return jsonify({'error': 'Invalid role'}), 400
         user['role'] = data['role']
-    
+
     if 'is_active' in data:
         user['is_active'] = bool(data['is_active'])
-    
+
     # Reset failed login attempts if reactivating user
     if data.get('is_active') and not user.get('is_active'):
         user['failed_login_attempts'] = 0
         user['locked_until'] = None
-    
+
     logger.info(f"User {user['email']} updated by {request.current_user.get('email')}")
-    
+
     user_data = {k: v for k, v in user.items() if k not in ['password_hash', 'failed_login_attempts', 'locked_until']}
     return jsonify(user_data)
 
@@ -565,20 +565,20 @@ def delete_user(user_id):
     # Prevent deleting self
     if user_id == request.current_user.get('user_id'):
         return jsonify({'error': 'Cannot delete your own account'}), 400
-    
+
     user_email = None
     for email, user in list(MOCK_USERS.items()):
         if user['id'] == user_id:
             user_email = email
             break
-    
+
     if not user_email:
         return jsonify({'error': 'User not found'}), 404
-    
+
     del MOCK_USERS[user_email]
-    
+
     logger.info(f"User {user_email} deleted by {request.current_user.get('email')}")
-    
+
     return jsonify({'message': 'User deleted successfully'})
 
 @api_bp.route('/users/<user_id>/reset-password', methods=['POST'])
@@ -588,21 +588,21 @@ def reset_user_password(user_id):
     """Reset user password (admin only)"""
     data = request.get_json()
     new_password = data.get('new_password', '')
-    
+
     if len(new_password) < 8:
         return jsonify({'error': 'New password must be at least 8 characters long'}), 400
-    
+
     user = next((u for u in MOCK_USERS.values() if u['id'] == user_id), None)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     # Update password and reset login attempts
     user['password_hash'] = hash_password(new_password)
     user['failed_login_attempts'] = 0
     user['locked_until'] = None
-    
+
     logger.info(f"Password reset for user {user['email']} by {request.current_user.get('email')}")
-    
+
     return jsonify({'message': 'Password reset successfully'})
 
 # Feature flags endpoints
@@ -629,17 +629,17 @@ def toggle_flag(flag_key):
     flag = next((f for f in MOCK_FLAGS if f['key'] == flag_key), None)
     if not flag:
         return jsonify({'error': 'Flag not found'}), 404
-    
+
     data = request.get_json()
     enabled = data.get('enabled')
-    
+
     if enabled is None:
         return jsonify({'error': 'enabled field required'}), 400
-    
+
     flag['enabled'] = bool(enabled)
     flag['last_modified'] = datetime.utcnow().isoformat() + 'Z'
     flag['modified_by'] = request.current_user['email']
-    
+
     return jsonify(flag)
 
 # Clusters endpoints
@@ -664,10 +664,10 @@ def get_cluster(cluster_id):
 def get_cost_metrics():
     """Get cost metrics"""
     time_range = request.args.get('range', '24h')
-    
+
     # Mock cost data
     total_hourly = sum(c['cost_per_hour'] for c in MOCK_CLUSTERS)
-    
+
     metrics = {
         'current_hourly': total_hourly,
         'projected_daily': total_hourly * 24,
@@ -677,7 +677,7 @@ def get_cost_metrics():
         'optimization_percentage': 15.2,
         'last_optimization': '2024-07-24T08:30:00Z'
     }
-    
+
     return jsonify(metrics)
 
 @api_bp.route('/costs/history', methods=['GET'])
@@ -685,24 +685,24 @@ def get_cost_metrics():
 def get_cost_history():
     """Get historical cost data"""
     time_range = request.args.get('range', '7d')
-    
+
     # Generate mock historical data
     days = 7 if time_range == '7d' else 30
     history = []
-    
+
     base_cost = sum(c['cost_per_hour'] for c in MOCK_CLUSTERS) * 24
-    
+
     for i in range(days):
         date = datetime.utcnow() - timedelta(days=days-i-1)
         cost = base_cost + (i * 10) + ((-1) ** i * 50)  # Add some variation
         savings = cost * 0.15  # 15% savings
-        
+
         history.append({
             'timestamp': date.isoformat() + 'Z',
             'cost': round(cost, 2),
             'savings': round(savings, 2)
         })
-    
+
     return jsonify(history)
 
 # Scaling events endpoints
@@ -712,7 +712,7 @@ def get_scaling_events():
     """Get scaling events"""
     cluster_id = request.args.get('clusterId')
     limit = int(request.args.get('limit', 50))
-    
+
     # Mock scaling events data
     events = []
     for i in range(min(limit, 20)):
@@ -730,7 +730,7 @@ def get_scaling_events():
             'duration': 1200 + (i * 100),
             'cost_impact': round((-1) ** i * 2.5, 2)
         })
-    
+
     return jsonify(events)
 
 # System health endpoint
@@ -749,7 +749,7 @@ def get_system_health():
         'last_health_check': datetime.utcnow().isoformat() + 'Z',
         'version': '1.1.0'
     }
-    
+
     return jsonify(health)
 
 # Settings endpoints
@@ -770,7 +770,7 @@ def get_settings():
             'webhook_enabled': True
         }
     }
-    
+
     return jsonify(settings)
 
 @api_bp.route('/test-connection', methods=['POST'])
@@ -781,18 +781,18 @@ def test_connection():
     data = request.get_json()
     provider = data.get('provider')
     credentials = data.get('credentials', {})
-    
+
     # Mock connection test
     if provider in ['launchdarkly', 'statsig']:
         # In real implementation, test actual connection
         success = len(credentials.get('api_key', '')) > 10
         message = 'Connection successful' if success else 'Invalid credentials'
-        
+
         return jsonify({
             'success': success,
             'message': message
         })
-    
+
     return jsonify({
         'success': False,
         'message': 'Unsupported provider'
@@ -805,24 +805,24 @@ def test_connection():
 def export_data(data_type):
     """Export data in various formats"""
     format_type = request.args.get('format', 'csv')
-    
+
     if data_type not in ['audit_logs', 'scaling_events', 'cost_reports']:
         return jsonify({'error': 'Invalid data type'}), 400
-    
+
     # Mock CSV export
     if format_type == 'csv':
         csv_content = f"# {data_type.replace('_', ' ').title()} Export\n"
         csv_content += f"# Generated on {datetime.utcnow().isoformat()}\n"
         csv_content += "timestamp,event,details\n"
         csv_content += f"{datetime.utcnow().isoformat()},export_requested,{data_type}\n"
-        
+
         from flask import Response
         return Response(
             csv_content,
             mimetype='text/csv',
             headers={'Content-Disposition': f'attachment; filename={data_type}_{int(time.time())}.csv'}
         )
-    
+
     return jsonify({'error': 'Unsupported format'}), 400
 
 # Error handlers

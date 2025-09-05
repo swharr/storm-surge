@@ -175,7 +175,7 @@ class ApiService {
     const params = new URLSearchParams()
     if (clusterId) params.append('clusterId', clusterId)
     params.append('limit', limit.toString())
-    
+
     const response = await this.client.get(`/scaling-events?${params}`)
     return response.data
   }
@@ -225,7 +225,7 @@ class ApiService {
     const params = new URLSearchParams()
     params.append('page', page.toString())
     params.append('limit', limit.toString())
-    
+
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value)

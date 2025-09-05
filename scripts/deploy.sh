@@ -207,6 +207,7 @@ get_region() {
   fi
 
   local regions
+  # shellcheck disable=SC2207
   regions=($(parse_regions "$provider"))
   local i=1
 
@@ -242,6 +243,7 @@ get_zone() {
   local provider=$1
   local region=$2
   local zones
+  # shellcheck disable=SC2207
   zones=($(parse_zones "$provider" "$region"))
 
   if [ "$NON_INTERACTIVE" = "true" ]; then
@@ -273,7 +275,7 @@ get_zone() {
         echo
         read -r -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
         ZONE="${region}-${zone_suffix}"
-        
+
         # Validate zone exists in the zones array
         if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
           break
@@ -289,21 +291,22 @@ get_zone() {
       echo
       echo "⚠️  EKS requires at least 2 availability zones for high availability"
       echo
-      
+
       local selected_zones=()
       while true; do
         read -r -p "Enter zones separated by spaces (e.g., 'a b c' for ${region}a ${region}b ${region}c): " zone_input
-        
+
         # Convert input to array
+        # shellcheck disable=SC2206
         local input_zones=($zone_input)
-        
+
         # Check if at least 2 zones were provided
         if [ ${#input_zones[@]} -lt 2 ]; then
           echo "❌ Please select at least 2 availability zones for EKS"
           echo
           continue
         fi
-        
+
         # Validate all zones exist
         local all_valid=true
         selected_zones=()
@@ -316,7 +319,7 @@ get_zone() {
             break
           fi
         done
-        
+
         if [ "$all_valid" = "true" ]; then
           ZONE="${selected_zones[*]}"
           break
@@ -333,7 +336,7 @@ get_zone() {
         echo
         read -r -p "Enter zone number (1-3): " zone_suffix
         ZONE="$zone_suffix"
-        
+
         # Validate zone exists in the zones array
         if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
           break
@@ -438,6 +441,7 @@ get_aws_profile() {
 
   # No valid credentials found, check for available profiles
   local profiles
+  # shellcheck disable=SC2207
   profiles=($(aws configure list-profiles 2>/dev/null || echo ""))
 
   if [ ${#profiles[@]} -eq 0 ]; then
@@ -464,7 +468,7 @@ get_aws_profile() {
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#profiles[@]}" ]; then
       AWS_PROFILE="${profiles[$((choice-1))]}"
-      
+
       # Verify the selected profile works
       if AWS_PROFILE="$AWS_PROFILE" aws sts get-caller-identity &>/dev/null 2>&1; then
         echo "✅ Using AWS profile: $AWS_PROFILE"
@@ -503,6 +507,7 @@ validate_arguments() {
 
   if [ -n "$REGION" ] && [ -n "$PROVIDER" ] && [ "$PROVIDER" != "all" ]; then
     local valid_regions
+    # shellcheck disable=SC2207
     valid_regions=($(parse_regions "$PROVIDER"))
     if ! printf '%s\n' "${valid_regions[@]}" | grep -q "^$REGION$"; then
       errors+=("Invalid region '$REGION' for provider '$PROVIDER'")
@@ -679,7 +684,7 @@ run_provider() {
   export STORM_NODES="$NODES"
   STORM_CLUSTER_NAME="$(get_cluster_name_for_provider "$p")"
   export STORM_CLUSTER_NAME
-  
+
   # Export AWS profile if set
   if [ -n "$AWS_PROFILE" ]; then
     export AWS_PROFILE

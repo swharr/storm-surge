@@ -42,13 +42,13 @@ class TestPasswordSecurity(unittest.TestCase):
         """Test password hashing functionality"""
         password = "testpassword123"
         hashed = hash_password(password)
-        
+
         # Hash should be different from original password
         self.assertNotEqual(password, hashed)
-        
+
         # Hash should be consistently long (bcrypt hashes are typically 60 chars)
         self.assertGreater(len(hashed), 50)
-        
+
         # Hashing same password twice should produce different results
         hashed2 = hash_password(password)
         self.assertNotEqual(hashed, hashed2)
@@ -58,10 +58,10 @@ class TestPasswordSecurity(unittest.TestCase):
         password = "testpassword123"
         wrong_password = "wrongpassword"
         hashed = hash_password(password)
-        
+
         # Correct password should verify
         self.assertTrue(verify_password(password, hashed))
-        
+
         # Wrong password should not verify
         self.assertFalse(verify_password(wrong_password, hashed))
 
@@ -69,14 +69,14 @@ class TestPasswordSecurity(unittest.TestCase):
         """Test user ID generation"""
         user_id1 = generate_user_id()
         user_id2 = generate_user_id()
-        
+
         # Should generate different IDs
         self.assertNotEqual(user_id1, user_id2)
-        
+
         # Should be strings
         self.assertIsInstance(user_id1, str)
         self.assertIsInstance(user_id2, str)
-        
+
         # Should be reasonable length (UUID-like)
         self.assertGreater(len(user_id1), 30)
 
@@ -93,7 +93,7 @@ class TestAuthenticationEndpoints(unittest.TestCase):
 
     def test_login_endpoint_exists(self):
         """Test that login endpoint exists"""
-        response = self.client.post('/api/auth/login', 
+        response = self.client.post('/api/auth/login',
                                    data=json.dumps({}),
                                    content_type='application/json')
         # Should not be 404 (endpoint exists)
@@ -106,7 +106,7 @@ class TestAuthenticationEndpoints(unittest.TestCase):
                                    data=json.dumps({}),
                                    content_type='application/json')
         self.assertEqual(response.status_code, 400)
-        
+
         data = json.loads(response.data)
         self.assertIn('error', data)
 
@@ -119,7 +119,7 @@ class TestAuthenticationEndpoints(unittest.TestCase):
                                    }),
                                    content_type='application/json')
         self.assertEqual(response.status_code, 401)
-        
+
         data = json.loads(response.data)
         self.assertIn('error', data)
 
@@ -167,8 +167,8 @@ class TestRoleBasedAccess(unittest.TestCase):
         # Test user list endpoint
         response = self.client.get('/api/users')
         self.assertEqual(response.status_code, 401)
-        
-        # Test user creation endpoint  
+
+        # Test user creation endpoint
         response = self.client.post('/api/users')
         self.assertEqual(response.status_code, 401)
 
@@ -177,11 +177,11 @@ class TestRoleBasedAccess(unittest.TestCase):
         endpoints = [
             ('/api/users', 'GET'),
             ('/api/users/test-id', 'GET'),
-            ('/api/users/test-id', 'PUT'), 
+            ('/api/users/test-id', 'PUT'),
             ('/api/users/test-id', 'DELETE'),
             ('/api/users/test-id/reset-password', 'POST')
         ]
-        
+
         for endpoint, method in endpoints:
             if method == 'GET':
                 response = self.client.get(endpoint)
@@ -191,13 +191,13 @@ class TestRoleBasedAccess(unittest.TestCase):
                 response = self.client.put(endpoint, data=json.dumps({}), content_type='application/json')
             elif method == 'DELETE':
                 response = self.client.delete(endpoint)
-            
+
             # Should not be 404 (endpoint exists), but should be 401 (unauthorized)
             self.assertNotEqual(response.status_code, 404, f"Endpoint {endpoint} ({method}) should exist")
             self.assertEqual(response.status_code, 401, f"Endpoint {endpoint} ({method}) should require auth")
 
 
-@unittest.skipIf(not MIDDLEWARE_AVAILABLE, "Middleware not available") 
+@unittest.skipIf(not MIDDLEWARE_AVAILABLE, "Middleware not available")
 class TestSecurityFeatures(unittest.TestCase):
     """Test security features like account locking, session management"""
 
@@ -218,7 +218,7 @@ class TestSecurityFeatures(unittest.TestCase):
         response = self.client.get('/health')
         # Health endpoint should be accessible without auth
         self.assertEqual(response.status_code, 200)
-        
+
         data = json.loads(response.data)
         self.assertIn('status', data)
         self.assertEqual(data['status'], 'healthy')
@@ -241,17 +241,17 @@ class TestFrontendAuthIntegration(unittest.TestCase):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'frontend', 'src', 'services', 'api.ts'
         )
-        
+
         self.assertTrue(os.path.exists(api_service_path), "API service should exist")
-        
+
         with open(api_service_path, 'r') as f:
             api_content = f.read()
-        
+
         # Check for authentication methods
         auth_methods = ['login', 'logout', 'getCurrentUser', 'register', 'changePassword']
         for method in auth_methods:
             self.assertIn(method, api_content, f"API service should have {method} method")
-        
+
         # Check for user management methods
         user_mgmt_methods = ['getUsers', 'updateUser', 'deleteUser', 'resetUserPassword']
         for method in user_mgmt_methods:
@@ -263,12 +263,12 @@ class TestFrontendAuthIntegration(unittest.TestCase):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'frontend', 'src', 'App.tsx'
         )
-        
+
         self.assertTrue(os.path.exists(app_component_path), "App component should exist")
-        
+
         with open(app_component_path, 'r') as f:
             app_content = f.read()
-        
+
         # Check for authentication integration: fetch user and admin-only component
         self.assertIn('getCurrentUser', app_content, "App should request current user")
         self.assertIn('UserManagement', app_content, "App should include admin-only route")
@@ -283,12 +283,12 @@ class TestConfigurationIntegration(unittest.TestCase):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'manifests', 'middleware', 'requirements.txt'
         )
-        
+
         self.assertTrue(os.path.exists(requirements_path), "Requirements file should exist")
-        
+
         with open(requirements_path, 'r') as f:
             requirements_content = f.read()
-        
+
         self.assertIn('bcrypt', requirements_content, "Requirements should include bcrypt")
 
     def test_configuration_script_updates_requirements(self):
@@ -297,13 +297,13 @@ class TestConfigurationIntegration(unittest.TestCase):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'feature_flag_configure.py'
         )
-        
+
         self.assertTrue(os.path.exists(config_script_path), "Configuration script should exist")
-        
+
         # Test script compiles
         with open(config_script_path, 'r') as f:
             script_content = f.read()
-        
+
         # Should handle bcrypt and authentication dependencies
         self.assertIn('requirements', script_content, "Script should handle requirements")
 
@@ -311,13 +311,13 @@ class TestConfigurationIntegration(unittest.TestCase):
 if __name__ == '__main__':
     print("🔐 Running Authentication System Tests")
     print("=" * 40)
-    
+
     if MIDDLEWARE_AVAILABLE:
         print("✅ Authentication system is available")
     else:
         print("⚠️  Authentication system import failed - some tests will be skipped")
-    
+
     print()
-    
+
     # Run tests
     unittest.main(verbosity=2)

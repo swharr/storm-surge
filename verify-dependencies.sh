@@ -53,7 +53,7 @@ fi
 # Check kubectl
 echo -n "☸️  kubectl: "
 if command_exists kubectl; then
-    kubectl version --client --short 2>/dev/null || echo "$(kubectl version --client 2>/dev/null | head -1)"
+    kubectl version --client --short 2>/dev/null || (kubectl version --client 2>/dev/null | head -1)
 else
     echo "⚠️  Not found (needed for deployment)"
 fi
@@ -79,7 +79,7 @@ echo "==========================="
 
 if [ -f "frontend/package.json" ]; then
     echo "✅ package.json found"
-    
+
     if command_exists node; then
         echo "📦 Package info:"
         node -e "
@@ -111,7 +111,7 @@ config_files=(
 for file_desc in "${config_files[@]}"; do
     file=$(echo "$file_desc" | cut -d: -f1)
     desc=$(echo "$file_desc" | cut -d: -f2)
-    
+
     if [ -f "$file" ]; then
         echo "✅ $desc"
     else
@@ -135,7 +135,7 @@ k8s_files=(
 for file_desc in "${k8s_files[@]}"; do
     file=$(echo "$file_desc" | cut -d: -f1)
     desc=$(echo "$file_desc" | cut -d: -f2)
-    
+
     if [ -f "$file" ]; then
         echo "✅ $desc"
     else
@@ -156,7 +156,7 @@ build_scripts=(
 for script_desc in "${build_scripts[@]}"; do
     script=$(echo "$script_desc" | cut -d: -f1)
     desc=$(echo "$script_desc" | cut -d: -f2)
-    
+
     if [ -f "$script" ]; then
         if [ -x "$script" ]; then
             echo "✅ $desc (executable)"

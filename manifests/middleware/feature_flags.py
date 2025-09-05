@@ -19,17 +19,17 @@ logger = logging.getLogger(__name__)
 
 class FeatureFlagProvider(ABC):
     """Abstract base class for feature flag providers"""
-    
+
     @abstractmethod
     def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
         """Verify webhook signature"""
         pass
-    
+
     @abstractmethod
     def parse_webhook_payload(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse webhook payload and extract flag information"""
         pass
-    
+
     @abstractmethod
     def get_webhook_endpoint(self) -> str:
         """Get the webhook endpoint path"""
@@ -38,10 +38,10 @@ class FeatureFlagProvider(ABC):
 
 class LaunchDarklyProvider(FeatureFlagProvider):
     """LaunchDarkly feature flag provider"""
-    
+
     def __init__(self, webhook_secret: str = ""):
         self.webhook_secret = webhook_secret
-    
+
     def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
         """Verify LaunchDarkly webhook signature"""
         if not self.webhook_secret:
@@ -55,7 +55,7 @@ class LaunchDarklyProvider(FeatureFlagProvider):
         ).hexdigest()
 
         return hmac.compare_digest(signature, expected_signature)
-    
+
     def parse_webhook_payload(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse LaunchDarkly webhook payload"""
         if payload.get('kind') == 'flag':
@@ -67,17 +67,17 @@ class LaunchDarklyProvider(FeatureFlagProvider):
                     'provider': 'launchdarkly'
                 }
         return None
-    
+
     def get_webhook_endpoint(self) -> str:
         return '/webhook/launchdarkly'
 
 
 class StatsigProvider(FeatureFlagProvider):
     """Statsig feature flag provider"""
-    
+
     def __init__(self, webhook_secret: str = ""):
         self.webhook_secret = webhook_secret
-    
+
     def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
         """Verify Statsig webhook signature"""
         if not self.webhook_secret:
@@ -91,7 +91,7 @@ class StatsigProvider(FeatureFlagProvider):
         ).hexdigest()
 
         return hmac.compare_digest(f"sha256={expected_signature}", signature)
-    
+
     def parse_webhook_payload(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse Statsig webhook payload"""
         if payload.get('event_type') == 'gate_config_updated':
@@ -103,29 +103,29 @@ class StatsigProvider(FeatureFlagProvider):
                     'provider': 'statsig'
                 }
         return None
-    
+
     def get_webhook_endpoint(self) -> str:
         return '/webhook/statsig'
 
 
 class FeatureFlagManager:
     """Manages feature flag providers and routing"""
-    
+
     def __init__(self, provider_type: str):
         self.provider_type = provider_type.lower()
         webhook_secret = os.getenv('WEBHOOK_SECRET', '')
-        
+
         if self.provider_type == 'launchdarkly':
             self.provider = LaunchDarklyProvider(webhook_secret)
         elif self.provider_type == 'statsig':
             self.provider = StatsigProvider(webhook_secret)
         else:
             raise ValueError(f"Unsupported provider type: {provider_type}")
-    
+
     def get_provider(self) -> FeatureFlagProvider:
         """Get the current provider instance"""
         return self.provider
-    
+
     def get_provider_type(self) -> str:
         """Get the provider type"""
         return self.provider_type

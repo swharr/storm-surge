@@ -26,10 +26,10 @@ class TestFrontendAvailability(unittest.TestCase):
         """Test that package.json exists and is valid"""
         package_json_path = FRONTEND_DIR / "package.json"
         self.assertTrue(package_json_path.exists(), "package.json should exist")
-        
+
         with open(package_json_path, 'r') as f:
             package_data = json.load(f)
-        
+
         # Verify required fields
         required_fields = ['name', 'version', 'dependencies', 'devDependencies', 'scripts']
         for field in required_fields:
@@ -39,12 +39,12 @@ class TestFrontendAvailability(unittest.TestCase):
         """Test that required configuration files exist"""
         required_files = [
             "tsconfig.json",
-            "tailwind.config.js", 
+            "tailwind.config.js",
             "vite.config.ts",
             "postcss.config.js",
             ".eslintrc.cjs"
         ]
-        
+
         for file in required_files:
             file_path = FRONTEND_DIR / file
             self.assertTrue(file_path.exists(), f"{file} should exist")
@@ -53,7 +53,7 @@ class TestFrontendAvailability(unittest.TestCase):
         """Test that src directory has required structure"""
         src_dir = FRONTEND_DIR / "src"
         self.assertTrue(src_dir.exists(), "src directory should exist")
-        
+
         required_dirs = ["components", "pages", "services", "types", "hooks"]
         for dir_name in required_dirs:
             dir_path = src_dir / dir_name
@@ -63,7 +63,7 @@ class TestFrontendAvailability(unittest.TestCase):
         """Test that main app files exist"""
         src_dir = FRONTEND_DIR / "src"
         required_files = ["App.tsx", "main.tsx", "index.css"]
-        
+
         for file in required_files:
             file_path = src_dir / file
             self.assertTrue(file_path.exists(), f"src/{file} should exist")
@@ -75,10 +75,10 @@ class TestFrontendConfiguration(unittest.TestCase):
     def test_package_json_scripts(self):
         """Test that package.json has required scripts"""
         package_json_path = FRONTEND_DIR / "package.json"
-        
+
         with open(package_json_path, 'r') as f:
             package_data = json.load(f)
-        
+
         required_scripts = ['dev', 'build', 'preview', 'lint']
         for script in required_scripts:
             self.assertIn(script, package_data['scripts'], f"Script '{script}' should be defined")
@@ -86,13 +86,13 @@ class TestFrontendConfiguration(unittest.TestCase):
     def test_typescript_config(self):
         """Test TypeScript configuration"""
         tsconfig_path = FRONTEND_DIR / "tsconfig.json"
-        
+
         with open(tsconfig_path, 'r') as f:
             tsconfig = json.load(f)
-        
+
         self.assertIn('compilerOptions', tsconfig)
         self.assertIn('include', tsconfig)
-        
+
         # Check for React JSX support
         compiler_options = tsconfig['compilerOptions']
         self.assertEqual(compiler_options.get('jsx'), 'react-jsx')
@@ -100,10 +100,10 @@ class TestFrontendConfiguration(unittest.TestCase):
     def test_essential_dependencies(self):
         """Test that essential dependencies are present"""
         package_json_path = FRONTEND_DIR / "package.json"
-        
+
         with open(package_json_path, 'r') as f:
             package_data = json.load(f)
-        
+
         essential_deps = [
             'react',
             'react-dom',
@@ -112,7 +112,7 @@ class TestFrontendConfiguration(unittest.TestCase):
             '@tanstack/react-query',
             'socket.io-client'
         ]
-        
+
         dependencies = package_data['dependencies']
         for dep in essential_deps:
             self.assertIn(dep, dependencies, f"Dependency '{dep}' should be present")
@@ -134,9 +134,9 @@ class TestDockerConfiguration(unittest.TestCase):
     def test_docker_scripts_exist(self):
         """Test that Docker build scripts exist"""
         build_script = FRONTEND_DIR / "build-and-push.sh"
-        local_script = FRONTEND_DIR / "local-build.sh" 
+        local_script = FRONTEND_DIR / "local-build.sh"
         entrypoint_script = FRONTEND_DIR / "docker-entrypoint.sh"
-        
+
         self.assertTrue(build_script.exists(), "build-and-push.sh should exist")
         self.assertTrue(local_script.exists(), "local-build.sh should exist")
         self.assertTrue(entrypoint_script.exists(), "docker-entrypoint.sh should exist")
@@ -145,21 +145,21 @@ class TestDockerConfiguration(unittest.TestCase):
         """Test that Docker scripts are executable"""
         build_script = FRONTEND_DIR / "build-and-push.sh"
         local_script = FRONTEND_DIR / "local-build.sh"
-        
+
         self.assertTrue(os.access(build_script, os.X_OK), "build-and-push.sh should be executable")
         self.assertTrue(os.access(local_script, os.X_OK), "local-build.sh should be executable")
 
     def test_nginx_config_content(self):
         """Test nginx configuration content"""
         nginx_config_path = FRONTEND_DIR / "nginx.conf"
-        
+
         with open(nginx_config_path, 'r') as f:
             nginx_content = f.read()
-        
+
         # Check for API proxy configuration
         self.assertIn('location /api/', nginx_content)
         self.assertIn('proxy_pass http://feature-flag-middleware:8000', nginx_content)
-        
+
         # Check for WebSocket proxy configuration
         self.assertIn('location /socket.io/', nginx_content)
         self.assertIn('Connection "upgrade"', nginx_content)
@@ -178,12 +178,12 @@ class TestKubernetesManifests(unittest.TestCase):
         k8s_dir = FRONTEND_DIR / "k8s"
         required_manifests = [
             "deployment.yaml",
-            "service.yaml", 
+            "service.yaml",
             "ingress.yaml",
             "configmap.yaml",
             "kustomization.yaml"
         ]
-        
+
         for manifest in required_manifests:
             manifest_path = k8s_dir / manifest
             self.assertTrue(manifest_path.exists(), f"{manifest} should exist in k8s/")
@@ -191,7 +191,7 @@ class TestKubernetesManifests(unittest.TestCase):
     def test_kustomization_syntax(self):
         """Test kustomization.yaml syntax"""
         kustomization_path = FRONTEND_DIR / "k8s" / "kustomization.yaml"
-        
+
         # Try to validate with kubectl (if available)
         try:
             result = subprocess.run(
@@ -218,10 +218,10 @@ class TestIntegrationPoints(unittest.TestCase):
         """Test API service configuration"""
         api_service_path = FRONTEND_DIR / "src" / "services" / "api.ts"
         self.assertTrue(api_service_path.exists(), "API service should exist")
-        
+
         with open(api_service_path, 'r') as f:
             api_content = f.read()
-        
+
         # Check for essential API methods
         essential_methods = ['login', 'getCurrentUser', 'getFeatureFlags', 'getClusters']
         for method in essential_methods:
@@ -231,10 +231,10 @@ class TestIntegrationPoints(unittest.TestCase):
         """Test WebSocket hook configuration"""
         websocket_hook_path = FRONTEND_DIR / "src" / "hooks" / "useWebSocket.ts"
         self.assertTrue(websocket_hook_path.exists(), "WebSocket hook should exist")
-        
+
         with open(websocket_hook_path, 'r') as f:
             websocket_content = f.read()
-        
+
         # Check for essential WebSocket events
         essential_events = ['flag_changed', 'cluster_scaled', 'alert_triggered']
         for event in essential_events:
@@ -243,10 +243,10 @@ class TestIntegrationPoints(unittest.TestCase):
     def test_app_component_integration(self):
         """Test main App component integration"""
         app_component_path = FRONTEND_DIR / "src" / "App.tsx"
-        
+
         with open(app_component_path, 'r') as f:
             app_content = f.read()
-        
+
         # Check for essential integrations
         self.assertIn('useQuery', app_content, "App should use React Query")
         self.assertIn('useWebSocket', app_content, "App should use WebSocket hook")
@@ -261,12 +261,12 @@ class TestComponentStructure(unittest.TestCase):
         pages_dir = FRONTEND_DIR / "src" / "pages"
         essential_pages = [
             "Dashboard.tsx",
-            "Login.tsx", 
+            "Login.tsx",
             "FeatureFlags.tsx",
             "Clusters.tsx",
             "Analytics.tsx"
         ]
-        
+
         for page in essential_pages:
             page_path = pages_dir / page
             self.assertTrue(page_path.exists(), f"Page {page} should exist")
@@ -278,7 +278,7 @@ class TestComponentStructure(unittest.TestCase):
             "Layout.tsx",
             "LoadingSpinner.tsx"
         ]
-        
+
         for component in essential_components:
             component_path = components_dir / component
             self.assertTrue(component_path.exists(), f"Component {component} should exist")
@@ -287,10 +287,10 @@ class TestComponentStructure(unittest.TestCase):
         """Test that TypeScript type definitions exist"""
         types_path = FRONTEND_DIR / "src" / "types" / "index.ts"
         self.assertTrue(types_path.exists(), "Type definitions should exist")
-        
+
         with open(types_path, 'r') as f:
             types_content = f.read()
-        
+
         # Check for essential type definitions
         essential_types = ['User', 'FeatureFlag', 'ClusterMetrics']
         for type_name in essential_types:
@@ -300,10 +300,10 @@ class TestComponentStructure(unittest.TestCase):
 if __name__ == '__main__':
     print("🧪 Running Frontend Tests")
     print("=" * 30)
-    
+
     # Set working directory to frontend for relative path tests
     original_cwd = os.getcwd()
-    
+
     try:
         # Run tests
         unittest.main(verbosity=2)

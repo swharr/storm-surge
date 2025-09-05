@@ -5,7 +5,7 @@
 ### 1. **Hardcoded Credentials**
 - **Issue**: Test passwords (admin123, operator123, viewer123) are hardcoded
 - **Risk**: High - Credentials could be used in production
-- **Fix**: 
+- **Fix**:
   ```python
   # Remove all hardcoded passwords
   # Use environment variables or secret management
@@ -16,14 +16,14 @@
   }
   ```
 
-### 2. **JWT Token in localStorage** 
+### 2. **JWT Token in localStorage**
 - **Issue**: JWT tokens stored in localStorage are vulnerable to XSS attacks
 - **Risk**: High - Token theft through XSS
 - **Fix**: Use httpOnly cookies instead:
   ```typescript
   // Backend: Set cookie with httpOnly flag
   response.set_cookie('auth_token', token, httpOnly=True, secure=True, samesite='Strict')
-  
+
   // Frontend: Cookies sent automatically with requests
   axios.defaults.withCredentials = true
   ```
@@ -35,7 +35,7 @@
   ```python
   from flask_limiter import Limiter
   limiter = Limiter(app, key_func=lambda: get_jwt_identity())
-  
+
   @limiter.limit("5 per minute")
   @app.route('/api/login', methods=['POST'])
   def login():
@@ -49,7 +49,7 @@
   ```bash
   # Generate strong secrets
   python -c "import secrets; print(secrets.token_urlsafe(32))"
-  
+
   # Use in production
   export FLASK_SECRET_KEY="<generated-secret>"
   export JWT_SECRET="<generated-secret>"
@@ -73,7 +73,7 @@
   ```python
   import redis
   from flask_session import Session
-  
+
   app.config['SESSION_TYPE'] = 'redis'
   app.config['SESSION_REDIS'] = redis.from_url('redis://localhost:6379')
   Session(app)
@@ -103,7 +103,7 @@
 - **Fix**: Use validation library:
   ```python
   from marshmallow import Schema, fields, validate
-  
+
   class LoginSchema(Schema):
       email = fields.Email(required=True)
       password = fields.Str(required=True, validate=validate.Length(min=8))

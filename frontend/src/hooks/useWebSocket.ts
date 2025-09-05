@@ -62,7 +62,7 @@ export function useWebSocket({
     socket.on('flag_changed', (event: WebSocketEvent) => {
       // Invalidate flags cache to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['flags'] })
-      
+
       toast.success(`Feature flag "${event.data.flag_key}" was ${event.data.enabled ? 'enabled' : 'disabled'}`)
     })
 
@@ -70,9 +70,9 @@ export function useWebSocket({
       // Invalidate clusters and scaling events cache
       queryClient.invalidateQueries({ queryKey: ['clusters'] })
       queryClient.invalidateQueries({ queryKey: ['scaling-events'] })
-      
+
       const { cluster_id, event_type, success } = event.data
-      
+
       if (success) {
         toast.success(`Cluster ${cluster_id} ${event_type.replace('_', ' ')} completed`)
       } else {
@@ -82,7 +82,7 @@ export function useWebSocket({
 
     socket.on('alert_triggered', (event: WebSocketEvent) => {
       const { alert_name, severity, message } = event.data
-      
+
       switch (severity) {
         case 'critical':
           toast.error(`🚨 ${alert_name}: ${message}`, { duration: 8000 })
@@ -98,9 +98,9 @@ export function useWebSocket({
     socket.on('system_health', (event: WebSocketEvent) => {
       // Invalidate system health cache
       queryClient.invalidateQueries({ queryKey: ['system-health'] })
-      
+
       const { status, component } = event.data
-      
+
       if (status === 'down' || status === 'degraded') {
         toast.error(`System component ${component} is ${status}`)
       }
@@ -108,10 +108,10 @@ export function useWebSocket({
 
     socket.on('cost_alert', (event: WebSocketEvent) => {
       const { threshold_exceeded, current_cost, threshold } = event.data
-      
+
       if (threshold_exceeded) {
-        toast.error(`💰 Cost threshold exceeded: $${current_cost} > $${threshold}`, { 
-          duration: 8000 
+        toast.error(`💰 Cost threshold exceeded: $${current_cost} > $${threshold}`, {
+          duration: 8000
         })
       }
     })

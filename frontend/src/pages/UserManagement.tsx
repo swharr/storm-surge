@@ -17,7 +17,7 @@ const UserManagement: React.FC = () => {
   const [showAddUser, setShowAddUser] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showPasswordReset, setShowPasswordReset] = useState<User | null>(null)
-  
+
   const queryClient = useQueryClient()
 
   const { data: users = [], isLoading } = useQuery({
@@ -76,7 +76,7 @@ const UserManagement: React.FC = () => {
   const handleCreateUser = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    
+
     createUserMutation.mutate({
       email: formData.get('email') as string,
       password: formData.get('password') as string,
@@ -90,7 +90,7 @@ const UserManagement: React.FC = () => {
     if (!editingUser) return
 
     const formData = new FormData(e.currentTarget)
-    
+
     updateUserMutation.mutate({
       userId: editingUser.id,
       updates: {

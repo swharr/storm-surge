@@ -103,7 +103,7 @@ class SpotOceanManager:
         """Scale cluster based on cost optimization flag"""
         start_time = time.time()
         details = {"scale_factor": scale_factor, "action": action}
-        
+
         try:
             cluster_info = self.get_cluster_info()
             if not cluster_info:
@@ -133,21 +133,21 @@ class SpotOceanManager:
                 logger.info(f"Scaling up cluster for performance: {new_capacity}")
 
             details["new_capacity"] = new_capacity
-            
+
             response = requests.put(
                 f"{SPOT_API_BASE_URL}/cluster/{self.cluster_id}",
                 headers=self.headers,
                 json={'cluster': {'capacity': new_capacity}}
             )
             response.raise_for_status()
-            
+
             details["duration_ms"] = int((time.time() - start_time) * 1000)
             details["response_status"] = response.status_code
-            
+
             # Log successful cluster action
             if logging_manager:
                 logging_manager.log_cluster_action(action, self.cluster_id, True, details)
-            
+
             # Emit WebSocket event for real-time updates
             socketio.emit('cluster_scaled', {
                 'cluster_id': self.cluster_id,
@@ -156,19 +156,19 @@ class SpotOceanManager:
                 'timestamp': time.time(),
                 'details': details
             })
-            
+
             return True
 
         except requests.exceptions.RequestException as e:
             details["error"] = str(e)
             details["duration_ms"] = int((time.time() - start_time) * 1000)
-            
+
             logger.error(f"Failed to scale cluster: {e}")
-            
+
             # Log failed cluster action
             if logging_manager:
                 logging_manager.log_cluster_action(action, self.cluster_id, False, details)
-            
+
             # Emit WebSocket event for failed scaling
             socketio.emit('cluster_scaled', {
                 'cluster_id': self.cluster_id,
@@ -177,7 +177,7 @@ class SpotOceanManager:
                 'timestamp': time.time(),
                 'details': details
             })
-            
+
             return False
 
 
@@ -210,23 +210,23 @@ def handle_feature_flag_webhook(provider_name: str):
     start_time = time.time()
     response_status = 200
     webhook_metadata = {"provider": provider_name, "endpoint": request.endpoint}
-    
+
     try:
         provider = flag_manager.get_provider()
-        
+
         # Verify this is the correct provider
         if flag_manager.get_provider_type() != provider_name:
             response_status = 400
             error_response = jsonify({'error': f'Wrong provider endpoint. Expected {flag_manager.get_provider_type()}'})
-            
+
             # Log webhook event
             if logging_manager:
                 webhook_metadata["error"] = "Wrong provider endpoint"
                 webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
                 logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
+
             return error_response, response_status
-        
+
         # Get signature header based on provider
         if provider_name == 'launchdarkly':
             signature = request.headers.get('X-LD-Signature', '')
@@ -234,19 +234,19 @@ def handle_feature_flag_webhook(provider_name: str):
             signature = request.headers.get('X-Statsig-Signature', '')
         else:
             signature = ''
-        
+
         # Verify webhook signature
         if not provider.verify_webhook_signature(request.data, signature):
             logger.error("Invalid webhook signature")
             response_status = 401
             error_response = jsonify({'error': 'Invalid signature'})
-            
+
             # Log webhook event
             if logging_manager:
                 webhook_metadata["error"] = "Invalid signature"
                 webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
                 logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
+
             return error_response, response_status
 
         # Parse webhook payload
@@ -254,32 +254,32 @@ def handle_feature_flag_webhook(provider_name: str):
         if not payload:
             response_status = 400
             error_response = jsonify({'error': 'Invalid JSON payload'})
-            
+
             # Log webhook event
             if logging_manager:
                 webhook_metadata["error"] = "Invalid JSON payload"
                 webhook_metadata["duration_ms"] = int((time.time() - start_time) * 1000)
                 logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-            
+
             return error_response, response_status
 
         logger.info(f"Received {provider_name} webhook: {payload}")
 
         # Parse flag data using provider-specific logic
         flag_data = provider.parse_webhook_payload(payload)
-        
+
         if flag_data:
             flag_key = flag_data.get('flag_key')
             flag_value = flag_data.get('flag_value')
-            
+
             # Log flag evaluation
             if logging_manager:
                 logging_manager.log_flag_evaluation(
-                    flag_key, 
-                    flag_value, 
+                    flag_key,
+                    flag_value,
                     metadata={"source": "webhook", "provider": provider_name}
                 )
-            
+
             # Emit WebSocket event for flag change
             socketio.emit('flag_changed', {
                 'flag_key': flag_key,
@@ -287,7 +287,7 @@ def handle_feature_flag_webhook(provider_name: str):
                 'timestamp': time.time(),
                 'provider': provider_name
             })
-            
+
             # Initialize Spot Ocean manager
             spot_manager = SpotOceanManager(SPOT_API_TOKEN, SPOT_CLUSTER_ID)
 
@@ -301,7 +301,7 @@ def handle_feature_flag_webhook(provider_name: str):
                 action = 'cost_optimization_disabled'
 
             logger.info(f"Processed flag change: {action}, success: {success}")
-            
+
             # Log webhook processing success
             webhook_metadata.update({
                 "flag_key": flag_key,
@@ -325,7 +325,7 @@ def handle_feature_flag_webhook(provider_name: str):
                 "status": "received_no_action",
                 "duration_ms": int((time.time() - start_time) * 1000)
             })
-            
+
             response_data = {
                 'status': 'received',
                 'provider': provider_name,
@@ -341,7 +341,7 @@ def handle_feature_flag_webhook(provider_name: str):
     except Exception as e:
         logger.error(f"Error processing {provider_name} webhook: {e}")
         response_status = 500
-        
+
         # Log webhook error
         if logging_manager:
             webhook_metadata.update({
@@ -349,7 +349,7 @@ def handle_feature_flag_webhook(provider_name: str):
                 "duration_ms": int((time.time() - start_time) * 1000)
             })
             logging_manager.log_webhook_event("webhook_error", {}, response_status, webhook_metadata)
-        
+
         return jsonify({'error': 'Internal server error'}), response_status
 
 

@@ -86,7 +86,7 @@ Update the `storm-surge.local` hostname in `ingress.yaml` to match your domain.
 
 The deployment is configured with:
 - **Replicas**: 2 (for high availability)
-- **Resources**: 
+- **Resources**:
   - Requests: 128Mi memory, 100m CPU
   - Limits: 256Mi memory, 200m CPU
 - **Rolling Updates**: Maximum 1 unavailable, maximum 1 surge
