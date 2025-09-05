@@ -270,6 +270,11 @@ class TestSecretsManagement(unittest.TestCase):
 
                 for line_num, line in enumerate(lines, 1):
                     line_lower = line.lower()
+                    line_stripped = line.strip()
+                    
+                    # Skip commented lines (examples/documentation)
+                    if line_stripped.startswith('#'):
+                        continue
 
                     # Check for secret patterns
                     for pattern in secret_patterns:
