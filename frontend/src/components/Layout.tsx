@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  Flag, 
-  Server, 
-  BarChart3, 
-  Bell, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Flag,
+  Server,
+  BarChart3,
+  Bell,
+  FileText,
+  Settings,
+  LogOut,
+  Menu,
   X,
   Zap,
   User as UserIcon,
@@ -96,10 +96,10 @@ export default function Layout({ user, children }: LayoutProps) {
                 <X className="h-6 w-6 text-white" />
               </button>
             </div>
-            <SidebarContent 
-              navigation={navigation} 
-              location={location} 
-              systemHealth={systemHealth} 
+            <SidebarContent
+              navigation={navigation}
+              location={location}
+              systemHealth={systemHealth}
               user={user}
               onLogout={handleLogout}
             />
@@ -110,10 +110,10 @@ export default function Layout({ user, children }: LayoutProps) {
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
-          <SidebarContent 
-            navigation={navigation} 
-            location={location} 
-            systemHealth={systemHealth} 
+          <SidebarContent
+            navigation={navigation}
+            location={location}
+            systemHealth={systemHealth}
             user={user}
             onLogout={handleLogout}
           />
@@ -131,14 +131,14 @@ export default function Layout({ user, children }: LayoutProps) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          
+
           <div className="flex-1 px-4 flex justify-between items-center">
             <div className="flex-1 flex">
               <h1 className="text-2xl font-semibold text-gray-900">
                 {navigation.find(item => item.href === location.pathname)?.name || 'Storm Surge'}
               </h1>
             </div>
-            
+
             <div className="ml-4 flex items-center md:ml-6 space-x-4">
               {/* System health indicator */}
               {systemHealth && (
@@ -147,7 +147,7 @@ export default function Layout({ user, children }: LayoutProps) {
                   <span className="text-sm text-gray-600 capitalize">{systemHealth.status}</span>
                 </div>
               )}
-              
+
               {/* User menu */}
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
@@ -196,7 +196,7 @@ function SidebarContent({ navigation, location, systemHealth, user, onLogout }: 
             <h1 className="text-xl font-bold text-gray-900">Storm Surge</h1>
           </div>
         </div>
-        
+
         {/* Navigation */}
         <nav className="mt-8 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
@@ -222,7 +222,7 @@ function SidebarContent({ navigation, location, systemHealth, user, onLogout }: 
           })}
         </nav>
       </div>
-      
+
       {/* System status */}
       {systemHealth && (
         <div className="flex-shrink-0 border-t border-gray-200 p-4">
@@ -232,13 +232,13 @@ function SidebarContent({ navigation, location, systemHealth, user, onLogout }: 
           </div>
         </div>
       )}
-      
+
       {/* User section */}
       <div className="flex-shrink-0 border-t border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-primary-600" />
+              <UserIcon className="w-4 h-4 text-primary-600" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{user.name}</div>

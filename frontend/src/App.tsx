@@ -22,7 +22,7 @@ function App() {
   })
 
   // Initialize WebSocket connection for authenticated users
-  const { isConnected } = useWebSocket({ autoConnect: !!user })
+  useWebSocket({ autoConnect: !!user })
 
   if (isLoading) {
     return (
@@ -42,7 +42,7 @@ function App() {
   }
 
   return (
-    <Layout user={user}>
+    <Layout user={user!}>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
