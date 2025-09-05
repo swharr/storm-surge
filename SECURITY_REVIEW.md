@@ -1,6 +1,6 @@
 # Storm Surge Security Review & Recommendations
 
-## 🔴 Critical Security Issues (Fix Immediately)
+## Critical Security Issues (Fix Immediately)
 
 ### 1. **Hardcoded Credentials**
 - **Issue**: Test passwords (admin123, operator123, viewer123) are hardcoded
@@ -64,7 +64,7 @@
   csrf = CSRFProtect(app)
   ```
 
-## 🟡 Important Security Issues
+## Important Security Issues
 
 ### 6. **In-Memory Session Storage**
 - **Issue**: Sessions lost on restart, doesn't scale
@@ -123,18 +123,18 @@
 - **Risk**: Medium - Unencrypted communication
 - **Fix**: Always use wss:// in production
 
-## 🟢 Good Security Practices Already Implemented
+## Good Security Practices Already Implemented
 
-✅ Non-root containers
-✅ Security contexts in Kubernetes
-✅ Read-only root filesystem
-✅ Dropped capabilities
-✅ Resource limits
-✅ Basic RBAC implementation
-✅ Security headers in nginx
-✅ No dangerouslySetInnerHTML usage
+- Non-root containers
+- Security contexts in Kubernetes
+- Read-only root filesystem
+- Dropped capabilities
+- Resource limits
+- Basic RBAC implementation
+- Security headers in nginx
+- No dangerouslySetInnerHTML usage
 
-## 📋 Security Checklist for Production
+## Security Checklist for Production
 
 ### Pre-Deployment
 - [ ] Replace all dummy CHANGEME_* values with secure secrets
@@ -167,7 +167,7 @@
 - [ ] Regular security scans
 - [ ] Penetration testing
 
-## 🛠️ Recommended Security Tools
+## Recommended Security Tools
 
 1. **Dependency Scanning**
    - `npm audit` for frontend
@@ -184,7 +184,7 @@
    - OWASP ModSecurity for WAF
    - Fail2ban for brute force protection
 
-## 🚨 Immediate Actions Required
+## Immediate Actions Required
 
 1. **Generate production secrets**:
    ```bash

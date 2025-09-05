@@ -24,6 +24,8 @@ spec:
         component: frontend
         version: v1.1.0
     spec:
+      serviceAccountName: frontend-sa
+      automountServiceAccountToken: false
       containers:
       - name: frontend
         image: storm-surge-frontend:latest

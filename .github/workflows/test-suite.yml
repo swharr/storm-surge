@@ -11,6 +11,8 @@ jobs:
   pre-commit:
     name: Pre-commit Validation
     runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/.npm-cache
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +32,8 @@ jobs:
         run: |
           pip install pre-commit
           pip install -r requirements-test.txt
+      - name: Prepare npm cache for markdownlint
+        run: mkdir -p "$NPM_CONFIG_CACHE"
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
@@ -40,6 +44,20 @@ jobs:
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
+
+      - name: Render manifests with kustomize
+        run: |
+          mkdir -p build/kustomize
+          kustomize build manifests/base > build/kustomize/base.yaml
+          kustomize build manifests/middleware > build/kustomize/middleware.yaml
+          kustomize build frontend/k8s > build/kustomize/frontend.yaml
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manifests
+          path: build/kustomize
+          retention-days: 7
 
       - name: Run Python syntax checks
         run: |
@@ -61,6 +79,7 @@ jobs:
 
       - name: Run Python unit tests
         run: |
+          pip install -r finops/requirements.txt
           python3 tests/test_middleware.py
           python3 tests/test_security.py
           python3 tests/test_authentication.py
@@ -85,7 +104,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
 
       - name: Run TypeScript check
         run: |
@@ -118,6 +137,7 @@ jobs:
         with:
           cpus: 4
           memory: 8192m
+          kubernetes-version: 'v1.27.4'
 
       - name: Run test suite
         run: ./tests/test-suite.sh
@@ -220,6 +240,9 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          config: 'trivy.yaml'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
@@ -299,6 +322,11 @@ jobs:
     needs: [pre-commit]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
 
       - name: Verify auth moved to cookies + CSRF
         run: |

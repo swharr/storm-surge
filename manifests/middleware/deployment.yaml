@@ -13,6 +13,8 @@ spec:
       labels:
         app: feature-flag-middleware
     spec:
+      serviceAccountName: middleware-sa
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

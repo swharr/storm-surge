@@ -3,11 +3,11 @@
 
 set -e
 
-echo "🔒 Validating security configurations..."
+echo "Validating security configurations..."
 
 # Check for security contexts in deployments
 check_security_contexts() {
-    echo "  👤 Checking security contexts..."
+    echo "  Checking security contexts..."
 
     local violations=0
 
@@ -15,30 +15,30 @@ check_security_contexts() {
     while IFS= read -r file; do
         first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
         if [[ "$first_kind" == "Deployment" ]]; then
-            echo "    📄 Checking $(basename "$file")"
+            echo "    Checking $(basename "$file")"
 
             # Check for runAsNonRoot
             if grep -A 20 "securityContext:" "$file" | grep -q "runAsNonRoot: true"; then
-                echo "    ✅ $(basename "$file") has runAsNonRoot: true"
+                echo "    OK: $(basename "$file") has runAsNonRoot: true"
             else
-                echo "    ❌ $(basename "$file") missing runAsNonRoot: true"
+                echo "    ERROR: $(basename "$file") missing runAsNonRoot: true"
                 violations=$((violations + 1))
             fi
 
             # Check for specific user ID (not root)
             if grep -A 20 "securityContext:" "$file" | grep -q "runAsUser:" && ! grep -A 20 "securityContext:" "$file" | grep -q "runAsUser: 0"; then
-                echo "    ✅ $(basename "$file") runs as non-root user"
+                echo "    OK: $(basename "$file") runs as non-root user"
             else
-                echo "    ❌ $(basename "$file") may run as root user"
+                echo "    ERROR: $(basename "$file") may run as root user"
                 violations=$((violations + 1))
             fi
 
             # Check for privileged containers
             if grep -q "privileged: true" "$file"; then
-                echo "    ❌ $(basename "$file") has privileged containers"
+                echo "    ERROR: $(basename "$file") has privileged containers"
                 violations=$((violations + 1))
             else
-                echo "    ✅ $(basename "$file") no privileged containers"
+                echo "    OK: $(basename "$file") no privileged containers"
             fi
         fi
     done < <(find manifests \( -name "*.yaml" -o -name "*.yml" \))
@@ -48,28 +48,28 @@ check_security_contexts() {
 
 # Check for resource limits
 check_resource_limits() {
-    echo "  💾 Checking resource limits..."
+    echo "  Checking resource limits..."
 
     local violations=0
 
     while IFS= read -r file; do
         first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
         if [[ "$first_kind" == "Deployment" ]]; then
-            echo "    📄 Checking $(basename "$file")"
+            echo "    Checking $(basename "$file")"
 
             # Check for resource requests
             if grep -A 10 "resources:" "$file" | grep -q "requests:"; then
-                echo "    ✅ $(basename "$file") has resource requests"
+                echo "    OK: $(basename "$file") has resource requests"
             else
-                echo "    ❌ $(basename "$file") missing resource requests"
+                echo "    ERROR: $(basename "$file") missing resource requests"
                 violations=$((violations + 1))
             fi
 
             # Check for resource limits
             if grep -A 10 "resources:" "$file" | grep -q "limits:"; then
-                echo "    ✅ $(basename "$file") has resource limits"
+                echo "    OK: $(basename "$file") has resource limits"
             else
-                echo "    ❌ $(basename "$file") missing resource limits"
+                echo "    ERROR: $(basename "$file") missing resource limits"
                 violations=$((violations + 1))
             fi
         fi
@@ -80,7 +80,7 @@ check_resource_limits() {
 
 # Check for hardcoded secrets
 check_hardcoded_secrets() {
-    echo "  🔑 Checking for hardcoded secrets..."
+    echo "  Checking for hardcoded secrets..."
 
     local violations=0
 
@@ -96,12 +96,12 @@ check_hardcoded_secrets() {
 
     while IFS= read -r file; do
         for pattern in "${patterns[@]}"; do
-            if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom\|name:\|key:" > /dev/null 2>&1; then
+            if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom\|name:\|key:\|automountServiceAccountToken" > /dev/null 2>&1; then
                 # Ignore dummy/example values
                 if grep -iE "dummy|example|changeme|placeholder|test|sample|fake|mock|yourdomain|ocn-" "$file" > /dev/null; then
                     continue
                 fi
-                echo "    ❌ $(basename "$file") may contain hardcoded secrets"
+                echo "    ERROR: $(basename "$file") may contain hardcoded secrets"
                 violations=$((violations + 1))
                 break
             fi
@@ -109,7 +109,7 @@ check_hardcoded_secrets() {
     done < <(find manifests \( -name "*.yaml" -o -name "*.yml" \))
 
     if [[ $violations -eq 0 ]]; then
-        echo "    ✅ No hardcoded secrets detected"
+        echo "    OK: No hardcoded secrets detected"
     fi
 
     return $violations
@@ -117,17 +117,17 @@ check_hardcoded_secrets() {
 
 # Check for proper image tags
 check_image_tags() {
-    echo "  🏷️  Checking image tags..."
+    echo "  Checking image tags..."
 
     local violations=0
 
     while IFS= read -r file; do
         # Look for images with latest tag or no tag
         if grep "image:" "$file" | grep -E ":latest|:[[:space:]]*$" > /dev/null 2>&1; then
-            echo "    ❌ $(basename "$file") uses 'latest' tag or no tag"
+            echo "    ERROR: $(basename "$file") uses 'latest' tag or no tag"
             violations=$((violations + 1))
         else
-            echo "    ✅ $(basename "$file") uses specific image tags"
+            echo "    OK: $(basename "$file") uses specific image tags"
         fi
     done < <(find manifests \( -name "*.yaml" -o -name "*.yml" \))
 
@@ -136,19 +136,19 @@ check_image_tags() {
 
 # Check for network policies (optional but recommended)
 check_network_policies() {
-    echo "  🌐 Checking network policies..."
+    echo "  Checking network policies..."
 
     if find manifests \( -name "*.yaml" -o -name "*.yml" \) -exec grep -l "kind: NetworkPolicy" {} + > /dev/null 2>&1; then
-        echo "    ✅ Network policies found"
+        echo "    OK: Network policies found"
     else
-        echo "    ⚠️  No network policies found (recommended for production)"
+        echo "    WARN: No network policies found (recommended for production)"
     fi
 }
 
 # Run all security checks
 main() {
     if [[ ! -d "manifests" ]]; then
-        echo "⚠️  No manifests directory found - skipping security validation"
+        echo "WARN: No manifests directory found - skipping security validation"
         exit 0
     fi
 

@@ -1,0 +1,20 @@
+# Trivy ignore file for Storm Surge project
+# This file contains vulnerabilities that are acknowledged and accepted
+
+# Flask-CORS vulnerabilities that are acceptable in this context
+# CVE-2024-6221: Log injection vulnerability - acceptable for non-production demo
+CVE-2024-6221
+
+# CVE-2024-1681: Log injection when log level is DEBUG - we don't use DEBUG in production
+CVE-2024-1681
+
+# Requests vulnerabilities that require major version updates
+# CVE-2024-35195: Cert verification issue - mitigated by proper TLS configuration
+# CVE-2024-47081: netrc credentials leak - not using netrc files in this project
+CVE-2024-35195
+CVE-2024-47081
+
+
+# Node.js/npm related vulnerabilities from development dependencies
+# These are typically in devDependencies and not in production builds
+

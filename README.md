@@ -1,4 +1,4 @@
-# 🌊 OceanSurge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
+# OceanSurge: Kubernetes Elasticity + FinOps Testing with Spot Ocean + LaunchDarkly
 
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![LaunchDarkly](https://img.shields.io/badge/LaunchDarkly-Feature--Flags-blue?style=for-the-badge)
@@ -8,9 +8,9 @@
 ![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
 ![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 
-A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization — designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
+A FinOps-focused microservices demo app for testing real-time scaling, feature flag toggling, and infrastructure cost optimization - designed to run on **GKE**, **EKS**, or **AKS** using the Hyperscaler provided Managed Kubernetes with **Spot Ocean** and **LaunchDarkly**.
 
-### 🎯 Key Features
+### Key Features
 
 - **Intelligent Region/Zone Selection**: Interactive deployment with validation for all cloud providers
 - **Robust Retry Logic**: Automatic retry mechanisms for deployment operations with configurable timeouts
@@ -23,19 +23,19 @@ A FinOps-focused microservices demo app for testing real-time scaling, feature f
 
 ---
 
-## 🚀 Highlights
+## Highlights
 
-- ⚙️ **LaunchDarkly Integration**: Real-time feature flag control with webhook middleware to monitor and fire off infrastructure changes
-- 🌊 **Spot Ocean API**: Automated cluster scaling based on cost optimization flags in the LaunchDarkly Integration.
-- 🛠️ **Multi-Cloud**: Deploy to GCP, AWS, or Azure with unified CLI (You need to have the API and CLI tools included)
-- 📈 **Cost Tracking**: Infrastructure impact monitoring via feature flag changes
-- 🔄 **Automated Scaling**: Dynamic right-sizing and node pool optimization
-- 🌐 **Production Ready**: Complete middleware with ingress, secrets, and monitoring
-- 💥 **Load Testing**: Built-in chaos testing and performance validation to simulate activity and show responsiveness
+- LaunchDarkly Integration: Real-time feature flag control with webhook middleware to monitor and fire off infrastructure changes
+- Spot Ocean API: Automated cluster scaling based on cost optimization flags in the LaunchDarkly Integration.
+- Multi-Cloud: Deploy to GCP, AWS, or Azure with unified CLI (You need to have the API and CLI tools included)
+- Cost Tracking: Infrastructure impact monitoring via feature flag changes
+- Automated Scaling: Dynamic right-sizing and node pool optimization
+- Production Ready: Complete middleware with ingress, secrets, and monitoring
+- Load Testing: Built-in chaos testing and performance validation to simulate activity and show responsiveness
 
 ---
 
-## 🧪 How It Works
+## How It Works
 
 You use LaunchDarkly feature flags (like `enable-cost-optimizer`) to toggle infrastructure behavior, which is reflected in your app and metrics.
 
@@ -43,7 +43,7 @@ This repo ties application behavior directly to cost outcomes.
 
 ---
 
-## 🧰 Quickstart
+## Quickstart
 
 ### Basic Deployment
 ```bash
@@ -166,7 +166,7 @@ aws configure --profile myprofile
 
 ---
 
-## 🧪 Local Testing & Validation
+## Local Testing & Validation
 
 ### Quick Local Tests
 ```bash
@@ -227,9 +227,9 @@ python3 finops/tests/test_integration.py
 
 ### Test Coverage
 
-#### 🧪 **Comprehensive Test Suite (104/112 tests passing - 92.9% success rate)**
+#### Comprehensive Test Suite (104/112 tests passing - 92.9% success rate)
 
-**FinOps Controller Tests** (43/43 tests - 100% ✅)
+**FinOps Controller Tests** (43/43 tests - 100%)
 - Controller initialization and method validation
 - Environment variable handling and configuration
 - LaunchDarkly integration readiness testing
@@ -237,28 +237,28 @@ python3 finops/tests/test_integration.py
 - Business hours and timezone handling
 - Error handling and failure recovery
 
-**Middleware Tests** (21/24 tests - 87.5% ✅)
+**Middleware Tests** (21/24 tests - 87.5%)
 - Flask application endpoint testing (health, cluster status)
 - LaunchDarkly webhook handling and validation
 - Spot Ocean API integration and scaling operations
 - Security validation (HMAC signatures, input validation)
 - Error handling scenarios and edge cases
 
-**Security Tests** (15/19 tests - 78.9% ✅)
+**Security Tests** (15/19 tests - 78.9%)
 - Kubernetes security configurations (security contexts, resource limits)
 - Container image security (no :latest tags, trusted registries)
 - Secrets management (no hardcoded secrets, proper Secret resources)
 - Script security (permissions, credentials, shebangs)
 - Dockerfile security practices and compliance checks
 
-**Script Validation Tests** (25/26 tests - 96.2% ✅)
+**Script Validation Tests** (25/26 tests - 96.2%)
 - Script syntax validation and structure
 - Deployment script functionality and parameter validation
 - Cloud provider script authentication and region validation
 - Utility script testing and security aspects
 - Documentation and help functionality
 
-#### 🔧 **Legacy Test Coverage**
+#### Legacy Test Coverage
 - **Script Syntax**: Validates all bash scripts for syntax errors
 - **Parameter Validation**: Tests deployment script argument handling
 - **Zone/Region Validation**: Ensures proper region-zone combinations
@@ -284,7 +284,7 @@ Retry logic applies to:
 - Health check validations
 - API calls to cloud providers
 
-## ⚙️ Feature Flag Provider Setup
+## Feature Flag Provider Setup
 
 Storm Surge supports both **LaunchDarkly** and **Statsig** for feature flag management. Use the interactive configuration script to set up your preferred provider.
 
@@ -327,11 +327,11 @@ export SPOT_CLUSTER_ID="ocn-cluster-id"
 export WEBHOOK_SECRET="your-webhook-secret"
 ```
 
-4. Toggle the flag → see automated cluster scaling in real time
+4. Toggle the flag -> see automated cluster scaling in real time
 
 ---
 
-## ☁️ Cloud Provider Support
+## Cloud Provider Support
 
 | Provider | Script                              | Requirements          | Security Features |
 |----------|-------------------------------------|------------------------|-------------------|
@@ -341,7 +341,7 @@ export WEBHOOK_SECRET="your-webhook-secret"
 
 ---
 
-## 🗃️ Project Structure
+## Project Structure
 
 ```
 ocean-surge/
@@ -395,7 +395,7 @@ ocean-surge/
 
 ---
 
-## 🎯 Current Status
+## Current Status
 
 - [x] **Enhanced Multi-Cloud Deployment**: GKE, EKS, AKS with intelligent region/zone selection
 - [x] **Robust Error Handling**: Comprehensive retry logic and validation
@@ -415,7 +415,7 @@ ocean-surge/
 - [x] **Load Testing**: Built-in traffic generation and scaling tests
 - [x] **Monitoring**: Health checks, logging, and status endpoints
 
-### 🔒 Security Features
+### Security Features
 
 - **Non-root containers**: All deployments run with `runAsNonRoot: true`
 - **Resource limits**: Comprehensive CPU/memory limits on all workloads
@@ -431,7 +431,7 @@ ocean-surge/
 
 > **Note**: The security workloads in `manifests/sec_fixes/` are specifically designed for GKE deployments to address Google Cloud-specific security configurations. **AKS and EKS users do not need these security fixes** as Azure and AWS managed Kubernetes services have different security models and built-in protections.
 
-## 🧠 Roadmap
+## Roadmap
 
 - [ ] OpenFeature + flagd support
 - [ ] Backstage IDP Scaffolding
@@ -449,7 +449,7 @@ ocean-surge/
 
 ---
 
-## 📞 Support Channels
+## Support Channels
 
 - 📖 [Flexera Docs](https://docs.spot.io)
 - 💬 [Spot Slack](https://community.flexera.com)
@@ -457,7 +457,7 @@ ocean-surge/
 
 ---
 
-## 🔧 Usage Examples
+## Usage Examples
 
 ### Basic Demo Deployment
 ```bash
