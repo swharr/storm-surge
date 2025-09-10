@@ -1,0 +1,20 @@
+# KEDA Integration for Storm-Surge
+# Feature Flag-Driven Autoscaling
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - keda-install.yaml
+  - scaled-objects.yaml
+  - external-scaler-service.yaml
+
+# Patches to integrate with existing Storm-Surge components
+patchesStrategicMerge:
+  - patches/deployment-annotations.yaml
+
+commonLabels:
+  keda.storm-surge.io/managed: "true"
+  storm-surge.io/component: "keda"
+
+namespace: keda

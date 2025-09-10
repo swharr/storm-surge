@@ -1,0 +1,112 @@
+# KEDA ScaledObjects for Storm-Surge
+# These replace the traditional HPA with feature flag integration
+
+# Shopping Cart ScaledObject - Main Storm-Surge component
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: shopping-cart-scaler
+  namespace: oceansurge
+  labels:
+    storm-surge.io/component: shopping-cart
+    storm-surge.io/scaler: keda
+  annotations:
+    storm-surge.io/description: "Feature flag driven autoscaling for shopping cart service"
+    storm-surge.io/flag-trigger: "enable-cost-optimizer"
+spec:
+  scaleTargetRef:
+    name: shopping-cart
+  pollingInterval: 15
+  cooldownPeriod: 60
+  idleReplicaCount: 1
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 30
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+  triggers:
+  # CPU-based scaling (baseline)
+  - type: cpu
+    metadata:
+      type: Utilization
+      value: "70"
+  # External trigger for feature flags
+  - type: external-push
+    metadata:
+      # This will be triggered by the Storm-Surge middleware
+      scalingDirection: both
+      # Optional: Add authentication for webhook security
+      # authenticationRef:
+      #   name: storm-surge-webhook-auth
+  # Memory-based scaling as backup
+  - type: memory
+    metadata:
+      type: Utilization
+      value: "80"
+
+---
+# Product Catalog ScaledObject
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: product-catalog-scaler
+  namespace: oceansurge
+  labels:
+    storm-surge.io/component: product-catalog
+    storm-surge.io/scaler: keda
+spec:
+  scaleTargetRef:
+    name: product-catalog
+  pollingInterval: 30
+  cooldownPeriod: 120
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+  # CPU-based scaling
+  - type: cpu
+    metadata:
+      type: Utilization
+      value: "60"
+  # External trigger for feature flags
+  - type: external-push
+    metadata:
+      scalingDirection: both
+
+---
+# TriggerAuthentication for secure webhook integration
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: storm-surge-webhook-auth
+  namespace: oceansurge
+spec:
+  secretTargetRef:
+  - parameter: webhookSecret
+    name: storm-surge-webhook-secret
+    key: secret
+
+---
+# Secret for webhook authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storm-surge-webhook-secret
+  namespace: oceansurge
+type: Opaque
+data:
+  # This should match your middleware webhook secret
+  # Replace with actual base64 encoded secret
+  secret: c3Rvcm0tc3VyZ2Utd2ViaG9vay1zZWNyZXQ=  # storm-surge-webhook-secret
