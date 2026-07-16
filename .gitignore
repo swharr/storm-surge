@@ -1,3 +1,9 @@
+# Claude Code
+todos/
+
+# Test suite output
+test-logs/
+
 # OceanSurge .gitignore
 # Generated for v0.1.1-rebase
 
@@ -309,6 +315,9 @@ docs/.doctrees/
 
 # MkDocs
 site/
+
+# Internal planning docs (local only, never push to GitHub)
+docs/superpowers/
 
 # =============================================================================
 # Project Specific

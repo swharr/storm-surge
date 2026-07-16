@@ -68,6 +68,8 @@ spec:
           capabilities:
             drop:
             - ALL
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - name: nginx-cache
           mountPath: /var/cache/nginx

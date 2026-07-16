@@ -5,7 +5,10 @@
 set -e
 
 # Configuration
-TEST_NAMESPACE="storm-surge-test"
+# NOTE: must match the namespace hardcoded in manifests/base, manifests/middleware,
+# and frontend/k8s kustomizations (all pin "oceansurge") -- kubectl apply -k rejects
+# a --namespace override that disagrees with a kustomization's own namespace.
+TEST_NAMESPACE="oceansurge"
 MINIKUBE_PROFILE="storm-surge-test"
 TIMEOUT=300
 LOG_DIR="test-logs"

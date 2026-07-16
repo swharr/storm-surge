@@ -9,12 +9,9 @@ resources:
   - scaled-objects.yaml
   - external-scaler-service.yaml
 
-# Patches to integrate with existing Storm-Surge components
-patchesStrategicMerge:
-  - patches/deployment-annotations.yaml
-
 commonLabels:
   keda.storm-surge.io/managed: "true"
   storm-surge.io/component: "keda"
 
-namespace: keda
+# Note: KEDA annotations for shopping-cart/product-catalog are applied via
+# manifests/base/patches/deployment-annotations.yaml (those Deployments live there)
