@@ -106,7 +106,8 @@ metadata:
   name: storm-surge-webhook-secret
   namespace: oceansurge
 type: Opaque
-data:
-  # This should match your middleware webhook secret
-  # Replace with actual base64 encoded secret
-  secret: c3Rvcm0tc3VyZ2Utd2ViaG9vay1zZWNyZXQ=  # storm-surge-webhook-secret
+stringData:
+  # Must match the middleware's WEBHOOK_SECRET (manifests/middleware/secret.yaml).
+  # Set this after applying -- see manifests/keda/README.md#webhook-secret-configuration.
+  # Never commit a real value.
+  secret: "${WEBHOOK_SECRET}"

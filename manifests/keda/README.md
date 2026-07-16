@@ -94,15 +94,17 @@ The external scaler listens for webhooks from the Storm-Surge middleware at:
 
 ### Webhook Secret Configuration
 
-Update the webhook secret in `scaled-objects.yaml`:
-```bash
-# Generate new secret
-echo -n "your-webhook-secret" | base64
+`scaled-objects.yaml` ships with a placeholder (`${WEBHOOK_SECRET}`), not a real
+value -- never commit an actual secret to git. Set it after applying the kustomization:
 
-# Update the secret in the manifest
-kubectl patch secret storm-surge-webhook-secret -n oceansurge \
-  --type='json' -p='[{"op": "replace", "path": "/data/secret", "value": "your-base64-secret"}]'
+```bash
+kubectl create secret generic storm-surge-webhook-secret -n oceansurge \
+  --from-literal=secret="$WEBHOOK_SECRET" \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
+
+Use the same value as the middleware's `WEBHOOK_SECRET` (`manifests/middleware/secret.yaml`)
+so KEDA and the middleware agree on the webhook signature.
 
 ## Integration with Storm-Surge Middleware
 
