@@ -1,5 +1,17 @@
 #!/bin/bash
 set -e
+set -o pipefail
+
+# Resolve project root regardless of caller's CWD
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+if [ ! -d "manifests/base" ]; then
+    echo "❌ Error: manifests/base directory not found in $PROJECT_ROOT" >&2
+    echo "This script must be run from a storm-surge repository" >&2
+    exit 1
+fi
 
 # Get configuration from environment or use defaults
 REGION=${STORM_REGION:-"us-central1"}
@@ -140,23 +152,23 @@ mkdir -p logs
 # Deploy the application with retry logic
 echo "📦 Applying Kubernetes manifests..."
 retry_command "Kubernetes manifests deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    bash -c "kubectl apply -k ../../manifests/base/ 2>&1 | tee -a logs/gke-deploy.log"
+    bash -c "set -o pipefail; kubectl apply -k manifests/base/ 2>&1 | tee -a logs/gke-deploy.log"
 
 echo "🚀 Deploying middleware layer..."
 retry_command "Middleware deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    ./deploy-middleware.sh
+    scripts/deploy-middleware.sh
 
 echo "💰 Deploying FinOps controller..."
 retry_command "FinOps controller deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    ./deploy-finops.sh
+    scripts/deploy-finops.sh
 
 echo "🔒 Deploying security workloads and tests..."
 retry_command "Security RBAC authentication mapping" "$RETRY_COUNT" "$RETRY_DELAY" \
-    kubectl apply -f ../../manifests/sec_fixes/rbac_authmap.yaml
+    kubectl apply -f manifests/sec_fixes/rbac_authmap.yaml
 retry_command "Security RBAC namespace binding" "$RETRY_COUNT" "$RETRY_DELAY" \
-    kubectl apply -f ../../manifests/sec_fixes/rbac_namespace_fix.yaml
+    kubectl apply -f manifests/sec_fixes/rbac_namespace_fix.yaml
 retry_command "Security validation test pod" "$RETRY_COUNT" "$RETRY_DELAY" \
-    kubectl apply -f ../../manifests/sec_fixes/sectest_validate.yaml
+    kubectl apply -f manifests/sec_fixes/sectest_validate.yaml
 
 echo "⏳ Waiting for deployments to be ready..."
 echo "   This may take up to 5 minutes..."
@@ -213,8 +225,7 @@ fi
 # Run lockitdown.sh if security issues are found
 if [ "$security_issues_found" = true ]; then
     echo "🔧 Running security lockdown script due to security issues..."
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    LOCKDOWN_SCRIPT="$SCRIPT_DIR/../lockitdown.sh"
+    LOCKDOWN_SCRIPT="$PROJECT_ROOT/scripts/lockitdown.sh"
 
     if [ -f "$LOCKDOWN_SCRIPT" ]; then
         chmod +x "$LOCKDOWN_SCRIPT"

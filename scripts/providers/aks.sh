@@ -1,5 +1,17 @@
 #!/bin/bash
 set -e
+set -o pipefail
+
+# Resolve project root regardless of caller's CWD
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+if [ ! -d "manifests/base" ]; then
+    echo "❌ Error: manifests/base directory not found in $PROJECT_ROOT" >&2
+    echo "This script must be run from a storm-surge repository" >&2
+    exit 1
+fi
 
 # Get configuration from environment or use defaults
 REGION=${STORM_REGION:-"eastus"}
@@ -97,15 +109,15 @@ mkdir -p logs
 # Deploy the application with retry logic
 echo "📦 Applying Kubernetes manifests..."
 retry_command "Kubernetes manifests deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    bash -c "kubectl apply -k ../../manifests/base/ 2>&1 | tee -a logs/aks-deploy.log"
+    bash -c "set -o pipefail; kubectl apply -k manifests/base/ 2>&1 | tee -a logs/aks-deploy.log"
 
 echo "🚀 Deploying middleware layer..."
 retry_command "Middleware deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    ./deploy-middleware.sh
+    scripts/deploy-middleware.sh
 
 echo "💰 Deploying FinOps controller..."
 retry_command "FinOps controller deployment" "$RETRY_COUNT" "$RETRY_DELAY" \
-    ./deploy-finops.sh
+    scripts/deploy-finops.sh
 
 echo "⏳ Waiting for deployments to be ready..."
 echo "   This may take up to 5 minutes..."
