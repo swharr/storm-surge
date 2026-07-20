@@ -149,8 +149,8 @@ data:
     def verify_webhook_signature(payload: bytes, signature: str) -> bool:
         """Verify LaunchDarkly webhook signature"""
         if not WEBHOOK_SECRET:
-            logger.warning("No webhook secret configured - skipping signature verification")
-            return True
+            logger.error("No webhook secret configured - rejecting webhook")
+            return False
 
         expected_signature = hmac.new(
             WEBHOOK_SECRET.encode('utf-8'),
