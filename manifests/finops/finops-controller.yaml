@@ -74,6 +74,8 @@ spec:
           capabilities:
             drop:
             - ALL
+          seccompProfile:
+            type: RuntimeDefault
       volumes:
       - name: finops-code
         configMap:
