@@ -35,6 +35,8 @@ spec:
           pip install --no-cache-dir -r /app/requirements.txt
           python /app/finops_controller.py
         env:
+        - name: HOME
+          value: "/tmp"
         - name: LAUNCHDARKLY_SDK_KEY
           valueFrom:
             secretKeyRef:
