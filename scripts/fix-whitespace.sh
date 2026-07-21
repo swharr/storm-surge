@@ -127,4 +127,3 @@ else
     echo -e "${GREEN}✨ All files are clean!${NC}"
     exit 0
 fi
-

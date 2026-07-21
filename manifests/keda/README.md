@@ -140,19 +140,19 @@ def send_keda_webhook(flag_key, flag_value):
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "source": "storm-surge-middleware"
     }
-    
+
     webhook_secret = os.getenv('KEDA_WEBHOOK_SECRET', '')
     signature = hmac.new(
         webhook_secret.encode(),
         json.dumps(payload).encode(),
         hashlib.sha256
     ).hexdigest()
-    
+
     headers = {
         'Content-Type': 'application/json',
         'X-Storm-Surge-Signature': f'sha256={signature}'
     }
-    
+
     requests.post(
         'http://storm-surge-external-scaler.oceansurge.svc.cluster.local/webhook/feature-flag',
         json=payload,

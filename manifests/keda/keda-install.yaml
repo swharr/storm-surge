@@ -9,14 +9,14 @@ data:
   install.sh: |
     #!/bin/bash
     set -euo pipefail
-    
+
     # Install KEDA via Helm
     echo "Installing KEDA..."
-    
+
     # Add KEDA Helm repository
     helm repo add kedacore https://kedacore.github.io/charts
     helm repo update
-    
+
     # Install KEDA with Storm-Surge specific configuration
     helm upgrade --install keda kedacore/keda \
       --namespace keda \
@@ -31,7 +31,7 @@ data:
       --set logging.metricServer.level=0 \
       --set logging.webhooks.level=info \
       --wait
-    
+
     echo "KEDA installation completed successfully"
 ---
 # Job to run the installation

@@ -132,4 +132,3 @@ pre-commit run --all-files
 ---
 
 **Remember**: With these tools in place, whitespace issues should be automatically prevented. If you're seeing failures, something in your setup needs adjustment!
-

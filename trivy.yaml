@@ -46,4 +46,3 @@ secret:
     - "**/*.md"
     - "**/CHANGELOG.md"
     - "**/LICENSE"
-

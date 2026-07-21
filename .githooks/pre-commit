@@ -23,12 +23,12 @@ fi
 # Function to check if file should be processed
 should_process() {
     local file="$1"
-    
+
     # Skip binary files
     if file --mime "$file" 2>/dev/null | grep -q "binary"; then
         return 1
     fi
-    
+
     # Skip specific directories/files
     case "$file" in
         */node_modules/*|*/.git/*|*/.npm/*|*/coverage/*|*/test-logs/*|*/__pycache__/*|*.min.js|*.min.css)
@@ -52,10 +52,10 @@ for FILE in $STAGED_FILES; do
         # Check for trailing whitespace
         if grep -q '[[:space:]]$' "$FILE" 2>/dev/null; then
             FILES_WITH_WHITESPACE+=("$FILE")
-            
+
             # Fix trailing whitespace
             echo -e "${YELLOW}  Fixing whitespace in: $FILE${NC}"
-            
+
             # Remove trailing whitespace based on OS
             if [[ "$OSTYPE" == "darwin"* ]]; then
                 # macOS
@@ -64,7 +64,7 @@ for FILE in $STAGED_FILES; do
                 # Linux
                 sed -i 's/[[:space:]]*$//' "$FILE"
             fi
-            
+
             # Re-stage the file with fixes
             git add "$FILE"
             FILES_FIXED+=("$FILE")

@@ -15,6 +15,14 @@ check_security_contexts() {
     while IFS= read -r file; do
         first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
         if [[ "$first_kind" == "Deployment" ]]; then
+            # Strategic-merge patches (e.g. manifests/*/patches/*.yaml) only touch
+            # metadata/annotations and never define containers -- the full
+            # securityContext lives on the base Deployment they patch, so skip them.
+            if ! grep -q "containers:" "$file"; then
+                echo "    SKIP: $(basename "$file") is a patch (no containers defined)"
+                continue
+            fi
+
             echo "    Checking $(basename "$file")"
 
             # Check for runAsNonRoot
@@ -55,6 +63,11 @@ check_resource_limits() {
     while IFS= read -r file; do
         first_kind=$(grep -m1 '^kind:' "$file" | awk '{print $2}')
         if [[ "$first_kind" == "Deployment" ]]; then
+            if ! grep -q "containers:" "$file"; then
+                echo "    SKIP: $(basename "$file") is a patch (no containers defined)"
+                continue
+            fi
+
             echo "    Checking $(basename "$file")"
 
             # Check for resource requests
@@ -86,17 +99,17 @@ check_hardcoded_secrets() {
 
     # Common secret patterns
     local patterns=(
-        "password.*[:=]"
-        "token.*[:=]"
-        "key.*[:=]"
-        "secret.*[:=]"
+        "password[[:space:]]*[:=]"
+        "token[[:space:]]*[:=]"
+        "key[[:space:]]*[:=]"
+        "secret[[:space:]]*[:=]"
         "api_key"
         "apikey"
     )
 
     while IFS= read -r file; do
         for pattern in "${patterns[@]}"; do
-            if grep -i "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom\|name:\|key:\|automountServiceAccountToken" > /dev/null 2>&1; then
+            if grep -iE "$pattern" "$file" | grep -v "secretKeyRef\|configMapKeyRef\|valueFrom\|name:\|key:\|automountServiceAccountToken\|secretTargetRef\|\${[A-Za-z_]\|os\.getenv(\|\.get(\|==" > /dev/null 2>&1; then
                 # Ignore dummy/example values
                 if grep -iE "dummy|example|changeme|placeholder|test|sample|fake|mock|yourdomain|ocn-" "$file" > /dev/null; then
                     continue

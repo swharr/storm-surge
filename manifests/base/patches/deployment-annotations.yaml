@@ -18,7 +18,7 @@ spec:
         storm-surge.io/keda-target: "true"
 
 ---
-# Product Catalog Deployment Patch  
+# Product Catalog Deployment Patch
 apiVersion: apps/v1
 kind: Deployment
 metadata:
