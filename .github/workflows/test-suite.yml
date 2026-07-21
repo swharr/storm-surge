@@ -137,7 +137,7 @@ jobs:
         with:
           cpus: 4
           memory: 8192m
-          kubernetes-version: 'v1.27.4'
+          kubernetes-version: 'v1.31.0'
 
       - name: Run test suite
         run: ./tests/test-suite.sh
