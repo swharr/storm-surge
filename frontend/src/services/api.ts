@@ -243,18 +243,18 @@ class ApiService {
   }
 
   // Analytics
-  async getAnalytics(type: 'cost' | 'usage' | 'performance', timeRange = '7d'): Promise<any> {
+  async getAnalytics(type: 'cost' | 'usage' | 'performance', timeRange = '7d'): Promise<Record<string, unknown>> {
     const response = await this.client.get(`/analytics/${type}?range=${timeRange}`)
     return response.data
   }
 
   // Settings
-  async getSettings(): Promise<Record<string, any>> {
+  async getSettings(): Promise<Record<string, unknown>> {
     const response = await this.client.get('/settings')
     return response.data
   }
 
-  async updateSettings(settings: Record<string, any>): Promise<Record<string, any>> {
+  async updateSettings(settings: Record<string, unknown>): Promise<Record<string, unknown>> {
     const response = await this.client.patch('/settings', settings)
     return response.data
   }

@@ -335,7 +335,7 @@ jobs:
           grep -q "Flask-Limiter" manifests/middleware/requirements.txt
 
           echo "> Checking limiter init in main.py"
-          grep -q "api_limiter.init_app\(app\)" manifests/middleware/main.py
+          rg -q "api_limiter\.init_app\(app\)" manifests/middleware/main.py
 
           echo "> Checking CSRF decorator defined"
           grep -q "def require_csrf" manifests/middleware/api_routes.py

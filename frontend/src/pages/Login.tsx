@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../services/api'
@@ -19,7 +20,7 @@ export default function Login() {
       toast.success('Welcome back!')
       navigate('/dashboard')
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ message?: string }>) => {
       toast.error(error.response?.data?.message || 'Login failed. Please try again.')
     },
   })
