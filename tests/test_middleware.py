@@ -529,13 +529,13 @@ if __name__ == '__main__':
     os.environ['PYTHONPATH'] = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manifests', 'middleware')
 
     # Print test information
-    print("🧪 Running Middleware Tests")
-    print("=" * 30)
+    print("Running Middleware Tests")
+    print("=" * 26)
 
     if MIDDLEWARE_AVAILABLE:
-        print("✅ Middleware is available")
+        print("OK: Middleware is available")
     else:
-        print("⚠️  Middleware import failed - some tests will be skipped")
+        print("WARN: Middleware import failed - some tests will be skipped")
 
     print()
 

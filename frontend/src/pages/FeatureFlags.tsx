@@ -60,7 +60,7 @@ export default function FeatureFlags() {
           <select
             className="input"
             value={selectedProvider}
-            onChange={(e) => setSelectedProvider(e.target.value as any)}
+            onChange={(e) => setSelectedProvider(e.target.value as 'all' | 'launchdarkly' | 'statsig')}
           >
             <option value="all">All Providers</option>
             <option value="launchdarkly">LaunchDarkly</option>

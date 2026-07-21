@@ -1,0 +1,101 @@
+# KEDA Installation via Helm Chart
+# This provides a GitOps-friendly way to install KEDA
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keda-install-script
+  namespace: keda
+data:
+  install.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    # Install KEDA via Helm
+    echo "Installing KEDA..."
+
+    # Add KEDA Helm repository
+    helm repo add kedacore https://kedacore.github.io/charts
+    helm repo update
+
+    # Install KEDA with Storm-Surge specific configuration
+    helm upgrade --install keda kedacore/keda \
+      --namespace keda \
+      --create-namespace \
+      --version 2.12.0 \
+      --set image.keda.tag=2.12.0 \
+      --set image.metricsApiServer.tag=2.12.0 \
+      --set image.webhooks.tag=2.12.0 \
+      --set prometheus.metricServer.enabled=true \
+      --set prometheus.operator.enabled=true \
+      --set logging.operator.level=info \
+      --set logging.metricServer.level=0 \
+      --set logging.webhooks.level=info \
+      --wait
+
+    echo "KEDA installation completed successfully"
+---
+# Job to run the installation
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keda-installer
+  namespace: keda
+  annotations:
+    storm-surge.io/description: "KEDA installation job for feature flag autoscaling"
+spec:
+  template:
+    spec:
+      serviceAccountName: keda-installer
+      containers:
+      - name: installer
+        image: alpine/helm:3.12.0
+        command: ["/bin/sh"]
+        args: ["/scripts/install.sh"]
+        volumeMounts:
+        - name: install-script
+          mountPath: /scripts
+        env:
+        - name: HELM_CACHE_HOME
+          value: /tmp/.helm
+        - name: HELM_CONFIG_HOME
+          value: /tmp/.helm
+        - name: HELM_DATA_HOME
+          value: /tmp/.helm
+      volumes:
+      - name: install-script
+        configMap:
+          name: keda-install-script
+          defaultMode: 0755
+      restartPolicy: OnFailure
+  backoffLimit: 3
+---
+# ServiceAccount for KEDA installer
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keda-installer
+  namespace: keda
+---
+# ClusterRole for KEDA installer
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: keda-installer
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+# ClusterRoleBinding for KEDA installer
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: keda-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: keda-installer
+subjects:
+- kind: ServiceAccount
+  name: keda-installer
+  namespace: keda

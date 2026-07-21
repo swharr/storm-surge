@@ -31,6 +31,8 @@ data:
     import json
     import logging
     import requests
+    import hmac
+    import hashlib
     from flask import Flask, request, jsonify
     from typing import Dict, Any
     import time
@@ -47,6 +49,8 @@ data:
     # Configuration from environment variables
     FEATURE_FLAG_PROVIDER = os.getenv('FEATURE_FLAG_PROVIDER', 'launchdarkly')
     LOGGING_PROVIDER = os.getenv('LOGGING_PROVIDER', 'auto')
+    LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY', '')
+    WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', '')
     SPOT_API_TOKEN = os.getenv('SPOT_API_TOKEN', '')
     COST_IMPACT_THRESHOLD = float(os.getenv('COST_IMPACT_THRESHOLD', '0.05'))
 
@@ -145,8 +149,8 @@ data:
     def verify_webhook_signature(payload: bytes, signature: str) -> bool:
         """Verify LaunchDarkly webhook signature"""
         if not WEBHOOK_SECRET:
-            logger.warning("No webhook secret configured - skipping signature verification")
-            return True
+            logger.error("No webhook secret configured - rejecting webhook")
+            return False
 
         expected_signature = hmac.new(
             WEBHOOK_SECRET.encode('utf-8'),

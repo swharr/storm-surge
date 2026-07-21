@@ -1,0 +1,15 @@
+
+manifests/middleware/requirements.txt (pip)
+===========================================
+Total: 2 (HIGH: 2, CRITICAL: 0)
+
+┌──────────┬───────────────┬──────────┬────────┬───────────────────┬───────────────┬─────────────────────────────────────────────────────────┐
+│ Library  │ Vulnerability │ Severity │ Status │ Installed Version │ Fixed Version │                          Title                          │
+├──────────┼───────────────┼──────────┼────────┼───────────────────┼───────────────┼─────────────────────────────────────────────────────────┤
+│ gunicorn │ CVE-2024-1135 │ HIGH     │ fixed  │ 21.2.0            │ 22.0.0        │ python-gunicorn: HTTP Request Smuggling due to improper │
+│          │               │          │        │                   │               │ validation of Transfer-Encoding headers                 │
+│          │               │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2024-1135               │
+│          ├───────────────┤          │        │                   ├───────────────┼─────────────────────────────────────────────────────────┤
+│          │ CVE-2024-6827 │          │        │                   │ 23.0.0        │ gunicorn: HTTP Request Smuggling in benoitc/gunicorn    │
+│          │               │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2024-6827               │
+└──────────┴───────────────┴──────────┴────────┴───────────────────┴───────────────┴─────────────────────────────────────────────────────────┘

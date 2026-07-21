@@ -1,5 +1,5 @@
-[INFO] 🌩️ Storm Surge FinOps Controller initialized
-[INFO] ⚡ Checking after-hours optimization at 2025-07-11 03:00:00+00:00
-[WARNING] 🚧 LaunchDarkly and Spot Ocean APIs not yet wired — using placeholder
+[INFO] Storm Surge FinOps Controller initialized
+[INFO] Checking after-hours optimization at 2025-07-11 03:00:00+00:00
+[WARNING] LaunchDarkly and Spot Ocean APIs not yet wired - using placeholder
 [DEBUG] Simulated action: disable autoscaling in non-prod clusters
-[INFO] ✔️ Controller run complete — will reschedule
+[INFO] Controller run complete - will reschedule

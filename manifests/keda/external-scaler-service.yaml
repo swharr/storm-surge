@@ -1,0 +1,264 @@
+# External Scaler Service for Storm-Surge Feature Flag Integration
+# This service receives webhooks from the Storm-Surge middleware and triggers KEDA scaling
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storm-surge-external-scaler
+  namespace: oceansurge
+  labels:
+    app: storm-surge-external-scaler
+    storm-surge.io/component: keda-scaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storm-surge-external-scaler
+  template:
+    metadata:
+      labels:
+        app: storm-surge-external-scaler
+        storm-surge.io/component: keda-scaler
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: external-scaler
+        image: python:3.11-slim
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: PORT
+          value: "8080"
+        - name: METRICS_PORT
+          value: "9090"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: storm-surge-webhook-secret
+              key: secret
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        command: ["python", "-c"]
+        args:
+          - |
+            import os
+            import json
+            import logging
+            import hmac
+            import hashlib
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            from urllib.parse import urlparse, parse_qs
+            import threading
+            import time
+
+            # Configure logging
+            logging.basicConfig(level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO')))
+            logger = logging.getLogger(__name__)
+
+            # Global state for scaling metrics
+            scaling_metrics = {
+                'shopping-cart': {'replicas': 1, 'cost_optimizer_enabled': False},
+                'product-catalog': {'replicas': 1, 'cost_optimizer_enabled': False}
+            }
+
+            class ScalerHandler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    """Handle KEDA external scaler requests"""
+                    path = urlparse(self.path).path
+                    query = parse_qs(urlparse(self.path).query)
+
+                    if path == '/health':
+                        self._send_response(200, {'status': 'healthy'})
+                    elif path == '/ready':
+                        self._send_response(200, {'status': 'ready'})
+                    elif path == '/api/v1/scaler':
+                        # KEDA external scaler endpoint
+                        scaledObject = query.get('scaledObjectName', [''])[0]
+                        component = scaledObject.replace('-scaler', '')
+
+                        if component in scaling_metrics:
+                            metrics = scaling_metrics[component]
+                            # Return scaling value based on feature flag state
+                            if metrics['cost_optimizer_enabled']:
+                                # Aggressive cost optimization - scale down
+                                value = min(metrics['replicas'], 2)
+                            else:
+                                # Normal scaling - allow higher values
+                                value = metrics['replicas']
+
+                            self._send_response(200, {
+                                'result': [{
+                                    'metricName': 'storm-surge-scaling-factor',
+                                    'metricValue': value
+                                }]
+                            })
+                        else:
+                            self._send_response(404, {'error': 'Component not found'})
+                    else:
+                        self._send_response(404, {'error': 'Not found'})
+
+                def do_POST(self):
+                    """Handle webhook from Storm-Surge middleware"""
+                    if self.path == '/webhook/feature-flag':
+                        try:
+                            content_length = int(self.headers['Content-Length'])
+                            post_data = self.rfile.read(content_length)
+
+                            # Verify webhook signature
+                            signature = self.headers.get('X-Storm-Surge-Signature')
+                            if not self._verify_signature(post_data, signature):
+                                self._send_response(401, {'error': 'Invalid signature'})
+                                return
+
+                            # Parse feature flag event
+                            event = json.loads(post_data.decode('utf-8'))
+                            self._handle_feature_flag_event(event)
+
+                            self._send_response(200, {'status': 'processed'})
+                        except Exception as e:
+                            logger.error(f"Error processing webhook: {e}")
+                            self._send_response(500, {'error': str(e)})
+                    else:
+                        self._send_response(404, {'error': 'Not found'})
+
+                def _verify_signature(self, payload, signature):
+                    """Verify webhook signature"""
+                    if not signature:
+                        return False
+
+                    webhook_secret = os.getenv('WEBHOOK_SECRET', '').encode()
+                    expected = hmac.new(webhook_secret, payload, hashlib.sha256).hexdigest()
+                    return hmac.compare_digest(f"sha256={expected}", signature)
+
+                def _handle_feature_flag_event(self, event):
+                    """Process feature flag changes"""
+                    flag_key = event.get('flag', {}).get('key')
+                    flag_value = event.get('flag', {}).get('value', False)
+
+                    logger.info(f"Feature flag event: {flag_key} = {flag_value}")
+
+                    if flag_key == 'enable-cost-optimizer':
+                        # Update all components
+                        for component in scaling_metrics:
+                            scaling_metrics[component]['cost_optimizer_enabled'] = flag_value
+
+                        logger.info(f"Cost optimizer {'enabled' if flag_value else 'disabled'}")
+
+                def _send_response(self, status_code, data):
+                    """Send JSON response"""
+                    self.send_response(status_code)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(data).encode())
+
+                def log_message(self, format, *args):
+                    """Override to use proper logging"""
+                    logger.info(format % args)
+
+            def start_metrics_server():
+                """Start metrics server on port 9090"""
+                class MetricsHandler(BaseHTTPRequestHandler):
+                    def do_GET(self):
+                        if self.path == '/metrics':
+                            metrics = []
+                            for component, data in scaling_metrics.items():
+                                metrics.append(f'storm_surge_replicas{{component="{component}"}} {data["replicas"]}')
+                                metrics.append(f'storm_surge_cost_optimizer{{component="{component}"}} {int(data["cost_optimizer_enabled"])}')
+
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'text/plain')
+                            self.end_headers()
+                            self.wfile.write('\n'.join(metrics).encode())
+                        else:
+                            self.send_response(404)
+                            self.end_headers()
+
+                metrics_server = HTTPServer(('0.0.0.0', int(os.getenv('METRICS_PORT', 9090))), MetricsHandler)
+                logger.info(f"Starting metrics server on port {os.getenv('METRICS_PORT', 9090)}")
+                metrics_server.serve_forever()
+
+            if __name__ == '__main__':
+                # Start metrics server in background
+                metrics_thread = threading.Thread(target=start_metrics_server, daemon=True)
+                metrics_thread.start()
+
+                # Start main server
+                port = int(os.getenv('PORT', 8080))
+                server = HTTPServer(('0.0.0.0', port), ScalerHandler)
+                logger.info(f"Starting Storm-Surge external scaler on port {port}")
+                server.serve_forever()
+
+---
+# Service for the external scaler
+apiVersion: v1
+kind: Service
+metadata:
+  name: storm-surge-external-scaler
+  namespace: oceansurge
+  labels:
+    app: storm-surge-external-scaler
+    storm-surge.io/component: keda-scaler
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: storm-surge-external-scaler
+
+---
+# ServiceMonitor for Prometheus monitoring (optional)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: storm-surge-external-scaler
+  namespace: oceansurge
+  labels:
+    app: storm-surge-external-scaler
+spec:
+  selector:
+    matchLabels:
+      app: storm-surge-external-scaler
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s

@@ -291,7 +291,7 @@ interface StatCardProps {
   value: string
   change: number
   changeType: 'savings' | 'percentage' | 'value'
-  icon: React.ComponentType<any>
+  icon: React.ComponentType<{ className?: string }>
   color: 'green' | 'blue' | 'purple' | 'red'
 }
 

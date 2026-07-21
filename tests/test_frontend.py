@@ -298,7 +298,7 @@ class TestComponentStructure(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print("🧪 Running Frontend Tests")
+    print("Running Frontend Tests")
     print("=" * 30)
 
     # Set working directory to frontend for relative path tests

@@ -381,7 +381,7 @@ data:
                 const storm = storms[intensity];
                 const status = document.getElementById('stormStatus');
                 status.style.display = 'block';
-                status.innerHTML = `🌩️ ${storm.name} in progress for ${storm.duration}s...`;
+                status.innerHTML = `${storm.name} in progress for ${storm.duration}s...`;
 
                 document.getElementById('stormLevel').textContent = storm.name;
 
@@ -406,7 +406,7 @@ data:
                     clearInterval(stormInterval);
                     stormInterval = null;
                     const status = document.getElementById('stormStatus');
-                    status.innerHTML = '🌀 Entered the eye of the storm - calm restored';
+                    status.innerHTML = 'Entered the eye of the storm - calm restored';
                     document.getElementById('stormLevel').textContent = 'Calm';
                     setTimeout(() => {
                         status.style.display = 'none';
@@ -438,15 +438,15 @@ data:
     <html>
     <head><title>Storm Surge - Product Catalog</title></head>
     <body>
-        <h1>🌩️ Storm Surge Product Catalog</h1>
+        <h1>Storm Surge Product Catalog</h1>
         <p>Service: product-catalog</p>
-        <p>Status: Weathering the storm ⛈️</p>
+        <p>Status: Weathering the storm</p>
         <div>
             <h3>Storm-Ready Products:</h3>
             <ul>
-                <li>⚡ Lightning-Fast Servers</li>
-                <li>🌊 Tsunami-Resistant Storage</li>
-                <li>🌪️ Hurricane-Proof Networking</li>
+                <li>Lightning-Fast Servers</li>
+                <li>Tsunami-Resistant Storage</li>
+                <li>Hurricane-Proof Networking</li>
             </ul>
         </div>
     </body>
@@ -463,15 +463,15 @@ data:
     <html>
     <head><title>Storm Surge - Shopping Cart</title></head>
     <body>
-        <h1>🌩️ Storm Surge Shopping Cart</h1>
+        <h1>Storm Surge Shopping Cart</h1>
         <p>Service: shopping-cart</p>
-        <p>Status: High-intensity processing ⚡</p>
+        <p>Status: High-intensity processing</p>
         <div>
             <h3>Cart Contents:</h3>
             <ul>
-                <li>⚡ Lightning Scaling (Qty: ∞)</li>
-                <li>🌊 Spot Instance Surfboard (Qty: 1)</li>
-                <li>🌪️ Chaos Engineering Kit (Qty: 1)</li>
+                <li>Lightning Scaling (Qty: infinity)</li>
+                <li>Spot Instance Surfboard (Qty: 1)</li>
+                <li>Chaos Engineering Kit (Qty: 1)</li>
             </ul>
             <p><strong>Total Resilience: Unlimited</strong></p>
         </div>

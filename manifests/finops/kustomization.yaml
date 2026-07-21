@@ -4,10 +4,10 @@ kind: Kustomization
 namespace: oceansurge
 
 resources:
-- ../base
 - finops-controller.yaml
 
-commonLabels:
-  app.kubernetes.io/name: storm-surge
-  app.kubernetes.io/component: finops
-  app.kubernetes.io/part-of: oceansurge
+labels:
+- pairs:
+    app.kubernetes.io/name: storm-surge
+    app.kubernetes.io/component: finops
+    app.kubernetes.io/part-of: oceansurge

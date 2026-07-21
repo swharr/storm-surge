@@ -45,6 +45,20 @@ jobs:
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
 
+      - name: Render manifests with kustomize
+        run: |
+          mkdir -p build/kustomize
+          kustomize build manifests/base > build/kustomize/base.yaml
+          kustomize build manifests/middleware > build/kustomize/middleware.yaml
+          kustomize build frontend/k8s > build/kustomize/frontend.yaml
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manifests
+          path: build/kustomize
+          retention-days: 7
+
       - name: Run Python syntax checks
         run: |
           python -m py_compile feature_flag_configure.py
@@ -65,6 +79,7 @@ jobs:
 
       - name: Run Python unit tests
         run: |
+          pip install -r finops/requirements.txt
           python3 tests/test_middleware.py
           python3 tests/test_security.py
           python3 tests/test_authentication.py
@@ -117,11 +132,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+
       - name: Install minikube
         uses: medyagh/setup-minikube@latest
         with:
           cpus: 4
           memory: 8192m
+          kubernetes-version: 'v1.31.0'
 
       - name: Run test suite
         run: ./tests/test-suite.sh
@@ -224,6 +248,9 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          config: 'trivy.yaml'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
@@ -304,6 +331,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
       - name: Verify auth moved to cookies + CSRF
         run: |
           set -euo pipefail
@@ -311,7 +343,7 @@ jobs:
           grep -q "Flask-Limiter" manifests/middleware/requirements.txt
 
           echo "> Checking limiter init in main.py"
-          grep -q "api_limiter.init_app\(app\)" manifests/middleware/main.py
+          rg -q "api_limiter\.init_app\(app\)" manifests/middleware/main.py
 
           echo "> Checking CSRF decorator defined"
           grep -q "def require_csrf" manifests/middleware/api_routes.py

@@ -1,3 +1,9 @@
+# Claude Code
+todos/
+
+# Test suite output
+test-logs/
+
 # OceanSurge .gitignore
 # Generated for v0.1.1-rebase
 
@@ -35,8 +41,10 @@ $RECYCLE.BIN/
 # Development & IDE Files
 # =============================================================================
 
-# Visual Studio Code
-.vscode/
+# Visual Studio Code (allow shared project settings)
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
 *.code-workspace
 
 # IntelliJ IDEA
@@ -57,9 +65,9 @@ tmp/
 *.swp
 *~.nib
 
-# Sublime Text
-*.sublime-project
+# Sublime Text (allow shared project file)
 *.sublime-workspace
+.sublime/trailing_spaces.sublime-settings
 
 # Vim
 *.swp
@@ -96,6 +104,9 @@ secrets/
 config.local.*
 *.local.yaml
 *.local.json
+
+# Claude Code personal settings (keep these local)
+.claude/settings.local.json
 
 # =============================================================================
 # Logs & Runtime Files
@@ -304,6 +315,9 @@ docs/.doctrees/
 
 # MkDocs
 site/
+
+# Internal planning docs (local only, never push to GitHub)
+docs/superpowers/
 
 # =============================================================================
 # Project Specific

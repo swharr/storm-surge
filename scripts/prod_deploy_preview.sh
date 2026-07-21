@@ -12,21 +12,13 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Functions
-log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
+log_info() { echo -e "${BLUE}INFO: $1${NC}"; }
 
-log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
+log_success() { echo -e "${GREEN}OK: $1${NC}"; }
 
-log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
+log_warning() { echo -e "${YELLOW}WARN: $1${NC}"; }
 
-log_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
+log_error() { echo -e "${RED}ERROR: $1${NC}"; }
 
 # Load .env if it exists
 if [ -f .env ]; then
@@ -37,7 +29,7 @@ if [ -f .env ]; then
 fi
 
 show_usage() {
-    echo "🌊 OceanSurge Production Deployment Preview"
+    echo "OceanSurge Production Deployment Preview"
     echo "=============================================="
     echo ""
     echo "Usage: $0 [OPTIONS]"
@@ -88,9 +80,9 @@ done
 
 # Banner
 echo ""
-echo "🌊 ========================================"
-echo "🌊 OceanSurge Production Deployment Preview"
-echo "🌊 ========================================"
+echo "========================================"
+echo "OceanSurge Production Deployment Preview"
+echo "========================================"
 echo ""
 
 # Check prerequisites
@@ -342,21 +334,21 @@ validate_deployment
 
 # Final summary
 echo ""
-echo "🎉 ========================================"
-echo "🎉 OceanSurge Deployment Complete!"
-echo "🎉 ========================================"
+echo "========================================"
+echo "OceanSurge Deployment Complete!"
+echo "========================================"
 echo ""
 log_success "Deployment completed successfully!"
 echo ""
-echo "📋 Next Steps:"
+echo "Next Steps:"
 echo "1. Configure LaunchDarkly webhook (see instructions above)"
 echo "2. Create feature flag 'enable-cost-optimizer' in LaunchDarkly"
 echo "3. Test the integration by toggling the feature flag"
 echo "4. Monitor cluster scaling in Spot Console"
 echo ""
-echo "🔗 Useful Commands:"
+echo "Useful Commands:"
 echo "  kubectl get pods -n oceansurge"
 echo "  kubectl get svc -n oceansurge"
 echo "  kubectl logs -f deployment/ld-spot-middleware -n oceansurge"
 echo ""
-echo "🌊 Happy sailing with OceanSurge! 🌊"
+echo "Happy sailing with OceanSurge!"

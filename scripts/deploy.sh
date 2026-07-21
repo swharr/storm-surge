@@ -3,7 +3,7 @@ set -e
 
 # Load .env if it exists
 if [ -f .env ]; then
-    echo "📥 Loading environment from .env"
+    echo "Loading environment from .env"
     set -a
     source .env
     set +a
@@ -74,8 +74,8 @@ for arg in "$@"; do
   esac
 done
 
-echo "🌩️ Deploying Storm Surge via deploy.sh"
-echo "======================================"
+echo "Deploying Storm Surge via deploy.sh"
+echo "==================================="
 
 # Provider configuration data (bash 3.2 compatible)
 get_provider_config() {
@@ -169,12 +169,12 @@ is_cli_available() {
 get_provider() {
   if [ "$NON_INTERACTIVE" = "true" ]; then
     PROVIDER="gke"
-    echo "🤖 Non-interactive mode: Using default provider 'gke'"
+    echo "Non-interactive mode: Using default provider 'gke'"
     return
   fi
 
   while true; do
-    echo "📋 Available cloud providers:"
+    echo "Available cloud providers:"
     echo "  1) gke  - Google Kubernetes Engine"
     echo "  2) eks  - Amazon Elastic Kubernetes Service"
     echo "  3) aks  - Azure Kubernetes Service"
@@ -187,7 +187,7 @@ get_provider() {
       2|eks) PROVIDER="eks"; break ;;
       3|aks) PROVIDER="aks"; break ;;
       4|all) PROVIDER="all"; break ;;
-      *) echo "❌ Invalid choice. Please try again."; echo ;;
+      *) echo "ERROR: Invalid choice. Please try again."; echo ;;
     esac
   done
 }
@@ -202,7 +202,7 @@ get_region() {
       "eks") REGION="us-east-1" ;;
       "aks") REGION="eastus" ;;
     esac
-    echo "🤖 Non-interactive mode: Using default region '$REGION'"
+    echo "Non-interactive mode: Using default region '$REGION'"
     return
   fi
 
@@ -211,7 +211,7 @@ get_region() {
   regions=($(parse_regions "$provider"))
   local i=1
 
-  echo "📍 Available $provider regions:"
+  echo "Available $provider regions:"
   for region in "${regions[@]}"; do
     local name
     name=$(parse_region_name "$provider" "$region")
@@ -232,7 +232,7 @@ get_region() {
       REGION="$choice"
       break
     else
-      echo "❌ Invalid choice. Please try again."
+      echo "ERROR: Invalid choice. Please try again."
       echo
     fi
   done
@@ -256,13 +256,13 @@ get_zone() {
         fi
       done
       ZONE="${default_zones[*]}"
-      echo "🤖 Non-interactive mode: Using default zones '$ZONE'"
+      echo "Non-interactive mode: Using default zones '$ZONE'"
     else
       ZONE="${zones[0]}"
       if [ "$provider" = "gke" ]; then
         ZONE="${region}-${zones[0]}"
       fi
-      echo "🤖 Non-interactive mode: Using default zone '$ZONE'"
+      echo "Non-interactive mode: Using default zone '$ZONE'"
     fi
     return
   fi
@@ -270,7 +270,7 @@ get_zone() {
   case $provider in
     "gke")
       while true; do
-        echo "🗺️  Available zones in $region:"
+        echo "Available zones in $region:"
         echo "  ${zones[*]}"
         echo
         read -r -p "Enter zone suffix (e.g., 'a' for ${region}-a): " zone_suffix
@@ -280,16 +280,16 @@ get_zone() {
         if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
           break
         else
-          echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
+          echo "ERROR: Invalid zone '$zone_suffix' for region '$region'. Please try again."
           echo
         fi
       done
       ;;
     "eks")
-      echo "🗺️  Available zones in $region:"
+      echo "Available zones in $region:"
       echo "  ${zones[*]}"
       echo
-      echo "⚠️  EKS requires at least 2 availability zones for high availability"
+      echo "WARN: EKS requires at least 2 availability zones for high availability"
       echo
 
       local selected_zones=()
@@ -302,7 +302,7 @@ get_zone() {
 
         # Check if at least 2 zones were provided
         if [ ${#input_zones[@]} -lt 2 ]; then
-          echo "❌ Please select at least 2 availability zones for EKS"
+          echo "ERROR: Please select at least 2 availability zones for EKS"
           echo
           continue
         fi
@@ -314,7 +314,7 @@ get_zone() {
           if printf '%s\n' "${zones[@]}" | grep -q "^$z$"; then
             selected_zones+=("${region}${z}")
           else
-            echo "❌ Invalid zone '$z' for region '$region'"
+            echo "ERROR: Invalid zone '$z' for region '$region'"
             all_valid=false
             break
           fi
@@ -331,7 +331,7 @@ get_zone() {
       ;;
     "aks")
       while true; do
-        echo "🗺️  Available zones in $region:"
+        echo "Available zones in $region:"
         echo "  ${zones[*]}"
         echo
         read -r -p "Enter zone number (1-3): " zone_suffix
@@ -341,7 +341,7 @@ get_zone() {
         if printf '%s\n' "${zones[@]}" | grep -q "^$zone_suffix$"; then
           break
         else
-          echo "❌ Invalid zone '$zone_suffix' for region '$region'. Please try again."
+          echo "ERROR: Invalid zone '$zone_suffix' for region '$region'. Please try again."
           echo
         fi
       done
@@ -353,14 +353,14 @@ get_zone() {
 get_node_count() {
   if [ "$NON_INTERACTIVE" = "true" ]; then
     NODES=4
-    echo "🤖 Non-interactive mode: Using default node count '4'"
+    echo "Non-interactive mode: Using default node count '4'"
     return
   fi
 
   while true; do
-    echo "🖥️  Node configuration:"
-    echo "  • Default: 4 nodes (recommended)"
-    echo "  • Range: 1-10 nodes maximum"
+    echo "Node configuration:"
+    echo "  - Default: 4 nodes (recommended)"
+    echo "  - Range: 1-10 nodes maximum"
     echo
     read -r -p "Enter number of nodes (1-10, or 'default' for 4): " node_input
 
@@ -374,7 +374,7 @@ get_node_count() {
         break
         ;;
       *)
-        echo "❌ Invalid input. Please enter a number between 1-10 or 'default'."
+        echo "ERROR: Invalid input. Please enter a number between 1-10 or 'default'."
         echo
         ;;
     esac
@@ -388,13 +388,13 @@ get_cluster_name() {
 
   if [ "$NON_INTERACTIVE" = "true" ]; then
     CLUSTER_NAME="$default_name"
-    echo "🤖 Non-interactive mode: Using default cluster name '$CLUSTER_NAME'"
+    echo "Non-interactive mode: Using default cluster name '$CLUSTER_NAME'"
     return
   fi
 
-  echo "🏷️  Cluster naming:"
-  echo "  • Default: $default_name"
-  echo "  • Custom: Enter your preferred name (alphanumeric and hyphens only)"
+  echo "Cluster naming:"
+  echo "  - Default: $default_name"
+  echo "  - Custom: Enter your preferred name (alphanumeric and hyphens only)"
   echo
   read -r -p "Enter cluster name (or press Enter for default): " name_input
 
@@ -405,20 +405,20 @@ get_cluster_name() {
     if [[ "$name_input" =~ ^[a-zA-Z0-9-]+$ ]] && [[ ! "$name_input" =~ ^- ]] && [[ ! "$name_input" =~ -$ ]]; then
       CLUSTER_NAME="$name_input"
     else
-      echo "❌ Invalid cluster name. Must contain only alphanumeric characters and hyphens, and cannot start or end with a hyphen."
+      echo "ERROR: Invalid cluster name. Must contain only alphanumeric characters and hyphens, and cannot start or end with a hyphen."
       echo "Using default name: $default_name"
       CLUSTER_NAME="$default_name"
     fi
   fi
 
-  echo "✅ Cluster name set to: $CLUSTER_NAME"
+  echo "OK: Cluster name set to: $CLUSTER_NAME"
 }
 
 # Get AWS profile for EKS deployments
 get_aws_profile() {
   # Check if AWS CLI is available
   if ! command -v aws &> /dev/null; then
-    echo "⚠️  AWS CLI not installed. Skipping profile selection."
+    echo "WARN: AWS CLI not installed. Skipping profile selection."
     return
   fi
 

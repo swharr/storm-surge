@@ -74,7 +74,7 @@ kubectl get hpa -n oceansurge
 
 ### Core Integration Flow
 The system connects feature flags to infrastructure scaling through this flow:
-1. **Feature Flag Change** → Webhook triggers middleware
+1. **Feature Flag Change** -> Webhook triggers middleware
 2. **Middleware** validates and processes the change via Flask API
 3. **Spot Ocean API** receives scaling commands based on flag state
 4. **Cluster Scaling** executes (cost optimization vs performance mode)

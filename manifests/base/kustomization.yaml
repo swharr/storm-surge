@@ -5,11 +5,19 @@ namespace: oceansurge
 
 resources:
 - namespace.yaml
+- namespace-security.yaml
+- rbac.yaml
 - deployments.yaml
 - services.yaml
 - configmaps.yaml
 - nginx-configs.yaml
 - hpa.yaml
+
+# KEDA annotations for shopping-cart/product-catalog, applied here since these
+# Deployments live in this kustomization (kustomize forbids patches referencing
+# files outside the kustomization's own directory tree)
+patchesStrategicMerge:
+- patches/deployment-annotations.yaml
 
 labels:
 - pairs:

@@ -35,7 +35,7 @@
 ## Security & Configuration
 - Never commit secrets; use environment variables and Kubernetes `Secret` manifests. Review `manifests/sec_fixes/` for GKE-specific hardening.
 - Validate dependencies: `./verify-dependencies.sh`.
-- Use approved regions/zones; follow provider scripts’ validation.
+- Use approved regions/zones; follow provider scripts' validation.
 
 ## Agent Notes
 - Prefer existing scripts and validators over new tooling.

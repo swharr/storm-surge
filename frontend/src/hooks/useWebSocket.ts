@@ -63,7 +63,8 @@ export function useWebSocket({
       // Invalidate flags cache to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['flags'] })
 
-      toast.success(`Feature flag "${event.data.flag_key}" was ${event.data.enabled ? 'enabled' : 'disabled'}`)
+      const data = event.data as { flag_key: string; enabled: boolean }
+      toast.success(`Feature flag "${data.flag_key}" was ${data.enabled ? 'enabled' : 'disabled'}`)
     })
 
     socket.on('cluster_scaled', (event: WebSocketEvent) => {
@@ -71,7 +72,11 @@ export function useWebSocket({
       queryClient.invalidateQueries({ queryKey: ['clusters'] })
       queryClient.invalidateQueries({ queryKey: ['scaling-events'] })
 
-      const { cluster_id, event_type, success } = event.data
+      const { cluster_id, event_type, success } = event.data as {
+        cluster_id: string
+        event_type: string
+        success: boolean
+      }
 
       if (success) {
         toast.success(`Cluster ${cluster_id} ${event_type.replace('_', ' ')} completed`)
@@ -81,7 +86,11 @@ export function useWebSocket({
     })
 
     socket.on('alert_triggered', (event: WebSocketEvent) => {
-      const { alert_name, severity, message } = event.data
+      const { alert_name, severity, message } = event.data as {
+        alert_name: string
+        severity: string
+        message: string
+      }
 
       switch (severity) {
         case 'critical':
@@ -99,7 +108,7 @@ export function useWebSocket({
       // Invalidate system health cache
       queryClient.invalidateQueries({ queryKey: ['system-health'] })
 
-      const { status, component } = event.data
+      const { status, component } = event.data as { status: string; component: string }
 
       if (status === 'down' || status === 'degraded') {
         toast.error(`System component ${component} is ${status}`)
@@ -107,7 +116,11 @@ export function useWebSocket({
     })
 
     socket.on('cost_alert', (event: WebSocketEvent) => {
-      const { threshold_exceeded, current_cost, threshold } = event.data
+      const { threshold_exceeded, current_cost, threshold } = event.data as {
+        threshold_exceeded: boolean
+        current_cost: number
+        threshold: number
+      }
 
       if (threshold_exceeded) {
         toast.error(`💰 Cost threshold exceeded: $${current_cost} > $${threshold}`, {
@@ -132,7 +145,7 @@ export function useWebSocket({
     socketRef.current?.connect()
   }
 
-  const emit = (event: string, data?: any) => {
+  const emit = (event: string, data?: unknown) => {
     socketRef.current?.emit(event, data)
   }
 

@@ -1,17 +1,17 @@
 #!/bin/bash
 set -e
 
-echo "🌩️ Updating OceanSurge Repository References"
+echo "Updating OceanSurge Repository References"
 echo "============================================"
 
 # Check if we're in the right directory
 if [[ ! $(basename "$PWD") == "ocean-surge" ]] && [[ ! $(basename "$PWD") == "OceanSurge" ]]; then
-    echo "⚠️  Please run this script from your ocean-surge or OceanSurge directory"
+    echo "WARN: Please run this script from your ocean-surge or OceanSurge directory"
     echo "Current directory: $PWD"
     exit 1
 fi
 
-echo "📝 Updating repository references to OceanSurge..."
+echo "Updating repository references to OceanSurge..."
 
 # Update README.md
 echo "Updating README.md..."
@@ -45,7 +45,7 @@ find configs/ -name "*.json" -type f -exec sed -i.bak 's|storm-surge|oceansurge|
 echo "Updating chaos testing scripts..."
 find chaos-testing/ -name "*.sh" -type f -exec sed -i.bak 's|storm-surge|oceansurge|g' {} \; 2>/dev/null || true
 
-echo "🔧 Creating updated namespace configuration..."
+echo "Creating updated namespace configuration..."
 
 # Create proper namespace manifest
 cat > manifests/base/namespace.yaml << 'EOF'
@@ -60,7 +60,7 @@ metadata:
     storm-surge.io/managed: "true"
 EOF
 
-echo "📦 Updating Kustomization files..."
+echo "Updating Kustomization files..."
 
 # Update kustomization files
 cat > manifests/base/kustomization.yaml << 'EOF'
@@ -101,7 +101,7 @@ commonLabels:
   app.kubernetes.io/part-of: oceansurge
 EOF
 
-echo "🔄 Updating git configuration..."
+echo "Updating git configuration..."
 
 # Update git remote if it exists
 if git remote get-url origin 2>/dev/null; then
@@ -109,52 +109,52 @@ if git remote get-url origin 2>/dev/null; then
     git remote set-url origin https://github.com/swharr/storm-surge.git
 fi
 
-echo "📋 Updating deployment scripts with correct repository..."
+echo "Updating deployment scripts with correct repository..."
 
 # Update main deployment script
 cat > scripts/deploy.sh << 'EOF'
 #!/bin/bash
 set -e
 
-echo "🌩️ Deploying Storm Surge from OceanSurge Repository"
+echo "Deploying Storm Surge from OceanSurge Repository"
 echo "=================================================="
 
 # Check prerequisites
 if ! command -v kubectl &> /dev/null; then
-    echo "❌ kubectl not found. Please install kubectl."
+    echo "ERROR: kubectl not found. Please install kubectl."
     exit 1
 fi
 
 if ! kubectl cluster-info &> /dev/null; then
-    echo "❌ kubectl not connected to cluster."
+    echo "ERROR: kubectl not connected to cluster."
     exit 1
 fi
 
-echo "✅ Prerequisites check passed"
+echo "OK: Prerequisites check passed"
 
 # Create namespace
-echo "📦 Creating oceansurge namespace..."
+echo "Creating oceansurge namespace..."
 kubectl apply -f manifests/base/namespace.yaml
 
 # Deploy base application
-echo "📦 Deploying Storm Surge application..."
+echo "Deploying Storm Surge application..."
 kubectl apply -k manifests/base/
 
 # Wait for deployment
-echo "⏳ Waiting for deployment..."
+echo "Waiting for deployment..."
 kubectl wait --for=condition=available --timeout=300s deployment --all -n oceansurge
 
 # Get frontend URL
-echo "🌐 Getting frontend URL..."
+echo "Getting frontend URL..."
 FRONTEND_IP=$(kubectl get service frontend-service -n oceansurge -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "pending")
 
-echo "✅ Storm Surge deployed successfully!"
+echo "OK: Storm Surge deployed successfully!"
 echo ""
-echo "🌐 Frontend URL: http://$FRONTEND_IP"
-echo "📊 Monitor with: kubectl get pods -n oceansurge"
-echo "📋 Logs: kubectl logs -l app=frontend -n oceansurge"
+echo "Frontend URL: http://$FRONTEND_IP"
+echo "Monitor with: kubectl get pods -n oceansurge"
+echo "Logs: kubectl logs -l app=frontend -n oceansurge"
 echo ""
-echo "🌩️ Ready to weather the scaling storm!"
+echo "Ready to weather the scaling storm!"
 echo "Repository: https://github.com/swharr/storm-surge"
 EOF
 
@@ -165,14 +165,14 @@ cat > scripts/load-test.sh << 'EOF'
 INTENSITY=${1:-"moderate"}
 DURATION=${2:-"300"}
 
-echo "⚡ Starting $INTENSITY storm for ${DURATION}s"
+echo "Starting $INTENSITY storm for ${DURATION}s"
 echo "Repository: OceanSurge by Shon-Harris_flexera"
 
 # Get frontend URL
 FRONTEND_URL=$(kubectl get service frontend-service -n oceansurge -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 if [ -z "$FRONTEND_URL" ]; then
-    echo "❌ Frontend service not ready"
+    echo "ERROR: Frontend service not ready"
     echo "Check: kubectl get svc -n oceansurge"
     exit 1
 fi
@@ -191,12 +191,12 @@ case $INTENSITY in
         CONCURRENT=100
         ;;
     *)
-        echo "❌ Invalid intensity. Use: light, moderate, severe, hurricane"
+        echo "ERROR: Invalid intensity. Use: light, moderate, severe, hurricane"
         exit 1
         ;;
 esac
 
-echo "🌩️ Generating storm with $CONCURRENT concurrent requests"
+echo "Generating storm with $CONCURRENT concurrent requests"
 echo "Target: http://$FRONTEND_URL"
 
 # Use curl if wrk not available
@@ -215,8 +215,8 @@ else
     wait
 fi
 
-echo "✅ Storm complete!"
-echo "🔍 Check scaling: kubectl get pods -n oceansurge"
+echo "OK: Storm complete!"
+echo "Check scaling: kubectl get pods -n oceansurge"
 EOF
 
 # Update FinOps deployment script
@@ -224,7 +224,7 @@ cat > scripts/deploy-finops.sh << 'EOF'
 #!/bin/bash
 set -e
 
-echo "💰 Deploying Storm Surge FinOps Controller (OceanSurge Repository)"
+echo "Deploying Storm Surge FinOps Controller (OceanSurge Repository)"
 echo "=================================================================="
 
 # Check environment variables

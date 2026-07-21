@@ -5,7 +5,10 @@
 set -e
 
 # Configuration
-TEST_NAMESPACE="storm-surge-test"
+# NOTE: must match the namespace hardcoded in manifests/base, manifests/middleware,
+# and frontend/k8s kustomizations (all pin "oceansurge") -- kubectl apply -k rejects
+# a --namespace override that disagrees with a kustomization's own namespace.
+TEST_NAMESPACE="oceansurge"
 MINIKUBE_PROFILE="storm-surge-test"
 TIMEOUT=300
 LOG_DIR="test-logs"
@@ -22,23 +25,12 @@ log() {
     echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
-success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
-
-warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-error() {
-    echo -e "${RED}❌ $1${NC}"
-    exit 1
-}
+success() { echo -e "${GREEN}OK: $1${NC}"; }
+warning() { echo -e "${YELLOW}WARN: $1${NC}"; }
+error()   { echo -e "${RED}ERROR: $1${NC}"; exit 1; }
 
 # For tests that should fail - these are expected failures, not blocking errors
-expected_failure() {
-    echo -e "${RED}❌ $1 (this is expected behavior)${NC}"
-}
+expected_failure() { echo -e "${RED}EXPECTED FAILURE: $1${NC}"; }
 
 # Setup test environment
 setup_test_env() {
@@ -324,25 +316,25 @@ generate_report() {
 
 ## Test Results
 
-### ✅ Passed Tests
+### Passed Tests
 - Kubernetes manifest validation
 - Deployment script parameter validation
 - Resource constraint validation
 - Security context validation
 - Cleanup functionality
 
-### 📊 Deployment Status
+### Deployment Status
 \`\`\`
 $(kubectl get pods -n "$TEST_NAMESPACE" 2>/dev/null || echo "Namespace cleaned up")
 \`\`\`
 
-### 📋 Test Logs
+### Test Logs
 - Minikube start: \`$LOG_DIR/minikube-start.log\`
 - Base deployment: \`$LOG_DIR/base-deploy.log\`
 - Middleware deployment: \`$LOG_DIR/middleware-deploy.log\`
 - Health checks: \`$LOG_DIR/*-health.log\`
 
-### 🛠️ Recommendations
+### Recommendations
 - All tests passed successfully
 - Ready for production deployment
 - Consider adding integration tests for API endpoints
@@ -367,8 +359,8 @@ cleanup_test_env() {
 
 # Main test execution
 main() {
-    echo "🧪 Storm Surge Test Suite"
-    echo "========================="
+    echo "Storm Surge Test Suite"
+    echo "======================"
     echo
 
     # Trap to ensure cleanup on exit
@@ -386,10 +378,10 @@ main() {
     generate_report
 
     echo
-    success "All tests completed successfully!"
+    success "All tests completed successfully."
     echo
-    echo "📋 Test logs available in: $LOG_DIR/"
-    echo "📊 Full report: $LOG_DIR/test-report.md"
+    echo "Test logs available in: $LOG_DIR/"
+    echo "Full report: $LOG_DIR/test-report.md"
     echo
 }
 

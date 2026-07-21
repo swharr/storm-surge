@@ -41,7 +41,7 @@ export interface Condition {
 
 export interface Action {
   type: 'serve_variation' | 'track_event'
-  value: any
+  value: unknown
 }
 
 export interface ClusterMetrics {
@@ -114,7 +114,7 @@ export interface AuditLogEntry {
   action: string
   resource: string
   resourceId: string
-  details: Record<string, any>
+  details: Record<string, unknown>
   ipAddress?: string
   userAgent?: string
 }
@@ -155,7 +155,7 @@ export interface DashboardConfig {
     type: string
     position: { x: number; y: number }
     size: { width: number; height: number }
-    config: Record<string, any>
+    config: Record<string, unknown>
   }[]
 }
 
@@ -179,8 +179,8 @@ export interface PaginatedResponse<T> {
 
 // WebSocket event types
 export interface WebSocketEvent {
-  type: 'flag_changed' | 'cluster_scaled' | 'alert_triggered' | 'system_health'
-  data: any
+  type: 'flag_changed' | 'cluster_scaled' | 'alert_triggered' | 'system_health' | 'cost_alert'
+  data: unknown
   timestamp: string
 }
 

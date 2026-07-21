@@ -1,0 +1,34 @@
+# Patch to add KEDA annotations to existing deployments
+# This ensures KEDA can manage the existing Storm-Surge deployments
+
+# Shopping Cart Deployment Patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart
+  annotations:
+    keda.sh/paused: "false"
+    storm-surge.io/keda-managed: "true"
+    storm-surge.io/scaling-policy: "feature-flag-driven"
+    storm-surge.io/cost-optimizer-responsive: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        storm-surge.io/keda-target: "true"
+
+---
+# Product Catalog Deployment Patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog
+  annotations:
+    keda.sh/paused: "false"
+    storm-surge.io/keda-managed: "true"
+    storm-surge.io/scaling-policy: "baseline-cpu"
+spec:
+  template:
+    metadata:
+      annotations:
+        storm-surge.io/keda-target: "true"

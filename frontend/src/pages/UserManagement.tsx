@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { toast } from 'react-hot-toast'
 import {
   PlusIcon,
@@ -32,7 +33,7 @@ const UserManagement: React.FC = () => {
       setShowAddUser(false)
       toast.success('User created successfully')
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ error?: string }>) => {
       toast.error(error.response?.data?.error || 'Failed to create user')
     },
   })
@@ -45,7 +46,7 @@ const UserManagement: React.FC = () => {
       setEditingUser(null)
       toast.success('User updated successfully')
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ error?: string }>) => {
       toast.error(error.response?.data?.error || 'Failed to update user')
     },
   })
@@ -56,7 +57,7 @@ const UserManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       toast.success('User deleted successfully')
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ error?: string }>) => {
       toast.error(error.response?.data?.error || 'Failed to delete user')
     },
   })
@@ -68,7 +69,7 @@ const UserManagement: React.FC = () => {
       setShowPasswordReset(null)
       toast.success('Password reset successfully')
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ error?: string }>) => {
       toast.error(error.response?.data?.error || 'Failed to reset password')
     },
   })
