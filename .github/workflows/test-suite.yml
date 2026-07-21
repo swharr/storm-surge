@@ -132,6 +132,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+
       - name: Install minikube
         uses: medyagh/setup-minikube@latest
         with:
