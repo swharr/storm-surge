@@ -30,7 +30,7 @@ class StormSurgeFinOpsController:
 
     def enable_autoscaling_business_hours(self):
         """Enable autoscaling during business hours"""
-        self.logger.info("Enabling business hours autoscaling")
+        self.logger.info("🌅 Enabling business hours autoscaling")
         return {"status": "enabled"}
 
 def main():
