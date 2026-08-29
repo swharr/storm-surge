@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: oceansurge
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.azure.com/scalesetpriority: spot
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: Equal
+          value: spot
+          effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog
+  namespace: oceansurge
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.azure.com/scalesetpriority: spot
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: Equal
+          value: spot
+          effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart
+  namespace: oceansurge
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.azure.com/scalesetpriority: spot
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: Equal
+          value: spot
+          effect: NoSchedule
