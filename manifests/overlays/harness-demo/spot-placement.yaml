@@ -5,6 +5,9 @@ metadata:
   namespace: oceansurge
 spec:
   template:
+    metadata:
+      annotations:
+        storm-surge.io/demo-change: "add-trail-recovery-kit"
     spec:
       nodeSelector:
         kubernetes.azure.com/scalesetpriority: spot

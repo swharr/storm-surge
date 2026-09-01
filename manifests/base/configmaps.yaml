@@ -456,7 +456,21 @@ data:
                             <button class="add-to-cart" onclick="addToCart('lights')">Add to Cart</button>
                         </div>
                     </div>
-                </div>
+
+                        <div class="product-card">
+                            <div class="product-image">
+                                <i class="fas fa-toolbox"></i>
+                        </div>
+                        <div class="product-info">
+                             <h3 class="product-title">Trail Recovery Kit</h3>
+                             <div class="product-price">$249.99</div>
+                             <p class="product-description">Compact recovery boards, tow strap, shackles, and gloves for getting unstuck on remote trails.</p>
+                             <button class="add-to-cart" onclick="addToCart('recovery-kit')">Add to Cart</button>
+                        </div>
+                    </div>
+            </div>
+
+
 
                 <div class="load-test-section">
                     <h3 class="load-test-title">🚀 Infrastructure Load Testing</h3>
